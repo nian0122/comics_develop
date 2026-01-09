@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # --------------------
+  # 1. Flask 应用服务
+  # --------------------
+  web:
+    build: 
+      context: . # 使用当前目录的 Dockerfile 构建镜像
+    container_name: comic5_server
+    
+    # 端口映射：将主机的 5000 端口映射到容器的 500 端口
+    # （你代码中定义了 500 端口）
+    ports:
+      - "5000:500" 
+      
+    # 卷（Volume）挂载，实现开发模式和文件访问
+    volumes:
+      # 挂载本地代码：实现热重载和本地修改
+      - ./:/app
+      # 挂载模板文件（如果存在）
+      # - ./templates:/app/templates 
+      
+      # 🚀 关键：挂载你的漫画目录到容器内部
+      # 将宿主机上的实际目录 (例如 F:\games\comics) 挂载到容器内部的 /comics 路径
+      # 注意：你需要根据你的操作系统调整路径格式
+      - "F:\\games\\comics:/comics" # 适用于 Windows 路径
+      # - /path/to/your/comics:/comics # 适用于 Linux/macOS 路径
+      
+    # 依赖服务：确保 web 服务在 redis 服务启动后才启动
+    depends_on:
+      - redis
+      
+    # 环境变量：覆盖 app.py 中的硬编码配置
+    environment:
+      # 确保 Flask 应用在容器内连接到名为 'redis' 的服务
+      REDIS_HOST: redis
+      # 覆盖 BASE_DIR，使其指向挂载的容器内路径
+      BASE_DIR: /comics 
+
+  # --------------------
+  # 2. Redis 缓存服务
+  # --------------------
+  redis:
+    image: redis:7-alpine # 使用轻量级的 Redis 官方镜像
+    container_name: comic5_redis
+    # 端口映射：可选，如果需要从主机连接 Redis 可以打开
+    ports:
+      - "6379:6379"
+    
+    # 卷：持久化 Redis 数据，防止容器重启后缓存丢失
+    volumes:
+      - redis_data:/data 
+
+# 卷定义，用于持久化 Redis 数据
+volumes:
+  redis_data:

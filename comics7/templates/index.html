@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地漫画阅读器</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* ... CSS 样式保持不变 ... */
+        :root {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #475569; /* slate-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background-color: #1e293b; /* slate-800 */
+        }
+        
+        /* --- Sidebar & List Styling --- */
+        
+        .list-item {
+            padding: 6px 10px;
+            padding-left: 20px;
+            margin: 2px 0;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            border-radius: 6px;
+            color: #d1d5db;
+            display: flex;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+        .list-item:hover {
+            background-color: #374151;
+        }
+
+        .chapter-dot {
+            width: 6px;
+            height: 6px;
+            min-width: 6px; 
+            min-height: 6px; 
+            background-color: transparent;
+            border: 1px solid transparent; 
+            border-radius: 50%;
+            margin-right: 10px;
+            transition: background-color 0.15s ease, border 0.15s ease;
+        }
+
+        .series-item.selected {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: 600;
+        }
+
+        .chapter-item.selected {
+            background-color: #1e40af;
+            color: white;
+            font-weight: 600;
+        }
+        .chapter-item.selected .chapter-dot {
+            background-color: white;
+            border-color: white;
+            box-shadow: 0 0 4px #93c5fd;
+        }
+
+        .volume-title {
+            padding: 8px 10px 4px 10px;
+            font-size: 0.85rem;
+            color: #93c5fd;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            user-select: none;
+            transition: color 0.15s ease;
+        }
+        .volume-title:hover {
+            color: #60a5fa;
+        }
+        
+        .volume-title .toggle-icon {
+            margin-right: 5px;
+            transition: transform 0.2s ease;
+            font-size: 10px;
+            min-width: 10px;
+        }
+        
+        .volume-title.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        /* --- 2:3 比例的自定义 CSS --- */
+        .series-ratio-2 {
+            flex: 2;
+            min-height: 0;
+        }
+        .chapters-ratio-3 {
+            flex: 3;
+            min-height: 0;
+        }
+
+        /* --- Reader & Global Styling --- */
+
+        .reader-img {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 0px; 
+            box-shadow: none;
+            border-radius: 0px; 
+            background-color: #27272a;
+        }
+        
+        /* 用于隐藏预加载图片的容器 */
+        #preloader-container {
+            position: absolute;
+            top: -9999px; /* 移出视口 */
+            left: -9999px; 
+            overflow: hidden;
+            height: 1px;
+            width: 1px;
+        }
+        
+        #reader {
+             padding: 0; 
+             background-color: #27272a; 
+             min-height: calc(100vh - 12rem); 
+        }
+
+        .header.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        .footer.hidden {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        .header, .footer {
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        }
+
+        /* 侧边栏响应式控制 (移动端默认隐藏) */
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+        .sidebar-visible {
+            transform: translateX(0);
+        }
+        
+        /* 桌面端 (md及以上) 侧边栏默认可见 */
+        @media (min-width: 768px) {
+            #sidebar {
+                /* 取消 fixed，成为 flex item */
+                position: static !important;
+                /* 确保在 flex 布局中可见 */
+                transform: translateX(0) !important;
+                z-index: 10; 
+            }
+            .main {
+                /* 侧边栏是 flex item，无需 margin */
+                margin-left: 0; 
+            }
+            #toggleSidebarBtn {
+                /* 桌面端隐藏按钮 */
+                display: none; 
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 antialiased">
+
+    <div id="preloader-container"></div> 
+    <div class="flex h-screen overflow-hidden">
+        <button id="toggleSidebarBtn" 
+                class="fixed top-4 left-4 z-50 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition duration-200 md:hidden">
+            ☰
+        </button>
+
+        <div id="sidebar" 
+             class="sidebar fixed inset-y-0 left-0 w-64 bg-gray-800 shadow-xl 
+                    p-4 flex flex-col z-40 transition-transform duration-300 ease-in-out 
+                    sidebar-hidden md:static md:w-72"> 
+            <div class="top-hint text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">漫画系列</div>
+            <div id="seriesWrapper" class="series-ratio-2 overflow-y-auto mb-2">
+                <div id="seriesList" class="list-block space-y-1">
+                    <div class="p-2 text-gray-500">正在加载...</div>
+                </div>
+            </div>
+            
+            <hr class="border-gray-700 my-2">
+            
+            <div class="top-hint text-xs font-semibold uppercase text-gray-400 tracking-wider mt-2">章节目录</div>
+            <input id="filter" class="search w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-lg placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500" placeholder="过滤章节名..." />
+            <div id="chaptersWrapper" class="chapters-ratio-3 overflow-y-auto">
+                <div id="chapters" class="list-block space-y-1">
+                    <div class="p-2 text-gray-500">请选择一个系列</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main flex-grow flex flex-col overflow-y-auto">
+            
+            <div class="header bg-gray-800 px-3 py-1 border-b border-gray-700 sticky top-0 z-30 shadow-lg">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center">
+                    <div class="mb-1 md:mb-0 flex items-baseline space-x-3">
+                        <div class="title text-2xl font-bold text-white" id="seriesTitle">本地漫画阅读器</div>
+                        <div class="small text-blue-400 text-base font-medium" id="chapterTitle">未选择章节</div>
+                    </div>
+                    
+                    <div class="controls flex items-center space-x-2 my-1 mt-2 md:mt-0">
+                        <label class="small text-gray-400 text-sm whitespace-nowrap">缩放：</label>
+                        <input id="scaleRange" type="range" min="30" max="150" value="100" class="w-24 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+                        <span id="scaleLabel" class="small text-sm w-10 text-right">100%</span>
+                    </div>
+                </div>
+
+                <div class="controls-bottom flex justify-center space-x-3 mt-1 pt-1 border-t border-gray-700">
+                    <button id="prevBtn" class="px-5 py-2 text-sm font-medium rounded-lg text-gray-300 bg-gray-700 hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
+                        上一章
+                    </button>
+                    <button id="nextBtn" class="px-5 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
+                        下一章
+                    </button>
+                    <button id="scrollTop" class="px-5 py-2 text-sm font-medium rounded-lg text-gray-300 bg-gray-700 hover:bg-gray-600 transition shadow-md">
+                        回到顶部
+                    </button>
+                </div>
+            </div>
+
+            <div id="reader" class="reader flex-grow overflow-y-auto outline-none" tabindex="0">
+                <div id="empty" class="flex flex-col items-center justify-center h-full text-center text-gray-500 p-10">
+                    <svg class="w-16 h-16 mb-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5s3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18s-3.332.477-4.5 1.253"></path></svg>
+                    <div class="text-xl font-medium mb-2">请先选择漫画系列和章节</div>
+                    <div class="text-sm">侧边栏包含您所有的本地漫画系列和章节。</div>
+                </div>
+            </div>
+            
+            <div class="footer bg-gray-800 p-3 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center text-sm sticky bottom-0 z-30 shadow-lg">
+                <div class="flex space-x-4 mb-2 sm:mb-0">
+                    <div class="small text-gray-400" id="status">状态：未加载</div>
+                    <div class="small text-gray-500">本地阅读器 · 不上传图片</div>
+                </div>
+
+                <div class="small flex items-center space-x-3" id="paginationControls">
+                    <div id="progressStatus" class="text-white font-medium">0 / 0 个文件</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (async function () {
+            // --- UI 元素引用 (保持不变) ---
+            const reader = document.getElementById('reader');
+            const preloaderContainer = document.getElementById('preloader-container');
+            const chaptersEl = document.getElementById('chapters');
+            const seriesList = document.getElementById('seriesList');
+            const seriesTitle = document.getElementById('seriesTitle');
+            const chapterTitle = document.getElementById('chapterTitle');
+            const status = document.getElementById('status');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const scrollTopBtn = document.getElementById('scrollTop');
+            const filterInput = document.getElementById('filter');
+            const scaleRange = document.getElementById('scaleRange');
+            const scaleLabel = document.getElementById('scaleLabel');
+            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+            const sidebar = document.getElementById('sidebar');
+            const progressStatusEl = document.getElementById('progressStatus'); 
+            const header = document.querySelector('.header');
+            const footer = document.querySelector('.footer');
+            const emptyDiv = document.getElementById('empty'); 
+
+            // --- 状态变量和常量 (保持不变) ---
+            const FRONT_END_PAGE_SIZE = 10;
+            const PRELOAD_SIZE = 10; 
+            const MAX_IMAGES_TO_FETCH = 500; 
+
+            let scale = 100;
+            let series = []; 
+            let allFlatChapters = []; 
+            let chapterTree = []; 
+            let currentSeries = ''; 
+            let currentIndex = -1; 
+            
+            let allChapterFiles = [];
+            let imagesLoadedCount = 0;      
+            
+            let isLoading = false;
+            
+            let lastScrollPos = 0; 
+            const SCROLL_DIRECTION_THRESHOLD = 50; 
+            const SCROLL_LOAD_THRESHOLD = 300;     
+
+            let nextChapterFilesCache = null; 
+            let nextChapterIndex = -1;
+            
+            const setStatus = (t) => status.textContent = '状态：' + t;
+            
+            // --- 侧边栏/响应式逻辑 (保持不变) ---
+            function isMobileView() {
+                return window.matchMedia("(max-width: 767px)").matches;
+            }
+
+            function updateSidebarState() {
+                if (isMobileView()) {
+                    sidebar.classList.add('sidebar-hidden');
+                    sidebar.classList.remove('sidebar-visible');
+                    toggleSidebarBtn.textContent = '☰';
+                } else {
+                    sidebar.classList.remove('sidebar-hidden');
+                    sidebar.classList.add('sidebar-visible');
+                }
+            }
+
+            function toggleSidebar() {
+                if (isMobileView()) {
+                    sidebar.classList.toggle('sidebar-hidden');
+                    sidebar.classList.toggle('sidebar-visible');
+                    toggleSidebarBtn.textContent = sidebar.classList.contains('sidebar-hidden') ? '☰' : '✕';
+                }
+            }
+            toggleSidebarBtn.addEventListener('click', toggleSidebar);
+            window.addEventListener('resize', updateSidebarState);
+            
+            // --- 1. 载入漫画系列 (保持不变) ---
+            async function loadSeries() {
+                try {
+                    seriesList.innerHTML = '<div class="p-2 text-gray-500">正在加载...</div>';
+                    const res = await fetch('/series');
+                    if (!res.ok) throw new Error('Network response was not ok');
+
+                    series = await res.json();
+                    
+                    renderSeries(series);
+                    setStatus(`已加载系列：${series.length}`);
+                } catch (error) {
+                    seriesList.innerHTML = '<div class="p-2 text-red-400">错误：无法连接到后端或加载系列列表。</div>';
+                    setStatus('错误：无法加载系列列表');
+                    console.error('Error loading series:', error);
+                }
+            }
+
+            // 渲染系列列表 (保持不变)
+            function renderSeries(list) {
+                seriesList.innerHTML = '';
+                if (list.length === 0) {
+                    seriesList.innerHTML = '<div class="p-2 text-gray-500">未找到任何漫画系列。请检查 BASE_DIR 配置。</div>';
+                }
+                list.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = `list-item series-item ${s === currentSeries ? 'selected' : ''}`;
+                    div.textContent = s;
+                    div.onclick = () => selectSeries(s);
+                    seriesList.appendChild(div);
+                });
+            }
+            
+            // --- 辅助: 根据扁平章节列表构建树形结构 (保持不变) ---
+            function naturalSort(text) {
+                return text.split(/(\d+)/).map(c => parseInt(c) || c);
+            }
+
+            function buildChapterTree(flatChapters) {
+                const root = { name: 'root', children: {} };
+                const expandedPaths = JSON.parse(localStorage.getItem('expandedPaths') || '{}');
+
+                flatChapters.forEach((chapter, index) => {
+                    const parts = chapter.path_id.split(/[\\/]/).filter(p => p); 
+                    let current = root;
+                    let fullPath = '';
+
+                    parts.forEach((part, i) => {
+                        fullPath = fullPath ? `${fullPath}/${part}` : part;
+
+                        if (!current.children[part]) {
+                            current.children[part] = {
+                                name: part,
+                                fullPath: fullPath,
+                                children: {},
+                                isChapter: (i === parts.length - 1),
+                                flatIndex: (i === parts.length - 1) ? index : null, 
+                                path_id: (i === parts.length - 1) ? chapter.path_id : null,
+                                isExpanded: expandedPaths[fullPath] !== false,
+                            };
+                        }
+                        current = current.children[part];
+                    });
+                });
+
+                const sortChildren = (node) => {
+                    const childrenArray = Object.values(node.children);
+                    
+                    childrenArray.sort((a, b) => {
+                        // 目录排在前面
+                        if (!a.isChapter && b.isChapter) return -1;
+                        if (a.isChapter && !b.isChapter) return 1;
+                        
+                        const naturalKeysA = naturalSort(a.name);
+                        const naturalKeysB = naturalSort(b.name);
+                        
+                        for (let i = 0; i < Math.min(naturalKeysA.length, naturalKeysB.length); i++) {
+                            if (naturalKeysA[i] < naturalKeysB[i]) return -1;
+                            if (naturalKeysA[i] > naturalKeysB[i]) return 1;
+                        }
+                        return naturalKeysA.length - naturalKeysB.length;
+                    });
+                    
+                    childrenArray.forEach(sortChildren);
+                    node.children = childrenArray;
+                };
+
+                sortChildren(root);
+                return root.children;
+            }
+
+
+            // --- 2. 选择系列并加载扁平化章节列表 (保持不变) ---
+            async function fetchAndRenderChapters(name) {
+                chapterTitle.textContent = '加载中...';
+                setStatus('加载章节...');
+                chaptersEl.innerHTML = '<div class="p-2 text-gray-500">正在加载章节目录...</div>';
+
+                try {
+                    const chaptersRes = await fetch(`/api/chapters/${encodeURIComponent(name)}`);
+                    if (!chaptersRes.ok) throw new Error('Failed to load chapters');
+
+                    allFlatChapters = await chaptersRes.json();
+                    
+                    chapterTree = buildChapterTree(allFlatChapters); 
+                    
+                    renderChapters(chapterTree);
+                    chapterTitle.textContent = `共 ${allFlatChapters.length} 章`;
+                    reader.innerHTML = '';
+                    emptyDiv.style.display = 'flex';
+                    resetLoadingState();
+
+                } catch (error) {
+                    chaptersEl.innerHTML = '<div class="p-2 text-red-400">错误：无法加载章节数据。</div>';
+                    setStatus('错误：无法加载章节数据');
+                    console.error('Error loading flat chapters:', error);
+                }
+            }
+
+            async function selectSeries(name) {
+                if (currentSeries === name) return; 
+
+                currentSeries = name;
+                seriesTitle.textContent = name;
+                
+                await fetchAndRenderChapters(name);
+                
+                renderSeries(series); 
+                localStorage.setItem('currentSeries', name);
+            }
+            
+            // --- 树形列表辅助函数 (保持不变) ---
+            function findNodeInTree(tree, fullPath) {
+                for (const node of tree) {
+                    if (node.fullPath === fullPath) {
+                        return node;
+                    }
+                    if (node.children && node.children.length > 0 && !node.isChapter) {
+                        const found = findNodeInTree(node.children, fullPath);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            }
+
+            function toggleVolume(fullPath) {
+                const node = findNodeInTree(chapterTree, fullPath);
+                if (node) {
+                    node.isExpanded = !node.isExpanded;
+                    const expandedPaths = JSON.parse(localStorage.getItem('expandedPaths') || '{}');
+                    expandedPaths[fullPath] = node.isExpanded;
+                    localStorage.setItem('expandedPaths', JSON.stringify(expandedPaths));
+                    
+                    renderChapters(chapterTree, filterInput.value);
+                }
+            }
+            
+            function containsFilteredChapters(node, lowerFilter) {
+                if (node.isChapter) {
+                    return node.name.toLowerCase().includes(lowerFilter);
+                }
+                if (node.children && node.children.length > 0) {
+                    return node.children.some(child => containsFilteredChapters(child, lowerFilter));
+                }
+                return false;
+            }
+
+            // --- 3. 渲染树形章节列表 (保持不变) ---
+            function renderChapters(tree, filterText = '') {
+                chaptersEl.innerHTML = '';
+                const lowerFilter = filterText.toLowerCase();
+
+                if (tree.length === 0) {
+                    chaptersEl.innerHTML = '<div class="p-2 text-gray-500">此系列下没有找到任何章节。</div>';
+                    return;
+                }
+                
+                let selectedChapterDiv = null;
+
+                function renderNode(node, depth = 0) {
+                    if (lowerFilter && !containsFilteredChapters(node, lowerFilter)) {
+                        return;
+                    }
+
+                    if (!node.isChapter) {
+                        const titleDiv = document.createElement('div');
+                        const isExpanded = node.isExpanded || lowerFilter;
+                        titleDiv.className = `volume-title ${isExpanded ? '' : 'collapsed'}`;
+                        titleDiv.style.paddingLeft = `${10 + depth * 15}px`; 
+                        titleDiv.innerHTML = `
+                            <span class="toggle-icon">${isExpanded ? '▼' : '▶'}</span>
+                            ${node.name}
+                        `;
+                        titleDiv.onclick = (e) => {
+                            e.stopPropagation();
+                            if (!lowerFilter) {
+                                toggleVolume(node.fullPath);
+                            }
+                        };
+                        chaptersEl.appendChild(titleDiv);
+                        
+                        if (isExpanded) {
+                             node.children.forEach(child => renderNode(child, depth + 1));
+                        }
+
+                    } 
+                    else if (node.isChapter) {
+                        if (lowerFilter && !node.name.toLowerCase().includes(lowerFilter)) {
+                            return;
+                        }
+                        
+                        const isSelected = node.flatIndex === currentIndex;
+                        
+                        const div = document.createElement('div');
+                        div.className = `list-item chapter-item ${isSelected ? 'selected' : ''}`; 
+                        div.style.paddingLeft = `${20 + depth * 15}px`; 
+                        
+                        if (node.flatIndex !== null) {
+                            div.onclick = () => openChapter(node.flatIndex, true);
+                        }
+                        
+                        const dot = document.createElement('div');
+                        dot.className = 'chapter-dot';
+                        
+                        const textSpan = document.createElement('span');
+                        textSpan.textContent = node.name;
+
+                        div.appendChild(dot);
+                        div.appendChild(textSpan);
+                        
+                        chaptersEl.appendChild(div);
+                        
+                        if (isSelected) {
+                            selectedChapterDiv = div;
+                        }
+                    }
+                }
+                
+                tree.forEach(node => renderNode(node));
+
+                if (selectedChapterDiv) {
+                    setTimeout(() => {
+                        selectedChapterDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                }
+            }
+            
+            filterInput.addEventListener('input', () => {
+                if (!currentSeries || chapterTree.length === 0) return;
+                renderChapters(chapterTree, filterInput.value);
+            });
+            
+            
+            // ==========================================================
+            //                 🚀 新增辅助函数：判断文件类型
+            // ==========================================================
+
+            const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+            const VIDEO_EXTENSIONS = ['.mp4', '.mov'];
+
+            function isImageFile(filename) {
+                const lowerFilename = filename.toLowerCase();
+                return IMAGE_EXTENSIONS.some(ext => lowerFilename.endsWith(ext));
+            }
+            
+            function isVideoFile(filename) {
+                const lowerFilename = filename.toLowerCase();
+                return VIDEO_EXTENSIONS.some(ext => lowerFilename.endsWith(ext));
+            }
+
+            // ==========================================================
+            //                 🚀 预加载逻辑
+            // ==========================================================
+
+            // 清理预加载容器 (保持不变)
+            function clearPreloader() {
+                preloaderContainer.innerHTML = '';
+            }
+
+            // 文件预加载 (Preload next batch of images) (修改：只预加载图片)
+            function preloadNextBatch(startIndex, count) {
+                clearPreloader(); // 清理旧的预加载任务
+                
+                const seriesName = currentSeries;
+                const chapterData = allFlatChapters[currentIndex];
+                const { path_id } = chapterData;
+                
+                const endIndex = Math.min(startIndex + count, allChapterFiles.length);
+                const filesToPreload = allChapterFiles.slice(startIndex, endIndex); 
+                
+                if (filesToPreload.length > 0) {
+                    console.log(`Preloading ${filesToPreload.length} files starting from index ${startIndex}...`);
+                } else {
+                    return; 
+                }
+
+                filesToPreload.forEach(filename => {
+                    // 仅预加载图片，视频文件太大不适合这种方式
+                    if (isImageFile(filename)) {
+                        // 🚨 路径修改点：图片使用 /image/ 路由
+                        const fileUrl = `/image/${encodeURIComponent(seriesName)}/${encodeURIComponent(path_id)}/${encodeURIComponent(filename)}`;
+                        
+                        // 使用隐藏的 <img> 标签触发下载
+                        const img = document.createElement('img');
+                        img.src = fileUrl;
+                        img.loading = 'eager'; 
+                        img.style.width = '1px'; 
+                        preloaderContainer.appendChild(img);
+                    }
+                });
+            }
+            
+            // 下一章元数据预加载 (保持不变)
+            async function preloadNextChapterMetadata() {
+                nextChapterIndex = currentIndex + 1;
+                
+                if (nextChapterIndex >= allFlatChapters.length) {
+                    nextChapterFilesCache = null; 
+                    console.log("No next chapter to preload metadata for.");
+                    return;
+                }
+                
+                const chapterData = allFlatChapters[nextChapterIndex];
+                const seriesName = currentSeries; 
+                const { path_id } = chapterData; 
+
+                const chapterUrl = `/chapter/${encodeURIComponent(seriesName)}/${encodeURIComponent(path_id)}?page=1&per_page=${MAX_IMAGES_TO_FETCH}`;
+                
+                console.log(`Preloading metadata for next chapter: ${chapterData.name}`);
+
+                try {
+                    const res = await fetch(chapterUrl);
+                    if (!res.ok) throw new Error('Failed to load next chapter metadata');
+                    
+                    const data = await res.json();
+                    
+                    nextChapterFilesCache = data.files || [];
+                    console.log(`Next chapter metadata loaded: ${nextChapterFilesCache.length} files cached.`);
+                } catch (error) {
+                    nextChapterFilesCache = null;
+                    console.error('Error preloading next chapter metadata:', error);
+                }
+            }
+            
+            // ==========================================================
+            //                 🚀 预加载逻辑 结束
+            // ==========================================================
+
+
+            // --- 4. 打开章节 (保持不变) ---
+            async function openChapter(idx, isUiSelection = false) {
+                if (isLoading || idx < 0 || idx >= allFlatChapters.length) return;
+                
+                currentIndex = idx;
+                const chapterData = allFlatChapters[idx];
+                
+                chapterTitle.textContent = chapterData.name;
+                setStatus('加载文件元数据...');
+                
+                renderChapters(chapterTree, filterInput.value); 
+                
+                resetLoadingState();
+                reader.innerHTML = ''; 
+                emptyDiv.style.display = 'none';
+                
+                // 检查是否可以使用预加载的元数据
+                if (idx === nextChapterIndex && nextChapterFilesCache) {
+                    allChapterFiles = nextChapterFilesCache;
+                    setStatus(`章节加载完成（使用缓存）。共 ${allChapterFiles.length} 个文件。`);
+                    nextChapterFilesCache = null; 
+                    
+                    appendNextImages();
+                } else {
+                    // 正常加载元数据
+                    await loadAllImageFilenamesAndRender(chapterData); 
+                }
+                
+                // 立即触发下一章元数据预加载
+                preloadNextChapterMetadata(); 
+                
+                reader.scrollTop = 0;
+                
+                if (isMobileView() && sidebar.classList.contains('sidebar-visible')) {
+                    toggleSidebar(); 
+                }
+
+                localStorage.setItem('currentSeries', currentSeries); 
+                localStorage.setItem('currentChapterPathId', chapterData.path_id);
+            }
+
+            // --- 5. 文件元数据加载和第一批 (5个) 渲染 (保持不变) ---
+            async function loadAllImageFilenamesAndRender(chapterData) {
+                isLoading = true;
+                
+                const seriesName = currentSeries; 
+                const { path_id } = chapterData; 
+
+                const chapterUrl = `/chapter/${encodeURIComponent(seriesName)}/${encodeURIComponent(path_id)}?page=1&per_page=${MAX_IMAGES_TO_FETCH}`;
+
+                try {
+                    const res = await fetch(chapterUrl);
+                    if (!res.ok) throw new Error(`Failed to load chapter data: ${res.statusText}`);
+
+                    const data = await res.json();
+                    
+                    if (!data || !data.files) throw new Error("Invalid API response format or missing files array.");
+
+                    allChapterFiles = data.files || [];
+                    
+                    setStatus(`章节加载完成。共 ${allChapterFiles.length} 个文件（图片/视频）。`);
+
+                    appendNextImages();
+
+                } catch (error) {
+                    setStatus('错误：加载文件元数据失败');
+                    console.error('Error loading files metadata:', error);
+                    allChapterFiles = [];
+                    reader.innerHTML = '<div class="p-4 text-red-400">无法加载章节文件列表，请检查后端服务。</div>';
+                } finally {
+                    updateProgressStatus();
+                }
+            }
+            
+            // --- 6. 渲染下一批 5 个文件 (Append Logic) (修改：分离图片和视频 URL) ---
+            function appendNextImages() {
+                if (imagesLoadedCount >= allChapterFiles.length) { 
+                    updateProgressStatus();
+                    return;
+                }
+                
+                isLoading = true; 
+                
+                const chapterData = allFlatChapters[currentIndex];
+                const seriesName = currentSeries;
+                const { path_id } = chapterData;
+
+                const startIndex = imagesLoadedCount;
+                const endIndex = Math.min(startIndex + FRONT_END_PAGE_SIZE, allChapterFiles.length);
+                const pageFilenames = allChapterFiles.slice(startIndex, endIndex); 
+
+                const lastFileIndex = pageFilenames.length - 1; 
+                let loadingIndicator = document.getElementById('loadingIndicator');
+                
+                if (!loadingIndicator) {
+                    loadingIndicator = document.createElement('div');
+                    loadingIndicator.id = 'loadingIndicator';
+                    loadingIndicator.className = 'flex justify-center items-center py-6 text-blue-400 text-lg font-semibold';
+                    loadingIndicator.innerHTML = `
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        加载更多文件...
+                    `;
+                    reader.appendChild(loadingIndicator);
+                }
+
+
+                const releaseLockAndRemoveIndicator = () => {
+                    isLoading = false;
+                    const indicator = document.getElementById('loadingIndicator');
+                    if (indicator) indicator.remove();
+                    
+                    // 在加载/释放锁后，立即触发下一批的**文件预加载**
+                    const nextBatchStartIndex = imagesLoadedCount;
+                    preloadNextBatch(nextBatchStartIndex, PRELOAD_SIZE);
+                };
+                
+                let lastElementLoaded = false;
+                
+                pageFilenames.forEach((filename, index) => {
+                    
+                    let element; 
+                    const isVideo = isVideoFile(filename); // 使用新的判断函数
+                    const isImage = isImageFile(filename);
+                    const isLastElement = (index === lastFileIndex);
+
+                    // 🚨 路径修改点：根据文件类型选择 /image/ 或 /video/
+                    let fileUrl = '';
+                    if (isImage) {
+                         fileUrl = `/image/${encodeURIComponent(seriesName)}/${encodeURIComponent(path_id)}/${encodeURIComponent(filename)}`;
+                    } else if (isVideo) {
+                         fileUrl = `/video/${encodeURIComponent(seriesName)}/${encodeURIComponent(path_id)}/${encodeURIComponent(filename)}`;
+                    } else {
+                        console.warn(`Unsupported file type found: ${filename}`);
+                        return; // 跳过不支持的文件
+                    }
+                    
+                    const handleLoadComplete = () => {
+                        if (isLastElement && !lastElementLoaded) {
+                            lastElementLoaded = true;
+                            releaseLockAndRemoveIndicator();
+                        }
+                    };
+                    
+                    if (isVideo) {
+                        element = document.createElement('video');
+                        element.className = 'reader-img'; 
+                        element.loading = 'lazy';
+                        element.controls = true; 
+                        element.autoplay = false;
+                        element.loop = false;
+                        element.style.width = scale + '%'; 
+                        element.preload = 'metadata';
+                        element.src = fileUrl;
+                        element.style.maxHeight = '80vh';
+                        
+                        element.onloadeddata = handleLoadComplete;
+                        element.onerror = handleLoadComplete; 
+                        
+                    } else if (isImage) { // 仅处理图片
+                        element = document.createElement('img');
+                        element.className = 'reader-img'; 
+                        element.loading = 'lazy'; 
+                        element.decoding = 'async';
+                        element.src = fileUrl;
+                        element.style.width = scale + '%';
+                        
+                        element.onload = handleLoadComplete;
+                        element.onerror = () => {
+                            element.style.backgroundColor = '#444';
+                            element.alt = `文件加载失败: ${filename}`;
+                            console.error(`Failed to load file: ${fileUrl}`);
+                            handleLoadComplete();
+                        };
+                    }
+                    
+                    if (element) {
+                        reader.insertBefore(element, loadingIndicator); 
+                    }
+                });
+                
+                imagesLoadedCount = endIndex; 
+                updateProgressStatus();
+
+                if (imagesLoadedCount >= allChapterFiles.length) {
+                    setTimeout(() => {
+                        releaseLockAndRemoveIndicator(); 
+                    }, 500);
+                }
+            }
+
+
+            // --- 7. 进度和导航控制 (保持不变) ---
+
+            function updateProgressStatus() {
+                progressStatusEl.textContent = `${imagesLoadedCount} / ${allChapterFiles.length} 个文件`; 
+                
+                prevBtn.disabled = currentIndex <= 0;
+                // 仅当下一章缓存为空时，才检查扁平列表
+                const nextChapterExists = currentIndex < allFlatChapters.length - 1;
+                nextBtn.disabled = !nextChapterExists && !nextChapterFilesCache;
+            }
+
+            function resetLoadingState() {
+                allChapterFiles = []; 
+                imagesLoadedCount = 0;
+                nextChapterFilesCache = null; 
+                nextChapterIndex = -1;
+                updateProgressStatus();
+                isLoading = false; 
+                const indicator = document.getElementById('loadingIndicator');
+                if (indicator) indicator.remove();
+                clearPreloader(); 
+            }
+            
+            prevBtn.onclick = () => currentIndex > 0 && openChapter(currentIndex - 1);
+            nextBtn.onclick = () => currentIndex < allFlatChapters.length - 1 && openChapter(currentIndex + 1);
+            scrollTopBtn.onclick = () => reader.scrollTo({ top: 0, behavior: 'smooth' });
+
+
+            // --- 8. 事件监听器 (滚动加载和 Header/Footer 隐藏) (保持不变) ---
+
+            reader.addEventListener('scroll', () => {
+                const st = reader.scrollTop;
+                const deltaY = st - lastScrollPos;
+                
+                if (Math.abs(deltaY) > SCROLL_DIRECTION_THRESHOLD) {
+                    const isHeaderHidden = header.classList.contains('hidden');
+                    
+                    if (st < 10) { 
+                        header.classList.remove('hidden');
+                        footer.classList.remove('hidden');
+                    } 
+                    else if (deltaY > 0 && !isHeaderHidden) { 
+                        header.classList.add('hidden');
+                        footer.classList.add('hidden');
+                    } 
+                    else if (deltaY < 0 && isHeaderHidden) { 
+                        header.classList.remove('hidden');
+                        footer.classList.remove('hidden');
+                    }
+                    
+                    lastScrollPos = st; 
+                }
+                
+                const isNearBottom = reader.scrollTop + reader.clientHeight >= reader.scrollHeight - SCROLL_LOAD_THRESHOLD;
+
+                if (!isLoading && isNearBottom) {
+                    if (imagesLoadedCount < allChapterFiles.length) { 
+                        appendNextImages();
+                    }
+                }
+            });
+
+            // 缩放
+            scaleRange.addEventListener('input', () => {
+                scale = scaleRange.value;
+                scaleLabel.textContent = scale + '%';
+                reader.querySelectorAll('.reader-img').forEach(i => i.style.width = scale + '%');
+            });
+            
+            // 键盘控制
+            document.addEventListener('keydown', e => {
+                if (document.activeElement === filterInput || document.activeElement.tagName === 'INPUT') return;
+
+                if (e.key === 'ArrowLeft') { prevBtn.click(); e.preventDefault(); }
+                if (e.key === 'ArrowRight') { nextBtn.click(); e.preventDefault(); }
+                if (e.key === 'Home') { scrollTopBtn.click(); e.preventDefault(); }
+                
+                if (e.key === 'PageDown') { reader.scrollBy({ top: reader.clientHeight * 0.9, behavior: 'smooth' }); e.preventDefault(); }
+                if (e.key === 'PageUp') { reader.scrollBy({ top: reader.clientHeight * -0.9, behavior: 'smooth' }); e.preventDefault(); }
+            });
+            
+            // --- 10. 高质量图片连击放大逻辑 (修改：判断文件类型) ---
+            let lastClickTime = 0;
+            const DOUBLE_CLICK_TIME_THRESHOLD = 300; 
+
+            function getHQImageUrl(lowQualityUrl) {
+                // 仅将 /image/ 替换为 /hq_image/，确保只处理图片 URL
+                return lowQualityUrl.replace('/image/', '/hq_image/');
+            }
+            
+            function handleImageClick(e) {
+                // 确保点击的是图片元素 (reader-img class) 并且是 <img> 标签
+                if (!e.target.classList.contains('reader-img') || e.target.tagName !== 'IMG') {
+                    return;
+                }
+                
+                const currentTime = Date.now();
+                
+                // 判断是否为快速点击（连击）
+                if (currentTime - lastClickTime < DOUBLE_CLICK_TIME_THRESHOLD) {
+                    // 是连击，触发 HQ 加载逻辑
+                    e.preventDefault(); 
+                    
+                    const img = e.target;
+                    const originalSrc = img.src;
+                    
+                    // 检查是否已经是 HQ 图片 或 URL 不包含 /image/ (即不是图片)
+                    if (originalSrc.includes('/hq_image/') || !originalSrc.includes('/image/')) {
+                        return;
+                    }
+                    
+                    const hqSrc = getHQImageUrl(originalSrc);
+                    console.log(`Double click detected. Loading HQ image: ${hqSrc}`);
+                    
+                    img.style.pointerEvents = 'none'; 
+                    img.src = hqSrc;
+                    
+                    img.onload = () => {
+                        img.style.pointerEvents = 'auto'; 
+                        console.log("HQ image loaded successfully.");
+                    };
+                    
+                    img.onerror = () => {
+                        img.style.pointerEvents = 'auto'; 
+                        console.error("Failed to load HQ image, keeping LQ/fallback.");
+                        img.src = originalSrc; 
+                    };
+                    
+                    lastClickTime = 0; 
+
+                } else {
+                    lastClickTime = currentTime;
+                }
+            }
+
+            reader.addEventListener('click', handleImageClick);
+
+            // --- 9. 初始化及恢复状态 (保持不变) ---
+            
+            async function restoreReadingPosition() {
+                const savedSeries = localStorage.getItem('currentSeries');
+                const savedChapterPathId = localStorage.getItem('currentChapterPathId'); 
+                
+                await loadSeries();
+
+                if (savedSeries) {
+                    await selectSeries(savedSeries);
+
+                    if (savedChapterPathId && allFlatChapters.length > 0) {
+                        const savedIndex = allFlatChapters.findIndex(item => item.path_id === savedChapterPathId);
+                        
+                        if (savedIndex !== -1) {
+                            await openChapter(savedIndex, false); 
+                        }
+                    }
+                } else {
+                    if (series.length > 0) {
+                        await selectSeries(series[0]);
+                    } else {
+                        setStatus('请配置后端服务和漫画目录。');
+                    }
+                }
+            }
+
+            // 初始化入口
+            header.classList.remove('hidden');
+            footer.classList.remove('hidden');
+            updateSidebarState();
+            await restoreReadingPosition();
+        })();
+    </script>
+</body>
+</html>

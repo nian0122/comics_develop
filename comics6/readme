@@ -1,0 +1,5 @@
+停止并移除旧容器：
+docker compose down
+2.  重建镜像并启动新服务（应用将使用 Gunicorn）
+
+docker compose up --build -d
