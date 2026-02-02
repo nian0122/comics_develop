@@ -1,5 +1,4 @@
 /**
- * 对应原 HTML 逻辑块:
  * - Header/Footer 隐藏/显示逻辑 (reader.addEventListener('scroll', ...))
  * - Sidebar 响应式控制 (isMobileView(), updateSidebarState(), toggleSidebar())
  * - 键盘事件控制 (document.addEventListener('keydown', ...))

@@ -1,5 +1,4 @@
 /**
- * 对应原 HTML 逻辑块: <style> 标签内的全局样式
  * - 滚动条美化
  * - 列表项样式
  * - 章节圆点样式
@@ -16,90 +15,128 @@
 @tailwind utilities;
 
 :root {
+  /* 柔和暗色调主题变量 */
+  --bg-primary: #181820;        /* 深色蓝灰背景，避免纯黑 */
+  --bg-secondary: #1e1e2a;      /* 次要背景，稍浅 */
+  --bg-tertiary: #252535;       /* 第三层背景，更浅 */
+  --text-primary: #e1e1e6;      /* 主要文本，高对比度 */
+  --text-secondary: #b8b8c5;    /* 次要文本，中等对比度 */
+  --text-muted: #8a8a9e;        /* 静音文本，低对比度 */
+  --accent-primary: #6366f1;    /* 主要强调色，柔和的靛蓝 */
+  --accent-secondary: #818cf8;  /* 次要强调色，较浅的靛蓝 */
+  --accent-hover: #4f46e5;      /* 悬停状态，更深的靛蓝 */
+  --border-color: #2d2d3f;     /* 边框颜色，与背景协调 */
+  --shadow-color: rgba(0, 0, 0, 0.4); /* 柔和阴影 */
+  
   font-family: 'Inter', system-ui, sans-serif;
+  
+  /* 增强可读性的字体渲染 */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* 滚动条美化 */
+/* 滚动条美化 - 柔和暗色主题 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #475569; /* slate-600 */
-  border-radius: 4px;
+  background-color: var(--text-muted);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-secondary);
 }
 
 ::-webkit-scrollbar-track {
-  background-color: #1e293b; /* slate-800 */
+  background-color: var(--bg-secondary);
+  border-radius: 6px;
 }
 
-/* 列表项样式 */
+/* 列表项样式 - 增强可读性和对比度 */
 .list-item {
-  padding: 6px 10px;
-  padding-left: 20px;
-  margin: 2px 0;
+  padding: 8px 12px;
+  padding-left: 22px;
+  margin: 3px 0;
   cursor: pointer;
-  transition: background-color 0.15s ease;
-  border-radius: 6px;
-  color: #d1d5db;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   font-size: 0.875rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
 }
 
 .list-item:hover {
-  background-color: #374151;
+  background-color: var(--bg-tertiary);
+  transform: translateX(2px);
+  border-left-color: var(--accent-primary);
 }
 
-/* 章节圆点样式 */
+/* 章节圆点样式 - 增强视觉反馈 */
 .chapter-dot {
-  width: 6px;
-  height: 6px;
-  min-width: 6px;
-  min-height: 6px;
-  background-color: transparent;
-  border: 1px solid transparent;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  min-height: 8px;
+  background-color: var(--text-muted);
+  border: 2px solid transparent;
   border-radius: 50%;
-  margin-right: 10px;
-  transition: background-color 0.15s ease, border 0.15s ease;
+  margin-right: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 0 2px transparent;
 }
 
-/* 系列选中状态 */
+/* 系列选中状态 - 增强对比度 */
 .series-item.selected {
-  background-color: #3b82f6;
+  background-color: var(--accent-primary);
   color: white;
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  border-left-color: white;
 }
 
-/* 章节选中状态 */
+/* 章节选中状态 - 增强对比度 */
 .chapter-item.selected {
-  background-color: #1e40af;
+  background-color: var(--accent-hover);
   color: white;
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  border-left-color: white;
 }
 
 .chapter-item.selected .chapter-dot {
   background-color: white;
   border-color: white;
-  box-shadow: 0 0 4px #93c5fd;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+  transform: scale(1.2);
 }
 
-/* 卷标题样式 */
+/* 卷标题样式 - 增强可读性 */
 .volume-title {
-  padding: 8px 10px 4px 10px;
+  padding: 10px 12px 6px 12px;
   font-size: 0.85rem;
-  color: #93c5fd;
+  color: var(--accent-secondary);
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   user-select: none;
-  transition: color 0.15s ease;
+  transition: all 0.2s ease;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
 }
 
 .volume-title:hover {
-  color: #60a5fa;
+  color: var(--accent-primary);
+  transform: translateX(2px);
 }
 
 .volume-title .toggle-icon {
@@ -124,16 +161,21 @@
   min-height: 0;
 }
 
-/* 阅读器图片样式 */
+/* 阅读器图片样式 - 柔和背景 */
 .reader-img {
   display: block;
   margin: 0 auto;
   max-width: 100%;
   height: auto;
   margin-bottom: 0px;
-  box-shadow: none;
-  border-radius: 0px;
-  background-color: #27272a;
+  box-shadow: 0 4px 20px var(--shadow-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  transition: transform 0.3s ease;
+}
+
+.reader-img:hover {
+  transform: scale(1.01);
 }
 
 /* 预加载容器 */
@@ -146,11 +188,13 @@
   width: 1px;
 }
 
-/* 阅读器区域 */
+/* 阅读器区域 - 柔和暗色背景 */
 #reader {
   padding: 0;
-  background-color: #27272a;
+  background-color: var(--bg-primary);
   min-height: calc(100vh - 12rem);
+  background-image: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 90% 80%, rgba(129, 140, 248, 0.05) 0%, transparent 50%);
 }
 
 /* Header/Footer 动画 */
@@ -195,31 +239,41 @@
   }
 }
 
-/* Range 滑块样式 */
+/* Range 滑块样式 - 增强可访问性 */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
   cursor: pointer;
+  height: 1.5rem;
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
-  background: #374151;
+  background: var(--bg-tertiary);
   height: 0.5rem;
   border-radius: 0.25rem;
+  border: 1px solid var(--border-color);
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   margin-top: -0.25rem;
-  background-color: #3b82f6;
-  height: 1rem;
-  width: 1rem;
+  background-color: var(--accent-primary);
+  height: 1.25rem;
+  width: 1.25rem;
   border-radius: 50%;
+  border: 2px solid var(--bg-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background-color: var(--accent-hover);
+  transform: scale(1.1);
 }
 
 input[type="range"]:focus::-webkit-slider-thumb {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--accent-secondary);
   outline-offset: 2px;
 }

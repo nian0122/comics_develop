@@ -1,5 +1,4 @@
 /**
- * 对应原 HTML 逻辑块:
  * - openChapter(): 打开章节
  * - loadAllImageFilenamesAndRender(): 加载文件元数据
  * - appendNextImages(): 渲染下一批文件

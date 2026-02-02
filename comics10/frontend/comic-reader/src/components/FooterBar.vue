@@ -1,28 +1,21 @@
-<!--
-  对应原 HTML 逻辑块: .footer 容器
-  - 状态信息
-  - 本地阅读器提示
-  - 进度显示
-  - Footer 隐藏/显示动画
--->
-
 <template>
   <div
-    class="footer bg-gray-800 p-3 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center text-sm sticky bottom-0 z-30 shadow-lg footer-transition"
+    class="footer p-3 border-t flex flex-col sm:flex-row justify-between items-center text-sm sticky bottom-0 z-30 shadow-soft footer-transition"
     :class="{ 'footer-hidden': !footerVisible }"
+    style="background-color: var(--bg-secondary); border-color: var(--border-color);"
   >
     <!-- 状态信息 -->
     <div class="flex space-x-4 mb-2 sm:mb-0">
-      <div class="small text-gray-400">{{ status }}</div>
-      <div class="small text-gray-500">本地阅读器 · 不上传图片</div>
+      <div class="small" style="color: var(--text-secondary);">{{ status }}</div>
+      <div class="small" style="color: var(--text-muted);">本地阅读器 · 不上传图片</div>
     </div>
 
     <!-- 进度显示 -->
     <div class="small flex items-center space-x-3">
-      <div class="text-white font-medium">
+      <div class="font-medium" style="color: var(--text-primary);">
         {{ loadedCount }} / {{ totalCount }} 个文件
       </div>
-      <div v-if="totalCount > 0" class="text-gray-400">
+      <div v-if="totalCount > 0" style="color: var(--text-secondary);">
         {{ progressPercent }}%
       </div>
     </div>

@@ -1,5 +1,4 @@
 /**
- * 对应原 HTML 逻辑块:
  * - preloadNextBatch(): 预加载下一批图片
  * - preloadNextChapterMetadata(): 预加载下一章元数据
  * - clearPreloader(): 清理预加载容器

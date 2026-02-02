@@ -1,11 +1,3 @@
-<!--
-  对应原 HTML 逻辑块: appendNextImages() 中的图片渲染部分 + handleImageClick()
-  - 图片懒加载
-  - 双击切换 HQ 图片
-  - 加载错误处理
-  - 缩放样式应用
--->
-
 <template>
   <div class="reader-image-wrapper">
     <img

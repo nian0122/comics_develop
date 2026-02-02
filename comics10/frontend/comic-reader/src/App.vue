@@ -1,5 +1,4 @@
 <!--
-  对应原 HTML 逻辑块: 整体页面结构
   - 预加载容器
   - 侧边栏
   - 主内容区 (Header + Reader + Footer)
@@ -7,14 +6,15 @@
 -->
 
 <template>
-  <div class="flex h-screen overflow-hidden bg-gray-900 text-gray-100">
+  <div class="flex h-screen overflow-hidden bg-dark-bg-primary text-dark-text-primary" style="background-color: var(--bg-primary); color: var(--text-primary);">
     <!-- 预加载容器 -->
     <div id="preloader-container" ref="preloaderRef"></div>
 
     <!-- 移动端侧边栏切换按钮 -->
     <button
-        class="toggle-sidebar-btn fixed top-4 left-4 z-50 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition duration-200 md:hidden"
+        class="toggle-sidebar-btn fixed top-4 left-4 z-50 p-2 bg-dark-accent-primary hover:bg-dark-accent-hover text-white rounded-full shadow-soft transition-all duration-200 md:hidden"
         @click="toggleSidebar"
+        style="background-color: var(--accent-primary); color: white;"
     >
       {{ sidebarVisible ? '✕' : '☰' }}
     </button>
@@ -37,7 +37,7 @@
     />
 
     <!-- 主内容区 -->
-    <div class="main-content flex-grow flex flex-col overflow-hidden">
+    <div class="main-content flex-grow flex flex-col overflow-hidden" style="background-color: var(--bg-secondary);">
       <!-- 顶部工具栏 -->
       <HeaderBar
           :series-title="currentSeries || '本地漫画阅读器'"
@@ -59,6 +59,8 @@
           :loaded-count="imagesLoadedCount || 0"
           :scale="scale || 100"
           :has-chapter="currentIndex !== undefined && currentIndex >= 0"
+          :series="currentSeries || ''"
+          :chapter="getCurrentChapterPathId()"
           @scroll="handleReaderScroll"
           @load-more="handleLoadMore"
           @image-double-click="handleImageDoubleClick"
@@ -162,6 +164,15 @@ const statusText = computed(() => {
   }
   return '状态：未加载';
 });
+
+// 获取当前章节的path_id
+function getCurrentChapterPathId(): string {
+  if (currentIndex.value === undefined || currentIndex.value < 0 || !flatChapters.value) {
+    return '';
+  }
+  const chapter = flatChapters.value[currentIndex.value];
+  return chapter ? chapter.path_id : '';
+}
 
 // ============== 事件处理 ==============
 

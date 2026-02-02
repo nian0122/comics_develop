@@ -3,6 +3,12 @@
  * 包含项目中使用的所有接口和类型
  */
 
+// ============== 基础类型 ==============
+
+export type Nullable<T> = T | null;
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
 // ============== API 相关类型 ==============
 
 export interface ChapterInfo {
@@ -12,6 +18,19 @@ export interface ChapterInfo {
 
 export interface ChapterFilesResponse {
     files: string[];
+}
+
+export interface SeriesInfo {
+    name: string;
+    chapterCount?: number;
+    lastRead?: string;
+}
+
+export interface ReadingProgress {
+    series: string;
+    chapter: string;
+    position: number;
+    timestamp: number;
 }
 
 // ============== 章节树相关类型 ==============
@@ -34,7 +53,191 @@ export interface ReaderFile {
     filename: string;
     type: FileType;
     url: string;
+    size?: number;
+    lastModified?: number;
 }
+
+export interface ReaderState {
+    currentSeries: string;
+    currentChapter: string;
+    currentIndex: number;
+    scale: number;
+    position: number;
+}
+
+export interface ReaderSettings {
+    scale: number;
+    autoPreload: boolean;
+    showControls: boolean;
+    keyboardShortcuts: boolean;
+    doubleClickForHQ: boolean;
+}
+
+// ============== UI 相关类型 ==============
+
+export interface UIState {
+    headerVisible: boolean;
+    footerVisible: boolean;
+    sidebarVisible: boolean;
+    isMobile: boolean;
+    theme: 'light' | 'dark' | 'auto';
+}
+
+export interface ViewportSize {
+    width: number;
+    height: number;
+}
+
+export interface ScrollPosition {
+    scrollTop: number;
+    scrollHeight: number;
+    clientHeight: number;
+}
+
+// ============== 事件相关类型 ==============
+
+export interface BaseEvent {
+    type: string;
+    timestamp: number;
+}
+
+export interface SeriesSelectEvent extends BaseEvent {
+    type: 'series:select';
+    payload: { name: string };
+}
+
+export interface ChapterSelectEvent extends BaseEvent {
+    type: 'chapter:select';
+    payload: { index: number; chapter: ChapterInfo };
+}
+
+export interface ReaderScrollEvent extends BaseEvent {
+    type: 'reader:scroll';
+    payload: ScrollPosition;
+}
+
+export interface ScaleChangeEvent extends BaseEvent {
+    type: 'scale:change';
+    payload: { value: number };
+}
+
+export type AppEvent = SeriesSelectEvent | ChapterSelectEvent | ReaderScrollEvent | ScaleChangeEvent;
+
+// ============== 存储相关类型 ==============
+
+export interface StorageData {
+    currentSeries: string;
+    currentChapterPathId: string;
+    readerScale: number;
+    expandedPaths: Record<string, boolean>;
+    readerSettings: ReaderSettings;
+    uiState: UIState;
+    readingProgress: ReadingProgress[];
+}
+
+export type StorageKey = keyof StorageData;
+
+// ============== 错误相关类型 ==============
+
+export interface BaseError {
+    message: string;
+    code?: string;
+    timestamp: number;
+}
+
+export interface NetworkError extends BaseError {
+    type: 'NetworkError';
+    statusCode?: number;
+    url?: string;
+}
+
+export interface ValidationError extends BaseError {
+    type: 'ValidationError';
+    field?: string;
+    value?: any;
+}
+
+export interface StorageError extends BaseError {
+    type: 'StorageError';
+    key?: string;
+    operation?: 'get' | 'set' | 'remove';
+}
+
+export type AppError = NetworkError | ValidationError | StorageError;
+
+// ============== 组件 Props 类型 ==============
+
+export interface ReaderProps {
+    files: string[];
+    loadedCount: number;
+    scale: number;
+    hasChapter: boolean;
+    series?: string;
+    chapter?: string;
+}
+
+export interface SidebarProps {
+    series: string[];
+    chapterTree: ChapterNode[];
+    currentSeries: string;
+    currentIndex: number;
+    filterText: string;
+    expandedPaths: Record<string, boolean>;
+    sidebarVisible: boolean;
+    isMobile: boolean;
+}
+
+export interface HeaderBarProps {
+    seriesTitle: string;
+    chapterTitle: string;
+    scale: number;
+    canPrev: boolean;
+    canNext: boolean;
+    headerVisible: boolean;
+}
+
+export interface FooterBarProps {
+    status: string;
+    loadedCount: number;
+    totalCount: number;
+    footerVisible: boolean;
+}
+
+// ============== 组件 Emits 类型 ==============
+
+export interface ReaderEmits {
+    scroll: [data: ScrollPosition];
+    'load-more': [];
+    'image-double-click': [imgElement: HTMLImageElement];
+}
+
+export interface SidebarEmits {
+    'select-series': [name: string];
+    'select-chapter': [index: number];
+    'update:filter-text': [text: string];
+    'toggle-volume': [fullPath: string];
+}
+
+export interface HeaderBarEmits {
+    'prev-chapter': [];
+    'next-chapter': [];
+    'scroll-top': [];
+    'update:scale': [value: number];
+}
+
+// ============== 工具类型 ==============
+
+export type DeepPartial<T> = {
+    [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+export type DeepReadonly<T> = {
+    readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
+};
+
+export type DeepRequired<T> = {
+    [P in keyof T]-?: T[P] extends object ? DeepRequired<T[P]> : T[P];
+};
 
 // ============== 常量定义 ==============
 
@@ -91,4 +294,57 @@ export function naturalSort(text: string): (string | number)[] {
         const num = parseInt(c, 10);
         return isNaN(num) ? c : num;
     });
+}
+
+// ============== 类型守卫函数 ==============
+
+export function isChapterNode(item: any): item is ChapterNode {
+    return (
+        item &&
+        typeof item === 'object' &&
+        typeof item.name === 'string' &&
+        typeof item.fullPath === 'string' &&
+        Array.isArray(item.children) &&
+        typeof item.isChapter === 'boolean'
+    );
+}
+
+export function isReaderFile(item: any): item is ReaderFile {
+    return (
+        item &&
+        typeof item === 'object' &&
+        typeof item.filename === 'string' &&
+        ['image', 'video', 'unknown'].includes(item.type) &&
+        typeof item.url === 'string'
+    );
+}
+
+export function isAppError(error: any): error is AppError {
+    return (
+        error &&
+        typeof error === 'object' &&
+        typeof error.message === 'string' &&
+        typeof error.timestamp === 'number' &&
+        ['NetworkError', 'ValidationError', 'StorageError'].includes(error.type)
+    );
+}
+
+// ============== 类型断言函数 ==============
+
+export function assertIsChapterNode(item: any): asserts item is ChapterNode {
+    if (!isChapterNode(item)) {
+        throw new Error('Expected ChapterNode');
+    }
+}
+
+export function assertIsReaderFile(item: any): asserts item is ReaderFile {
+    if (!isReaderFile(item)) {
+        throw new Error('Expected ReaderFile');
+    }
+}
+
+export function assertIsAppError(error: any): asserts error is AppError {
+    if (!isAppError(error)) {
+        throw new Error('Expected AppError');
+    }
 }

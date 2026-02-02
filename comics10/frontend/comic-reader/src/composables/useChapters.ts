@@ -1,5 +1,4 @@
 /**
- * 对应原 HTML 逻辑块:
  * - buildChapterTree(): 构建章节树形结构
  * - renderChapters(): 渲染章节列表
  * - toggleVolume(): 切换卷展开/折叠

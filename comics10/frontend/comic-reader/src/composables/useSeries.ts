@@ -1,5 +1,4 @@
 /**
- * 对应原 HTML 逻辑块:
  * - loadSeries(): 加载系列列表
  * - renderSeries(): 渲染系列列表
  * - selectSeries(): 选择系列

@@ -72,8 +72,8 @@ export const comicApi = {
 
   /**
    * 获取指定章节的文件列表
-   * GET /chapter/{seriesName}/{path_id}?page=1&per_page=500 -> { files: string[] }
-   * 对应原 HTML: fetch(`/chapter/${encodeURIComponent(seriesName)}/${encodeURIComponent(path_id)}?page=1&per_page=${MAX_IMAGES_TO_FETCH}`)
+   * GET /api/chapter/{seriesName}/{path_id}?page=1&per_page=500 -> { files: string[] }
+   * 对应原 HTML: fetch(`/api/chapter/${encodeURIComponent(seriesName)}/${encodeURIComponent(path_id)}?page=1&per_page=${MAX_IMAGES_TO_FETCH}`)
    */
   async getFiles(
     seriesName: string,
@@ -82,7 +82,7 @@ export const comicApi = {
     perPage: number = 500
   ): Promise<ChapterFilesResponse> {
     const response = await apiClient.get<ChapterFilesResponse>(
-      `/chapter/${encodeURIComponent(seriesName)}/${encodeURIComponent(pathId)}`,
+      `/api/chapter/${encodeURIComponent(seriesName)}/${encodeURIComponent(pathId)}`,
       {
         params: {
           page,

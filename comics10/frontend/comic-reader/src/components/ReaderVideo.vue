@@ -1,11 +1,3 @@
-<!--
-  对应原 HTML 逻辑块: appendNextImages() 中的视频渲染部分
-  - 视频懒加载
-  - 控件显示
-  - 加载错误处理
-  - 缩放样式应用
--->
-
 <template>
   <div class="reader-video-wrapper">
     <video
