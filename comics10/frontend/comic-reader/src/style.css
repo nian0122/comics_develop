@@ -1,0 +1,15 @@
+/* 基础样式重置 */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+#app {
+  height: 100%;
+}

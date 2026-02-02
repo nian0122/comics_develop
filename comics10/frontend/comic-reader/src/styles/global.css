@@ -1,0 +1,225 @@
+/**
+ * 对应原 HTML 逻辑块: <style> 标签内的全局样式
+ * - 滚动条美化
+ * - 列表项样式
+ * - 章节圆点样式
+ * - 选中状态样式
+ * - 卷标题样式
+ * - 侧边栏比例
+ * - 阅读器图片样式
+ * - Header/Footer 动画
+ * - 侧边栏响应式
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #475569; /* slate-600 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #1e293b; /* slate-800 */
+}
+
+/* 列表项样式 */
+.list-item {
+  padding: 6px 10px;
+  padding-left: 20px;
+  margin: 2px 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-radius: 6px;
+  color: #d1d5db;
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.list-item:hover {
+  background-color: #374151;
+}
+
+/* 章节圆点样式 */
+.chapter-dot {
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  min-height: 6px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  margin-right: 10px;
+  transition: background-color 0.15s ease, border 0.15s ease;
+}
+
+/* 系列选中状态 */
+.series-item.selected {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 600;
+}
+
+/* 章节选中状态 */
+.chapter-item.selected {
+  background-color: #1e40af;
+  color: white;
+  font-weight: 600;
+}
+
+.chapter-item.selected .chapter-dot {
+  background-color: white;
+  border-color: white;
+  box-shadow: 0 0 4px #93c5fd;
+}
+
+/* 卷标题样式 */
+.volume-title {
+  padding: 8px 10px 4px 10px;
+  font-size: 0.85rem;
+  color: #93c5fd;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.volume-title:hover {
+  color: #60a5fa;
+}
+
+.volume-title .toggle-icon {
+  margin-right: 5px;
+  transition: transform 0.2s ease;
+  font-size: 10px;
+  min-width: 10px;
+}
+
+.volume-title.collapsed .toggle-icon {
+  transform: rotate(-90deg);
+}
+
+/* 侧边栏比例 */
+.series-ratio-2 {
+  flex: 2;
+  min-height: 0;
+}
+
+.chapters-ratio-3 {
+  flex: 3;
+  min-height: 0;
+}
+
+/* 阅读器图片样式 */
+.reader-img {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 0px;
+  box-shadow: none;
+  border-radius: 0px;
+  background-color: #27272a;
+}
+
+/* 预加载容器 */
+#preloader-container {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  overflow: hidden;
+  height: 1px;
+  width: 1px;
+}
+
+/* 阅读器区域 */
+#reader {
+  padding: 0;
+  background-color: #27272a;
+  min-height: calc(100vh - 12rem);
+}
+
+/* Header/Footer 动画 */
+.header-hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.footer-hidden {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.header-transition,
+.footer-transition {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+/* 侧边栏响应式 */
+.sidebar-hidden {
+  transform: translateX(-100%);
+}
+
+.sidebar-visible {
+  transform: translateX(0);
+}
+
+/* 桌面端侧边栏默认可见 */
+@media (min-width: 768px) {
+  #sidebar {
+    position: static !important;
+    transform: translateX(0) !important;
+    z-index: 10;
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .toggle-sidebar-btn {
+    display: none;
+  }
+}
+
+/* Range 滑块样式 */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: #374151;
+  height: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -0.25rem;
+  background-color: #3b82f6;
+  height: 1rem;
+  width: 1rem;
+  border-radius: 50%;
+}
+
+input[type="range"]:focus::-webkit-slider-thumb {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
