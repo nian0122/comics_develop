@@ -1,0 +1,24 @@
+server:
+  port: 500
+comic:
+  root-dir: ${COMICS_ROOT_DIR:E:/comics}
+  hq-sub-dir: ${HQ_SUB_DIR:h_photograph}
+  lq-sub-dir: ${LQ_SUB_DIR:l_photograph}
+  cache-expiration: ${CACHE_EXPIRATION:604800}
+
+spring:
+  application:
+    name: comic
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: debug
