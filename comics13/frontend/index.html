@@ -218,27 +218,45 @@
         .header, .footer {
             transition: transform 0.3s ease-out, opacity 0.3s ease-out;
         }
-
-        /* ===== 侧边栏响应式 ===== */
-        .sidebar-hidden {
+        
+        /* ===== 侧边栏悬浮 ===== */
+        #sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 18rem;
+            z-index: 50;
+            transform: translateX(0);
+            transition: transform 0.3s ease-in-out;
+        }
+        #sidebar.hidden {
             transform: translateX(-100%);
         }
-        .sidebar-visible {
-            transform: translateX(0);
+        
+        /* Toggle按钮始终显示 */
+        #toggleSidebarBtn {
+            position: fixed;
+            left: 16px;
+            top: 16px;
+            z-index: 100;
+            display: flex !important;
         }
         
-        @media (min-width: 768px) {
-            #sidebar {
-                position: static !important;
-                transform: translateX(0) !important;
-                z-index: 10; 
-            }
-            .main {
-                margin-left: 0; 
-            }
-            #toggleSidebarBtn {
-                display: none; 
-            }
+        /* Reader占满全屏 */
+        .main {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            margin: 0;
+        }
+        
+        .header {
+            z-index: 30;
+        }
+        
+        .footer {
+            z-index: 30;
         }
         
         /* ===== 按钮样式 ===== */
@@ -380,21 +398,172 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        
+        /* 弹窗动画 */
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        #jumpModal:not(.hidden) > div {
+            animation: modalIn 0.2s ease-out;
+        }
+
+        /* ===== 骨架屏动画 ===== */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .skeleton {
+            background: linear-gradient(
+                90deg,
+                rgba(201, 185, 154, 0.1) 25%,
+                rgba(201, 185, 154, 0.3) 50%,
+                rgba(201, 185, 154, 0.1) 75%
+            );
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        .skeleton-text {
+            height: 1em;
+            background: rgba(139, 119, 101, 0.15);
+            border-radius: 4px;
+            margin: 8px 0;
+        }
+        .skeleton-image {
+            width: 100%;
+            height: 300px;
+            border-radius: 8px;
+        }
+        .skeleton-wrapper {
+            padding: 4px;
+        }
+
+        /* ===== 无限滚动 Sentinels ===== */
+        #infinite-sentinel {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #end-sentinel {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8b7765;
+            font-size: var(--font-size-small);
+            font-weight: var(--font-weight-light);
+            letter-spacing: 0.1em;
+            opacity: 0.7;
+        }
+
+        /* ===== 渐进式图片加载动画 ===== */
+        .progressive-image {
+            position: relative;
+            overflow: hidden;
+        }
+        .progressive-image .placeholder {
+            filter: blur(20px);
+            transform: scale(1.1);
+            transition: opacity 0.3s ease;
+        }
+        .progressive-image .full-image {
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .progressive-image.loaded .placeholder {
+            opacity: 0;
+        }
+        .progressive-image.loaded .full-image {
+            opacity: 1;
+        }
+
+        /* ===== 图片加载过渡 ===== */
+        .reader-img {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .reader-img.loading {
+            opacity: 0.7;
+        }
+        .reader-img.loaded {
+            opacity: 1;
+        }
+        .reader-img.error {
+            filter: grayscale(100%);
+        }
+
+        /* ===== 滚动加载指示器 ===== */
+        .scroll-loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+        }
+        .scroll-loader .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(139, 119, 101, 0.2);
+            border-top-color: #8b7765;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .scroll-loader .text {
+            margin-top: 8px;
+            font-size: var(--font-size-small);
+            color: #8b7765;
+            letter-spacing: 0.1em;
+        }
+        
+        /* ===== 懒加载容器样式 ===== */
+        .lazy-image-container {
+            position: relative;
+            min-height: 200px;
+            margin-bottom: 0;
+            background: rgba(201, 185, 154, 0.1);
+        }
+        
+        .lazy-image-container .skeleton-wrapper {
+            padding: 4px;
+        }
+        
+        .lazy-image-container .skeleton-image {
+            width: 100%;
+            height: 200px;
+            border-radius: 8px;
+        }
+        
+        .lazy-image-container .reader-img {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .lazy-image-container.loaded .reader-img {
+            opacity: 1;
+        }
+        
+        .lazy-image-container.loaded .skeleton-wrapper {
+            display: none;
+        }
     </style>
 </head>
 <body class="antialiased" style="color: #5c5547;">
 
     <div id="preloader-container"></div> 
     <div class="flex h-screen overflow-hidden">
-        <button id="toggleSidebarBtn" 
-                class="fixed top-4 left-4 z-50 p-3 glass rounded-full shadow-lg transition duration-200 md:hidden" style="color: #8b7765;">
+        <button id="toggleSidebarBtn" class="fixed top-4 left-4 z-100 p-3 glass rounded-full shadow-lg" style="color: #8b7765;">
             ☰
         </button>
 
         <div id="sidebar" 
-             class="sidebar fixed inset-y-0 left-0 w-64 glass-strong rounded-r-2xl
-                    p-4 flex flex-col z-40 transition-transform duration-300 ease-in-out 
-                    sidebar-hidden md:static md:w-72"> 
+             class="sidebar fixed inset-y-0 left-0 w-72 glass-strong rounded-r-2xl
+                    p-4 flex flex-col z-50 transition-transform duration-300 ease-in-out"> 
             <div class="section-label mb-4 px-2">漫画系列</div>
             <div id="seriesWrapper" class="series-ratio-2 overflow-y-auto mb-4 glass rounded-xl p-2">
                 <div id="seriesList" class="list-block space-y-1">
@@ -415,35 +584,35 @@
 
         <div class="main flex-grow flex flex-col overflow-hidden relative">
             
-            <div class="header absolute top-0 left-0 right-0 z-50 glass rounded-b-2xl px-6 py-4 transition-all duration-300 ease-out transform"
+            <div class="header absolute top-0 left-0 right-0 z-30 glass rounded-b-xl px-4 py-2 transition-all duration-300 ease-out transform"
                  style="transform: translateY(0);">
-                <div class="flex flex-col md:flex-row md:justify-between md:items-center">
-                    <div class="mb-3 md:mb-0 flex flex-col items-center md:items-start">
-                        <div class="title" id="seriesTitle">本地漫画阅读器</div>
-                        <div class="chapter-title" id="chapterTitle">未选择章节</div>
+                <div class="flex flex-col items-center">
+                    <div class="flex flex-col items-center mb-2">
+                        <div class="title text-base" id="seriesTitle">本地漫画阅读器</div>
+                        <div class="chapter-title text-xs" id="chapterTitle">未选择章节</div>
                     </div>
                     
-                    <div class="flex items-center justify-center space-x-4">
-                        <span class="status-text">缩放</span>
-                        <input id="scaleRange" type="range" min="30" max="150" value="100" class="rounded-lg appearance-none cursor-pointer">
-                        <span id="scaleLabel" class="progress-text w-14 text-center">100%</span>
+                    <div class="flex items-center justify-center space-x-3">
+                        <span class="status-text text-xs">缩放</span>
+                        <input id="scaleRange" type="range" min="30" max="150" value="100" class="rounded-lg appearance-none cursor-pointer h-3">
+                        <span id="scaleLabel" class="progress-text w-12 text-xs text-center">100%</span>
                     </div>
                 </div>
 
-                <div class="flex justify-center space-x-4 mt-4">
-                    <button id="prevBtn" class="glass-btn rounded-xl">
+                <div class="flex justify-center space-x-3 mt-2">
+                    <button id="prevBtn" class="glass-btn rounded-xl px-3 py-1.5 text-xs">
                         上一章
                     </button>
-                    <button id="nextBtn" class="primary-btn rounded-xl shadow-lg">
+                    <button id="nextBtn" class="primary-btn rounded-xl shadow-lg px-3 py-1.5 text-xs">
                         下一章
                     </button>
-                    <button id="scrollTop" class="glass-btn rounded-xl">
+                    <button id="scrollTop" class="glass-btn rounded-xl px-3 py-1.5 text-xs">
                         回到顶部
                     </button>
                 </div>
             </div>
 
-            <div id="reader" class="reader flex-grow overflow-y-auto outline-none pt-20 pb-16" tabindex="0">
+            <div id="reader" class="reader flex-grow overflow-y-auto outline-none pt-14 pb-16" tabindex="0">
                 <div id="empty" class="empty-state glass rounded-2xl mx-4">
                     <svg class="mx-auto" fill="none" stroke="#8b7765" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5s3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18s-3.332.477-4.5 1.253"></path></svg>
                     <div class="empty-state-title">请先选择漫画系列和章节</div>
@@ -451,15 +620,37 @@
                 </div>
             </div>
             
-            <div class="footer absolute bottom-0 left-0 right-0 z-50 glass rounded-t-2xl px-6 py-3 transition-all duration-300 ease-out transform"
-                <div class="flex flex-col sm:flex-row justify-between items-center">
-                    <div class="flex space-x-6 mb-2 sm:mb-0">
-                        <div class="status-text" id="status">状态：未加载</div>
-                        <div class="status-text" style="opacity: 0.6;">本地阅读器</div>
+             <div class="footer absolute bottom-0 left-0 right-0 z-30 glass rounded-t-2xl px-6 py-2 transition-all duration-300 ease-out transform">
+                <div class="flex flex-row justify-between items-center">
+                    <div class="status-text text-xs" id="status">状态：未加载</div>
+                    <div class="flex items-center space-x-2">
+                        <button id="retryFailedBtn" class="status-text text-xs opacity-60 hover:opacity-100 transition-opacity px-2 py-1 rounded hover:bg-white/20" title="重试所有失败的图片" style="display:none;">
+                            🔄 重试失败
+                        </button>
+                        <div class="progress-text px-3 py-1 glass rounded-full cursor-pointer hover:bg-white/30 transition-colors text-xs" title="点击跳转页码 (或按 G 键)" id="progressStatus">0 / 0</div>
                     </div>
+                    <div class="status-text text-xs opacity-60">本地阅读器</div>
+                </div>
+            </div>
 
-                    <div class="flex items-center space-x-3" id="paginationControls">
-                        <div id="progressStatus" class="progress-text px-4 py-1 glass rounded-full">0 / 0</div>
+                    <!-- 跳转页码弹窗 -->
+                    <div id="jumpModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden items-center justify-center">
+                        <div class="glass-strong rounded-2xl p-6 w-72 shadow-2xl">
+                            <div class="text-center mb-4">
+                                <div class="title text-lg">跳转页码</div>
+                                <div class="chapter-title text-sm mt-1">共 <span id="totalPages">0</span> 页</div>
+                            </div>
+                            <input id="jumpPageInput" type="number" min="1"
+                                   class="w-full glass-input rounded-xl text-center text-lg mb-4"
+                                   placeholder="输入页码">
+                            <div class="flex space-x-3">
+                                <button id="jumpCancelBtn" class="flex-1 glass-btn rounded-xl">取消</button>
+                                <button id="jumpConfirmBtn" class="flex-1 primary-btn rounded-xl">跳转</button>
+                            </div>
+                            <div class="mt-3 text-center">
+                                <span class="text-xs status-text opacity-50">按 G 键或点击状态栏打开跳转</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -512,36 +703,142 @@
 
             let nextChapterFilesCache = null; 
             let nextChapterIndex = -1;
-            
+
+            // ==========================================================
+            //                 📊 阅读进度状态管理
+            // ==========================================================
+            const progressState = {
+                // 当前进度数据
+                currentPage: 1,           // 当前页码（1-based）
+                totalPages: 0,             // 总页数
+                loadedPages: 0,           // 已加载页数
+                scrollPercent: 0,          // 滚动百分比
+                lastReadTime: 0,          // 最后阅读时间戳
+
+                // 初始化进度状态
+                init(total) {
+                    this.totalPages = total;
+                    this.currentPage = 1;
+                    this.loadedPages = 0;
+                    this.scrollPercent = 0;
+                    this.lastReadTime = Date.now();
+                },
+
+                // 更新当前页码
+                setCurrentPage(page) {
+                    this.currentPage = Math.max(1, Math.min(page, this.totalPages));
+                    this.lastReadTime = Date.now();
+                    this.saveToStorage();
+                },
+
+                // 更新已加载页数
+                setLoadedPages(count) {
+                    this.loadedPages = Math.min(count, this.totalPages);
+                },
+
+                // 更新滚动进度
+                updateScrollPercent(percent) {
+                    this.scrollPercent = Math.max(0, Math.min(100, percent));
+                    this.lastReadTime = Date.now();
+                },
+
+                // 获取进度显示文本
+                getDisplayText() {
+                    const percent = this.totalPages > 0
+                        ? Math.round((this.currentPage / this.totalPages) * 100)
+                        : 0;
+                    return `${this.currentPage} / ${this.totalPages} (${percent}%)`;
+                },
+
+                // 获取简要文本
+                getBriefText() {
+                    return `${this.currentPage} / ${this.totalPages}`;
+                },
+
+                // 保存进度到本地存储
+                saveToStorage() {
+                    if (!currentSeries || currentIndex < 0) return;
+                    const key = `progress_${currentSeries}_${currentIndex}`;
+                    const data = {
+                        page: this.currentPage,
+                        scrollPercent: this.scrollPercent,
+                        timestamp: this.lastReadTime
+                    };
+                    try {
+                        localStorage.setItem(key, JSON.stringify(data));
+                    } catch (e) {
+                        console.warn('保存阅读进度失败:', e);
+                    }
+                },
+
+                // 从本地存储恢复进度
+                restoreFromStorage(series, index) {
+                    if (!series || index < 0) return null;
+                    const key = `progress_${series}_${index}`;
+                    try {
+                        const data = localStorage.getItem(key);
+                        if (data) {
+                            const parsed = JSON.parse(data);
+                            this.currentPage = parsed.page || 1;
+                            this.scrollPercent = parsed.scrollPercent || 0;
+                            this.lastReadTime = parsed.timestamp || 0;
+                            return parsed;
+                        }
+                    } catch (e) {
+                        console.warn('恢复阅读进度失败:', e);
+                    }
+                    return null;
+                },
+
+                // 获取指定系列所有章节的阅读进度
+                getSeriesProgress(seriesName) {
+                    if (!seriesName) return {};
+                    const progress = {};
+                    try {
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key && key.startsWith(`progress_${seriesName}_`)) {
+                                const data = JSON.parse(localStorage.getItem(key));
+                                const chapterIndex = parseInt(key.split('_').pop());
+                                progress[chapterIndex] = {
+                                    page: data.page,
+                                    percent: data.scrollPercent,
+                                    timestamp: data.timestamp
+                                };
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('获取系列阅读进度失败:', e);
+                    }
+                    return progress;
+                },
+
+                // 清除当前章节的进度记录
+                clearCurrentProgress() {
+                    if (!currentSeries || currentIndex < 0) return;
+                    const key = `progress_${currentSeries}_${currentIndex}`;
+                    localStorage.removeItem(key);
+                }
+            };
+
             const setStatus = (t) => status.textContent = '状态：' + t;
             
-            // --- 侧边栏/响应式逻辑 (保持不变) ---
-            function isMobileView() {
-                return window.matchMedia("(max-width: 767px)").matches;
-            }
-
-            function updateSidebarState() {
-                if (isMobileView()) {
-                    sidebar.classList.add('sidebar-hidden');
-                    sidebar.classList.remove('sidebar-visible');
-                    toggleSidebarBtn.textContent = '☰';
-                } else {
-                    sidebar.classList.remove('sidebar-hidden');
-                    sidebar.classList.add('sidebar-visible');
-                }
-            }
-
-            function toggleSidebar() {
-                if (isMobileView()) {
-                    sidebar.classList.toggle('sidebar-hidden');
-                    sidebar.classList.toggle('sidebar-visible');
-                    toggleSidebarBtn.textContent = sidebar.classList.contains('sidebar-hidden') ? '☰' : '✕';
-                }
-            }
-            toggleSidebarBtn.addEventListener('click', toggleSidebar);
-            window.addEventListener('resize', updateSidebarState);
+            // --- 侧边栏控制 ---
+            sidebar.classList.add('hidden');
             
-            // --- 1. 载入漫画系列 (保持不变) ---
+            function toggleSidebar() {
+                if (sidebar.classList.contains('hidden')) {
+                    sidebar.classList.remove('hidden');
+                    toggleSidebarBtn.textContent = '✕';
+                } else {
+                    sidebar.classList.add('hidden');
+                    toggleSidebarBtn.textContent = '☰';
+                }
+            }
+            
+            toggleSidebarBtn.onclick = toggleSidebar;
+            
+            // --- 1. 载入漫画系列 ---
             async function loadSeries() {
                 try {
                     seriesList.innerHTML = '<div class="p-3 text-center" style="color: rgba(92, 85, 71, 0.7);">正在加载...</div>';
@@ -812,60 +1109,705 @@
             }
 
             // ==========================================================
+            //                 🚀 懒加载核心实现
+            // ==========================================================
+
+            // 懒加载配置
+            const LAZY_LOAD_CONFIG = {
+                ROOT_MARGIN: '800px',       // 视窗外 800px 开始加载
+                INITIAL_BATCH: 15,          // 初始加载 15 张
+                BATCH_SIZE: 10,             // 每次观察 10 个新元素
+            };
+
+            // 图片加载重试配置
+            const IMAGE_RETRY_CONFIG = {
+                MAX_RETRIES: 3,             // 最大重试次数
+                INITIAL_DELAY: 1000,        // 初始延迟 (ms)
+                MAX_DELAY: 10000,           // 最大延迟 (ms)
+                BACKOFF_MULTIPLIER: 2,      // 延迟倍数
+            };
+
+            // 懒加载状态
+            let lazyLoadState = {
+                observer: null,             // Intersection Observer
+                nextToObserve: 0,           // 下一个要观察的索引
+                loadedCount: 0,             // 已加载数量
+                isObserving: false          // 是否正在观察
+            };
+
+            // 图片加载重试状态管理
+            const imageRetryState = new Map();
+
+            /**
+             * 获取容器的重试状态
+             */
+            function getRetryState(container) {
+                if (!imageRetryState.has(container)) {
+                    imageRetryState.set(container, {
+                        retries: 0,
+                        status: 'idle',     // idle, loading, retrying, failed, success
+                        lastError: null,
+                        timeoutId: null
+                    });
+                }
+                return imageRetryState.get(container);
+            }
+
+            /**
+             * 计算重试延迟时间 (指数退避)
+             */
+            function getRetryDelay(retries) {
+                const delay = IMAGE_RETRY_CONFIG.INITIAL_DELAY *
+                    Math.pow(IMAGE_RETRY_CONFIG.BACKOFF_MULTIPLIER, retries);
+                return Math.min(delay, IMAGE_RETRY_CONFIG.MAX_DELAY);
+            }
+
+            /**
+             * 更新重试状态UI显示
+             */
+            function updateRetryStatus(container, state) {
+                const statusEl = container.querySelector('.retry-status');
+                if (!statusEl) return;
+
+                switch (state.status) {
+                    case 'retrying':
+                        statusEl.textContent = `重试 ${state.retries}/${IMAGE_RETRY_CONFIG.MAX_RETRIES}`;
+                        statusEl.className = 'retry-status text-amber-500 text-xs';
+                        break;
+                    case 'failed':
+                        statusEl.textContent = '加载失败';
+                        statusEl.className = 'retry-status text-red-500 text-xs';
+                        break;
+                    default:
+                        statusEl.textContent = '';
+                }
+            }
+
+            /**
+             * 懒加载观察器回调
+             */
+            function lazyLoadCallback(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const container = entry.target;
+                        const retryState = imageRetryState.get(container);
+
+                        // 如果正在重试中，不重复触发
+                        if (retryState && retryState.status === 'retrying') {
+                            return;
+                        }
+
+                        // 如果已经成功加载，跳过
+                        if (retryState && retryState.status === 'success') {
+                            return;
+                        }
+
+                        // 如果是失败状态且还有重试次数，进行重试
+                        if (retryState && retryState.status === 'failed') {
+                            if (retryState.retries < IMAGE_RETRY_CONFIG.MAX_RETRIES) {
+                                loadImageElement(container, { forceRetry: true });
+                                return;
+                            }
+                        }
+
+                        // 正常加载
+                        loadImageElement(container);
+                    }
+                });
+            }
+
+            /**
+             * 重试所有失败的图片
+             */
+            function retryAllFailedImages() {
+                const failedContainers = [];
+                const containers = reader.querySelectorAll('.lazy-image-container');
+
+                containers.forEach(container => {
+                    const state = imageRetryState.get(container);
+                    if (state && state.status === 'failed' && state.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES) {
+                        failedContainers.push(container);
+                    }
+                });
+
+                if (failedContainers.length === 0) {
+                    setStatus('没有失败的图片需要重试');
+                    return;
+                }
+
+                setStatus(`正在重试 ${failedContainers.length} 张失败的图片...`);
+
+                failedContainers.forEach((container, index) => {
+                    setTimeout(() => {
+                        loadImageElement(container, { forceRetry: true });
+                    }, index * 500); // 错开重试时间
+                });
+            }
+
+            /**
+             * 获取加载统计信息
+             */
+            function getLoadingStats() {
+                let total = 0;
+                let loaded = 0;
+                let failed = 0;
+                let retrying = 0;
+
+                imageRetryState.forEach((state) => {
+                    if (state.status !== 'idle') {
+                        total++;
+                        if (state.status === 'success') loaded++;
+                        if (state.status === 'failed') failed++;
+                        if (state.status === 'retrying') retrying++;
+                    }
+                });
+
+                return { total, loaded, failed, retrying };
+            }
+
+            /**
+             * 构建媒体文件URL
+             */
+            function buildMediaUrl(filename, pathId, seriesName, isVideo) {
+                if (isVideo) {
+                    if (pathId) {
+                        return `/video/${encodeURIComponent(seriesName)}/${encodeURIComponent(pathId)}/${encodeURIComponent(filename)}`;
+                    }
+                    return `/video/${encodeURIComponent(seriesName)}/${encodeURIComponent(filename)}`;
+                }
+                return `/api/image/${encodeURIComponent(seriesName)}/${encodeURIComponent(filename)}?chapterPath=${encodeURIComponent(pathId)}`;
+            }
+
+            /**
+             * 清理容器中的媒体元素
+             */
+            function clearMediaElement(container) {
+                const existingElement = container.querySelector('img, video');
+                if (existingElement) {
+                    existingElement.src = '';
+                    existingElement.load && existingElement.load();
+                }
+                container.innerHTML = '';
+            }
+
+            /**
+             * 加载单个图片/视频元素（带重试机制）
+             */
+            function loadImageElement(container, options = {}) {
+                const { filename, pathId, seriesName } = container.dataset;
+                const isVideo = isVideoFile(filename);
+                const isImage = isImageFile(filename);
+
+                if (!isImage && !isVideo) return;
+
+                // 获取或初始化重试状态
+                const retryState = getRetryState(container);
+                const forceRetry = options.forceRetry === true;
+
+                // 如果已经成功加载且不是强制重试，则跳过
+                if (retryState.status === 'success' && !forceRetry) {
+                    return;
+                }
+
+                // 如果达到最大重试次数且不是强制重试，则跳过
+                if (retryState.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES &&
+                    retryState.status === 'failed' && !forceRetry) {
+                    return;
+                }
+
+                // 强制重置状态
+                if (forceRetry) {
+                    retryState.retries = 0;
+                    retryState.status = 'loading';
+                    retryState.lastError = null;
+                    container.dataset.loaded = 'false';
+                    container.classList.remove('loaded', 'failed');
+                }
+
+                // 构建URL
+                const url = buildMediaUrl(filename, pathId, seriesName, isVideo);
+
+                // 清理容器
+                clearMediaElement(container);
+
+                // 添加重试状态显示
+                if (retryState.retries > 0) {
+                    let statusEl = container.querySelector('.retry-status');
+                    if (!statusEl) {
+                        statusEl = document.createElement('div');
+                        statusEl.className = 'retry-status';
+                        statusEl.style.cssText = 'position:absolute;bottom:8px;right:8px;padding:4px 8px;background:rgba(0,0,0,0.6);border-radius:4px;font-size:12px;z-index:10;';
+                        container.style.position = 'relative';
+                        container.appendChild(statusEl);
+                    }
+                    updateRetryStatus(container, retryState);
+                }
+
+                // 创建媒体元素
+                let element;
+                if (isVideo) {
+                    element = document.createElement('video');
+                    element.className = 'reader-img';
+                    element.controls = true;
+                    element.autoplay = false;
+                    element.loop = false;
+                    element.preload = 'metadata';
+                    element.style.maxHeight = '80vh';
+                    element.style.width = scale + '%';
+                } else {
+                    element = document.createElement('img');
+                    element.className = 'reader-img';
+                    element.loading = 'lazy';
+                    element.decoding = 'async';
+                    element.style.width = scale + '%';
+                }
+
+                // 加载成功回调
+                const onSuccess = () => {
+                    // 清理定时器
+                    if (retryState.timeoutId) {
+                        clearTimeout(retryState.timeoutId);
+                        retryState.timeoutId = null;
+                    }
+
+                    retryState.status = 'success';
+                    retryState.retries = 0;
+
+                    container.classList.add('loaded');
+                    container.classList.remove('failed');
+                    lazyLoadState.loadedCount++;
+
+                    // 移除重试状态显示
+                    const statusEl = container.querySelector('.retry-status');
+                    if (statusEl && retryState.retries > 0) {
+                        statusEl.remove();
+                    }
+
+                    updateProgressStatus();
+                    updateRetryButtonVisibility();
+                    observeNextBatch();
+                };
+
+                // 加载失败回调（带重试逻辑）
+                const onError = (error) => {
+                    retryState.lastError = error;
+                    retryState.retries++;
+
+                    if (retryState.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES) {
+                        // 达到最大重试次数
+                        retryState.status = 'failed';
+
+                        container.classList.add('loaded', 'failed');
+                        lazyLoadState.loadedCount++;
+
+                        // 显示失败状态
+                        updateRetryStatus(container, retryState);
+
+                        console.warn(`[图片加载] 达到最大重试次数 (${IMAGE_RETRY_CONFIG.MAX_RETRIES}):`, {
+                            filename,
+                            pathId,
+                            seriesName
+                        });
+
+                        updateProgressStatus();
+                        updateRetryButtonVisibility();
+                        observeNextBatch();
+                    } else {
+                        // 需要重试
+                        retryState.status = 'retrying';
+                        const delay = getRetryDelay(retryState.retries);
+
+                        console.log(`[图片加载] 第 ${retryState.retries}/${IMAGE_RETRY_CONFIG.MAX_RETRIES} 次重试，${delay}ms 后重试:`, {
+                            filename,
+                            url
+                        });
+
+                        // 更新UI显示
+                        updateRetryStatus(container, retryState);
+
+                        // 设置重试定时器
+                        retryState.timeoutId = setTimeout(() => {
+                            retryState.timeoutId = null;
+                            retryState.status = 'loading';
+                            loadImageElement(container, { forceRetry: true });
+                        }, delay);
+                    }
+                };
+
+                // 设置事件监听器
+                if (isVideo) {
+                    element.onloadeddata = onSuccess;
+                    element.onerror = () => onError('video_load_error');
+                } else {
+                    element.onload = onSuccess;
+                    element.onerror = () => onError('image_load_error');
+                }
+
+                // 添加超时保护（10秒）
+                const timeoutId = setTimeout(() => {
+                    if (retryState.status === 'loading') {
+                        console.warn(`[图片加载] 超时:`, { filename, url });
+                        element.src = ''; // 取消当前加载
+                        onError('timeout');
+                    }
+                }, 10000);
+
+                // 保存超时ID用于清理
+                element._timeoutId = timeoutId;
+
+                container.appendChild(element);
+                element.src = url;
+
+                container.dataset.loaded = 'true';
+            }
+
+            /**
+             * 观察下一批元素
+             */
+            function observeNextBatch() {
+                if (!lazyLoadState.observer) return;
+                
+                // 获取所有容器
+                const allContainers = reader.querySelectorAll('.lazy-image-container');
+                const totalContainers = allContainers.length;
+                
+                // 观察范围内的元素
+                const endIndex = Math.min(
+                    lazyLoadState.nextToObserve + LAZY_LOAD_CONFIG.BATCH_SIZE,
+                    totalContainers
+                );
+                
+                let observedCount = 0;
+                for (let i = lazyLoadState.nextToObserve; i < endIndex; i++) {
+                    const container = allContainers[i];
+                    if (container && container.dataset.loaded !== 'true') {
+                        lazyLoadState.observer.observe(container);
+                        observedCount++;
+                    }
+                    lazyLoadState.nextToObserve = i + 1;
+                }
+                
+                // 更新状态
+                lazyLoadState.nextToObserve = endIndex;
+                
+                // 如果没观察到东西但还有容器，尝试继续观察
+                if (observedCount === 0 && lazyLoadState.nextToObserve < totalContainers) {
+                    observeNextBatch();
+                }
+            }
+
+            /**
+             * 初始观察一批元素
+             */
+            function observeInitialBatch() {
+                if (!lazyLoadState.observer) return;
+                
+                const allContainers = reader.querySelectorAll('.lazy-image-container');
+                const endIndex = Math.min(LAZY_LOAD_CONFIG.INITIAL_BATCH, allContainers.length);
+                
+                for (let i = 0; i < endIndex; i++) {
+                    const container = allContainers[i];
+                    if (container) {
+                        lazyLoadState.observer.observe(container);
+                    }
+                }
+                
+                lazyLoadState.nextToObserve = endIndex;
+            }
+
+            /**
+             * 初始化懒加载观察器
+             */
+            function initLazyObserver() {
+                // 断开旧观察器
+                if (lazyLoadState.observer) {
+                    lazyLoadState.observer.disconnect();
+                }
+                
+                // 创建新观察器
+                lazyLoadState.observer = new IntersectionObserver(
+                    lazyLoadCallback,
+                    {
+                        rootMargin: LAZY_LOAD_CONFIG.ROOT_MARGIN,
+                        threshold: 0
+                    }
+                );
+                
+                // 重置状态
+                lazyLoadState.nextToObserve = 0;
+                lazyLoadState.loadedCount = 0;
+            }
+
+            /**
+             * 清理懒加载状态
+             */
+            function cleanupLazyLoad() {
+                if (lazyLoadState.observer) {
+                    lazyLoadState.observer.disconnect();
+                    lazyLoadState.observer = null;
+                }
+
+                // 清理重试定时器
+                imageRetryState.forEach((state, container) => {
+                    if (state.timeoutId) {
+                        clearTimeout(state.timeoutId);
+                    }
+                });
+
+                // 清空重试状态映射
+                imageRetryState.clear();
+
+                // 隐藏重试按钮
+                const retryFailedBtn = document.getElementById('retryFailedBtn');
+                if (retryFailedBtn) {
+                    retryFailedBtn.style.display = 'none';
+                }
+
+                lazyLoadState.nextToObserve = 0;
+                lazyLoadState.loadedCount = 0;
+                
+                // 清理阅读器中的懒加载容器
+                reader.querySelectorAll('.lazy-image-container').forEach(c => c.remove());
+                hideEndMarker();
+            }
+
+             // ==========================================================
+            //                 🚀 懒加载入口函数
+            // ==========================================================
+
+            /**
+             * 显示结束标记
+             */
+            function showEndMarker() {
+                const marker = document.createElement('div');
+                marker.id = 'end-marker';
+                marker.className = 'end-sentinel';
+                marker.textContent = '— 已经到底了 —';
+                marker.style.cssText = 'height: 40px; display: flex; align-items: center; justify-content: center; color: #8b7765; font-size: var(--font-size-small); font-weight: var(--font-weight-light); letter-spacing: 0.1em; opacity: 0.7; padding: 16px;';
+                reader.appendChild(marker);
+            }
+
+            /**
+             * 隐藏结束标记
+             */
+            function hideEndMarker() {
+                const marker = reader.querySelector('#end-marker');
+                if (marker) marker.remove();
+            }
+
+            /**
+             * 加载指定索引的图片（用于跳转）
+             */
+            function loadImageAtIndex(targetIndex) {
+                const container = reader.querySelector(`.lazy-image-container[data-index="${targetIndex}"]`);
+                if (container && container.dataset.loaded === 'false') {
+                    loadImageElement(container);
+                }
+            }
+
+            // ==========================================================
+            //                 🚀 懒加载入口函数
+            // ==========================================================
+
+             /**
+              * 使用懒加载方式渲染章节
+              * 替换原来的分批加载
+              */
+             async function renderChapterWithLazyLoad(chapterData) {
+                isLoading = true;
+
+                const seriesName = currentSeries;
+                const { path_id } = chapterData;
+
+                // === 初始化阅读进度状态 ===
+                progressState.init(allChapterFiles.length);
+
+                // 从本地存储恢复阅读进度
+                const savedProgress = progressState.restoreFromStorage(currentSeries, currentIndex);
+                if (savedProgress) {
+                    setStatus(`已恢复阅读进度：第 ${savedProgress.page} 页`);
+                    // 跳转到保存的阅读位置
+                    setTimeout(() => {
+                        if (savedProgress.page > 1) {
+                            jumpToPageWithLazyLoad(savedProgress.page);
+                        }
+                    }, 100);
+                }
+
+                // 1. 清理之前的懒加载状态
+                cleanupLazyLoad();
+                 
+                // 2. 初始化懒加载观察器
+                initLazyObserver();
+                
+                // 3. 创建所有懒加载容器（骨架屏）
+                const fragment = document.createDocumentFragment();
+                
+                allChapterFiles.forEach((filename, index) => {
+                    const container = document.createElement('div');
+                    container.className = 'lazy-image-container';
+                    container.dataset.index = index;
+                    container.dataset.filename = filename;
+                    container.dataset.pathId = path_id;
+                    container.dataset.seriesName = seriesName;
+                    container.dataset.loaded = 'false';
+                    
+                    // 骨架屏
+                    container.innerHTML = `
+                        <div class="skeleton-wrapper">
+                            <div class="skeleton-image skeleton" style="height: 200px;"></div>
+                        </div>
+                    `;
+                    
+                    fragment.appendChild(container);
+                });
+                
+                reader.appendChild(fragment);
+                
+                // 4. 初始观察一批元素
+                observeNextBatch();
+
+                // 5. 预加载下一章元数据
+                preloadNextChapterMetadata();
+
+                setStatus(`章节加载完成,共 ${allChapterFiles.length} 个文件`);
+                isLoading = false;
+                updateProgressStatus();
+            }
+
+            // ==========================================================
+            //                 🚀 重写页码跳转逻辑
+            // ==========================================================
+
+            const JUMP_CONFIG = {
+                PRELOAD_AROUND: 3,      // 跳转后预加载周围图片数量
+                LOAD_TIMEOUT: 5000,     // 加载超时时间
+            };
+
+            /**
+             * 跳转到指定页码（全新重写版本）
+             * 1. 强制立即加载目标图片
+             * 2. 预加载周围图片
+             * 3. 提供加载状态反馈
+             */
+            function jumpToPageWithLazyLoad(pageNum) {
+                if (pageNum < 1 || pageNum > allChapterFiles.length) return;
+
+                const targetIndex = pageNum - 1;
+                const targetElement = reader.querySelector(`.lazy-image-container[data-index="${targetIndex}"]`);
+
+                if (targetElement) {
+                    // 显示加载状态
+                    setStatus(`正在跳转至第 ${pageNum} 页...`);
+
+                    // 1. 强制立即加载目标图片
+                    loadImageAtIndexWithForce(targetIndex);
+
+                    // 2. 预加载周围图片
+                    preloadImagesAround(targetIndex);
+
+                    // 3. 直接跳转到目标位置
+                    targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+
+                    // 4. 更新状态
+                    setTimeout(() => {
+                        updateProgressStatus();
+                        setStatus(`已跳转至第 ${pageNum} 页`);
+                    }, 100);
+                } else {
+                    // 元素不存在时的后备方案
+                    reader.scrollTop = targetIndex * 300;
+                }
+            }
+
+            /**
+             * 强制加载指定索引的图片
+             */
+            function loadImageAtIndexWithForce(index) {
+                const container = reader.querySelector(`.lazy-image-container[data-index="${index}"]`);
+                if (container && container.dataset.loaded === 'false') {
+                    loadImageElement(container);
+                }
+            }
+
+            /**
+             * 预加载目标周围指定数量的图片
+             */
+            function preloadImagesAround(targetIndex) {
+                // 边界检查：空数组直接返回
+                if (allChapterFiles.length === 0) return;
+
+                const start = Math.max(0, targetIndex - JUMP_CONFIG.PRELOAD_AROUND);
+                const end = Math.min(allChapterFiles.length - 1, targetIndex + JUMP_CONFIG.PRELOAD_AROUND);
+
+                for (let i = start; i <= end; i++) {
+                    if (i !== targetIndex) {
+                        loadImageAtIndexWithForce(i);
+                    }
+                }
+            }
+
+            /**
+             * 键盘快捷键 G 跳转
+             */
+            function showJumpModalWithKeyboard() {
+                if (allChapterFiles.length === 0) return;
+                showJumpModal();
+            }
+
+            // ==========================================================
             //                 🚀 预加载逻辑
             // ==========================================================
 
-            // 清理预加载容器 (保持不变)
+            // 清理预加载容器
             function clearPreloader() {
                 preloaderContainer.innerHTML = '';
             }
 
-            // 文件预加载 (Preload next batch of images) (修改：只预加载图片)
+            // 文件预加载 (Preload next batch of images)
             function preloadNextBatch(startIndex, count) {
-                clearPreloader(); // 清理旧的预加载任务
+                clearPreloader();
                 
                 const seriesName = currentSeries;
                 const chapterData = allFlatChapters[currentIndex];
                 const { path_id } = chapterData;
                 
                 const endIndex = Math.min(startIndex + count, allChapterFiles.length);
-                const filesToPreload = allChapterFiles.slice(startIndex, endIndex); 
+                const filesToPreload = allChapterFiles.slice(startIndex, endIndex);
                 
                 if (filesToPreload.length > 0) {
                     console.log(`Preloading ${filesToPreload.length} files starting from index ${startIndex}...`);
                 } else {
-                    return; 
+                    return;
                 }
 
                 filesToPreload.forEach(filename => {
-                     // 仅预加载图片，视频文件太大不适合这种方式
+                    // 仅预加载图片
                     if (isImageFile(filename)) {
-                        // 🚨 路径修改点：图片使用 /api/image/ 路由
                         const fileUrl = `/api/image/${encodeURIComponent(seriesName)}/${encodeURIComponent(filename)}?chapterPath=${encodeURIComponent(path_id)}`;
                         
-                        // 使用隐藏的 <img> 标签触发下载
                         const img = document.createElement('img');
                         img.src = fileUrl;
-                        img.loading = 'eager'; 
-                        img.style.width = '1px'; 
+                        img.loading = 'eager';
+                        img.style.width = '1px';
                         preloaderContainer.appendChild(img);
                     }
                 });
             }
             
-            // 下一章元数据预加载 (保持不变)
+            // 下一章元数据预加载
             async function preloadNextChapterMetadata() {
                 nextChapterIndex = currentIndex + 1;
                 
                 if (nextChapterIndex >= allFlatChapters.length) {
-                    nextChapterFilesCache = null; 
+                    nextChapterFilesCache = null;
                     console.log("No next chapter to preload metadata for.");
                     return;
                 }
                 
                 const chapterData = allFlatChapters[nextChapterIndex];
-                const seriesName = currentSeries; 
-                const { path_id } = chapterData; 
+                const seriesName = currentSeries;
+                const { path_id } = chapterData;
 
                 const chapterUrl = `/api/chapter/${encodeURIComponent(seriesName)}?chapterPath=${encodeURIComponent(path_id)}&page=1&per_page=${MAX_IMAGES_TO_FETCH}`;
                 
@@ -909,30 +1851,25 @@
                 // 检查是否可以使用预加载的元数据
                 if (idx === nextChapterIndex && nextChapterFilesCache) {
                     allChapterFiles = nextChapterFilesCache;
-                    setStatus(`章节加载完成（使用缓存）。共 ${allChapterFiles.length} 个文件。`);
+                    setStatus(`章节加载完成（使用缓存）。共 ${allChapterFiles.length} 个文件（懒加载模式）。`);
                     nextChapterFilesCache = null; 
                     
-                    appendNextImages();
+                    // 使用懒加载渲染
+                    renderChapterWithLazyLoad(chapterData);
                 } else {
-                    // 正常加载元数据
-                    await loadAllImageFilenamesAndRender(chapterData); 
+                    // 正常加载元数据并使用懒加载
+                    await loadChapterDataAndRender(chapterData); 
                 }
-                
-                // 立即触发下一章元数据预加载
-                preloadNextChapterMetadata(); 
                 
                 reader.scrollTop = 0;
                 
-                if (isMobileView() && sidebar.classList.contains('sidebar-visible')) {
-                    toggleSidebar(); 
-                }
 
                 localStorage.setItem('currentSeries', currentSeries); 
                 localStorage.setItem('currentChapterPathId', chapterData.path_id);
             }
 
-            // --- 5. 文件元数据加载和第一批 (5个) 渲染 (保持不变) ---
-            async function loadAllImageFilenamesAndRender(chapterData) {
+            // --- 懒加载版本：加载章节数据并渲染 ---
+            async function loadChapterDataAndRender(chapterData) {
                 isLoading = true;
                 
                 const seriesName = currentSeries; 
@@ -950,9 +1887,8 @@
 
                     allChapterFiles = data.files || [];
                     
-                    setStatus(`章节加载完成。共 ${allChapterFiles.length} 个文件（图片/视频）。`);
-
-                    appendNextImages();
+                    // 使用懒加载渲染章节
+                    renderChapterWithLazyLoad(chapterData);
 
                 } catch (error) {
                     setStatus('错误：加载文件元数据失败');
@@ -960,146 +1896,123 @@
                     allChapterFiles = [];
                     reader.innerHTML = '<div class="p-4 text-red-400">无法加载章节文件列表，请检查后端服务。</div>';
                 } finally {
-                    updateProgressStatus();
+                    isLoading = false;
                 }
             }
             
-            // --- 6. 渲染下一批 5 个文件 (Append Logic) (修改：分离图片和视频 URL) ---
+            // --- 旧的分批加载函数（已废弃，保留用于参考）---
             function appendNextImages() {
-                if (imagesLoadedCount >= allChapterFiles.length) { 
-                    updateProgressStatus();
-                    return;
-                }
-                
-                isLoading = true; 
-                
-                const chapterData = allFlatChapters[currentIndex];
-                const seriesName = currentSeries;
-                const { path_id } = chapterData;
-
-                const startIndex = imagesLoadedCount;
-                const endIndex = Math.min(startIndex + FRONT_END_PAGE_SIZE, allChapterFiles.length);
-                const pageFilenames = allChapterFiles.slice(startIndex, endIndex); 
-
-                const lastFileIndex = pageFilenames.length - 1; 
-                let loadingIndicator = document.getElementById('loadingIndicator');
-                
-                if (!loadingIndicator) {
-                    loadingIndicator = document.createElement('div');
-                    loadingIndicator.id = 'loadingIndicator';
-                    loadingIndicator.className = 'loading-indicator glass rounded-2xl mx-4';
-                    loadingIndicator.innerHTML = `
-                        <svg class="mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.25"></circle>
-                          <path d="M4 12a8 8 0 018-8V0" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                        </svg>
-                        加载中...
-                    `;
-                    reader.appendChild(loadingIndicator);
-                }
-
-
-                const releaseLockAndRemoveIndicator = () => {
-                    isLoading = false;
-                    const indicator = document.getElementById('loadingIndicator');
-                    if (indicator) indicator.remove();
-                    
-                    // 在加载/释放锁后，立即触发下一批的**文件预加载**
-                    const nextBatchStartIndex = imagesLoadedCount;
-                    preloadNextBatch(nextBatchStartIndex, PRELOAD_SIZE);
-                };
-                
-                let lastElementLoaded = false;
-                
-                pageFilenames.forEach((filename, index) => {
-                    
-                    let element; 
-                    const isVideo = isVideoFile(filename); // 使用新的判断函数
-                    const isImage = isImageFile(filename);
-                    const isLastElement = (index === lastFileIndex);
-
-                      // 🚨 路径修改点：根据文件类型选择不同路由
-                     let fileUrl = '';
-                     if (isImage) {
-                          // 图片通过API智能选择LQ/HQ
-                          fileUrl = `/api/image/${encodeURIComponent(seriesName)}/${encodeURIComponent(filename)}?chapterPath=${encodeURIComponent(path_id)}`;
-                     } else if (isVideo) {
-                          // 视频通过nginx直接静态服务，路径为 /video/series/chapterPath/filename
-                          if (path_id) {
-                              fileUrl = `/video/${encodeURIComponent(seriesName)}/${encodeURIComponent(path_id)}/${encodeURIComponent(filename)}`;
-                          } else {
-                              // 根目录视频
-                              fileUrl = `/video/${encodeURIComponent(seriesName)}/${encodeURIComponent(filename)}`;
-                          }
-                     } else {
-                        console.warn(`Unsupported file type found: ${filename}`);
-                        return; // 跳过不支持的文件
-                    }
-                    
-                    const handleLoadComplete = () => {
-                        if (isLastElement && !lastElementLoaded) {
-                            lastElementLoaded = true;
-                            releaseLockAndRemoveIndicator();
-                        }
-                    };
-                    
-                    if (isVideo) {
-                        element = document.createElement('video');
-                        element.className = 'reader-img'; 
-                        element.loading = 'lazy';
-                        element.controls = true; 
-                        element.autoplay = false;
-                        element.loop = false;
-                        element.style.width = scale + '%'; 
-                        element.preload = 'metadata';
-                        element.src = fileUrl;
-                        element.style.maxHeight = '80vh';
-                        
-                        element.onloadeddata = handleLoadComplete;
-                        element.onerror = handleLoadComplete; 
-                        
-                    } else if (isImage) { // 仅处理图片
-                        element = document.createElement('img');
-                        element.className = 'reader-img'; 
-                        element.loading = 'lazy'; 
-                        element.decoding = 'async';
-                        element.src = fileUrl;
-                        element.style.width = scale + '%';
-                        
-                        element.onload = handleLoadComplete;
-                        element.onerror = () => {
-                            element.style.backgroundColor = '#444';
-                            element.alt = `文件加载失败: ${filename}`;
-                            console.error(`Failed to load file: ${fileUrl}`);
-                            handleLoadComplete();
-                        };
-                    }
-                    
-                    if (element) {
-                        reader.insertBefore(element, loadingIndicator); 
-                    }
-                });
-                
-                imagesLoadedCount = endIndex; 
-                updateProgressStatus();
-
-                if (imagesLoadedCount >= allChapterFiles.length) {
-                    setTimeout(() => {
-                        releaseLockAndRemoveIndicator(); 
-                    }, 500);
-                }
+                // 此函数已被懒加载替代
+                // 保留空函数体以避免错误
+                console.warn('appendNextImages is deprecated, using lazy loading instead');
             }
+            
+            // ==========================================================
+            //                 🚀 懒加载滚动监听
+            // ==========================================================
 
+            reader.addEventListener('scroll', () => {
+                const st = reader.scrollTop;
+                const deltaY = st - lastScrollPos;
 
-            // --- 7. 进度和导航控制 (保持不变) ---
+                // Header/Footer 隐藏逻辑
+                if (Math.abs(deltaY) > SCROLL_DIRECTION_THRESHOLD) {
+                    const isHeaderHidden = header.classList.contains('hidden');
 
+                    if (st < 10) {
+                        header.classList.remove('hidden');
+                        footer.classList.remove('hidden');
+                    }
+                    else if (deltaY > 0 && !isHeaderHidden) {
+                        header.classList.add('hidden');
+                        footer.classList.add('hidden');
+                    }
+                    else if (deltaY < 0 && isHeaderHidden) {
+                        header.classList.remove('hidden');
+                        footer.classList.remove('hidden');
+                    }
+
+                    lastScrollPos = st;
+                }
+
+                // 更新阅读进度（防抖）
+                updateCurrentPageOnScroll();
+            });
+
+            // --- 7. 进度和导航控制 ---
+
+            /**
+             * 更新阅读进度显示
+             * 显示格式: 当前页/总页数 (百分比%) [已加载数]
+             */
             function updateProgressStatus() {
-                progressStatusEl.textContent = `${imagesLoadedCount} / ${allChapterFiles.length}`;
-                
+                // 更新进度状态
+                progressState.setLoadedPages(lazyLoadState.loadedCount);
+
+                // 构建显示文本
+                const displayText = progressState.getDisplayText();
+                const briefText = progressState.getBriefText();
+
+                // 更新主显示元素
+                progressStatusEl.textContent = briefText;
+                progressStatusEl.title = `点击跳转页码 (或按 G 键)\n当前: ${displayText}\n已加载: ${progressState.loadedPages}/${progressState.totalPages}`;
+
+                // 按钮状态更新
                 prevBtn.disabled = currentIndex <= 0;
-                // 仅当下一章缓存为空时，才检查扁平列表
                 const nextChapterExists = currentIndex < allFlatChapters.length - 1;
                 nextBtn.disabled = !nextChapterExists && !nextChapterFilesCache;
+
+                // 保存滚动进度
+                const scrollPercent = allChapterFiles.length > 0
+                    ? (reader.scrollTop / (reader.scrollHeight - reader.clientHeight)) * 100
+                    : 0;
+                progressState.updateScrollPercent(scrollPercent);
+            }
+
+            /**
+             * 计算当前可视区域中最上面的图片索引（0-based）
+             * @returns {number} 当前可见的页码（1-based）
+             */
+            function calculateCurrentPage() {
+                const containers = reader.querySelectorAll('.lazy-image-container');
+                if (containers.length === 0) return 1;
+
+                const readerRect = reader.getBoundingClientRect();
+                const viewportCenter = readerRect.top + readerRect.height / 2;
+
+                let minDistance = Infinity;
+                let closestIndex = 0;
+
+                containers.forEach((container, index) => {
+                    const rect = container.getBoundingClientRect();
+                    const containerCenter = rect.top + rect.height / 2;
+                    const distance = Math.abs(containerCenter - viewportCenter);
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestIndex = index;
+                    }
+                });
+
+                return closestIndex + 1;
+            }
+
+            /**
+             * 滚动时更新当前页码（防抖）
+             */
+            let scrollUpdateTimer = null;
+            function updateCurrentPageOnScroll() {
+                if (scrollUpdateTimer) return;
+
+                scrollUpdateTimer = setTimeout(() => {
+                    const currentPage = calculateCurrentPage();
+                    if (currentPage !== progressState.currentPage) {
+                        progressState.setCurrentPage(currentPage);
+                        progressStatusEl.textContent = progressState.getBriefText();
+                    }
+                    updateProgressStatus();
+                    scrollUpdateTimer = null;
+                }, 100);
             }
 
             function resetLoadingState() {
@@ -1111,47 +2024,126 @@
                 isLoading = false; 
                 const indicator = document.getElementById('loadingIndicator');
                 if (indicator) indicator.remove();
-                clearPreloader(); 
+                clearPreloader();
+                
+                // 清理懒加载状态
+                cleanupLazyLoad();
             }
             
             prevBtn.onclick = () => currentIndex > 0 && openChapter(currentIndex - 1);
             nextBtn.onclick = () => currentIndex < allFlatChapters.length - 1 && openChapter(currentIndex + 1);
             scrollTopBtn.onclick = () => reader.scrollTo({ top: 0, behavior: 'smooth' });
 
+            // 重试失败图片按钮
+            const retryFailedBtn = document.getElementById('retryFailedBtn');
+            retryFailedBtn.onclick = () => retryAllFailedImages();
 
-            // --- 8. 事件监听器 (滚动加载和 Header/Footer 隐藏) (保持不变) ---
-
-            reader.addEventListener('scroll', () => {
-                const st = reader.scrollTop;
-                const deltaY = st - lastScrollPos;
-                
-                if (Math.abs(deltaY) > SCROLL_DIRECTION_THRESHOLD) {
-                    const isHeaderHidden = header.classList.contains('hidden');
-                    
-                    if (st < 10) { 
-                        header.classList.remove('hidden');
-                        footer.classList.remove('hidden');
-                    } 
-                    else if (deltaY > 0 && !isHeaderHidden) { 
-                        header.classList.add('hidden');
-                        footer.classList.add('hidden');
-                    } 
-                    else if (deltaY < 0 && isHeaderHidden) { 
-                        header.classList.remove('hidden');
-                        footer.classList.remove('hidden');
+            /**
+             * 更新重试按钮显示状态
+             */
+            function updateRetryButtonVisibility() {
+                let failedCount = 0;
+                imageRetryState.forEach((state) => {
+                    if (state.status === 'failed' && state.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES) {
+                        failedCount++;
                     }
-                    
-                    lastScrollPos = st; 
-                }
-                
-                const isNearBottom = reader.scrollTop + reader.clientHeight >= reader.scrollHeight - SCROLL_LOAD_THRESHOLD;
+                });
 
-                if (!isLoading && isNearBottom) {
-                    if (imagesLoadedCount < allChapterFiles.length) { 
-                        appendNextImages();
-                    }
+                if (failedCount > 0) {
+                    retryFailedBtn.style.display = 'block';
+                    retryFailedBtn.textContent = `🔄 重试失败 (${failedCount})`;
+                    retryFailedBtn.title = `点击重试 ${failedCount} 张失败的图片`;
+                } else {
+                    retryFailedBtn.style.display = 'none';
                 }
-            });
+            }
+
+            // 修改 updateProgressStatus 函数以包含重试按钮更新
+            const originalUpdateProgressStatus = updateProgressStatus;
+            updateProgressStatus = function() {
+                originalUpdateProgressStatus();
+                updateRetryButtonVisibility();
+            };
+
+            // --- 跳转页码功能 ---
+            const jumpModal = document.getElementById('jumpModal');
+            const jumpPageInput = document.getElementById('jumpPageInput');
+            const jumpCancelBtn = document.getElementById('jumpCancelBtn');
+            const jumpConfirmBtn = document.getElementById('jumpConfirmBtn');
+            const totalPagesEl = document.getElementById('totalPages');
+
+            function showJumpModal() {
+                if (allChapterFiles.length === 0) return;
+                totalPagesEl.textContent = allChapterFiles.length;
+                jumpPageInput.value = '';
+                jumpPageInput.max = allChapterFiles.length;
+                jumpModal.classList.remove('hidden');
+                jumpModal.classList.add('flex');
+                setTimeout(() => jumpPageInput.focus(), 100);
+            }
+
+            function hideJumpModal() {
+                jumpModal.classList.add('hidden');
+                jumpModal.classList.remove('flex');
+            }
+
+            function jumpToPage() {
+                const pageNum = parseInt(jumpPageInput.value, 10);
+
+                // 增强的输入验证
+                if (isNaN(pageNum) || pageNum < 1) {
+                    showInputError('请输入有效的页码');
+                    return;
+                }
+                if (pageNum > allChapterFiles.length) {
+                    showInputError(`页码超出范围，最大为 ${allChapterFiles.length}`);
+                    return;
+                }
+
+                hideJumpModal();
+
+                // 使用懒加载的跳转功能
+                jumpToPageWithLazyLoad(pageNum);
+            }
+
+            /**
+             * 显示输入错误反馈
+             */
+            function showInputError(message) {
+                jumpPageInput.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                jumpPageInput.title = message;
+
+                // 晃动动画
+                jumpPageInput.animate([
+                    { transform: 'translateX(0)' },
+                    { transform: 'translateX(-10px)' },
+                    { transform: 'translateX(10px)' },
+                    { transform: 'translateX(-5px)' },
+                    { transform: 'translateX(5px)' },
+                    { transform: 'translateX(0)' }
+                ], {
+                    duration: 300,
+                    easing: 'ease-in-out'
+                });
+
+                setTimeout(() => {
+                    jumpPageInput.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+                    jumpPageInput.title = '';
+                }, 500);
+            }
+
+            progressStatusEl.onclick = showJumpModal;
+            jumpCancelBtn.onclick = hideJumpModal;
+            jumpConfirmBtn.onclick = jumpToPage;
+            jumpPageInput.onkeydown = (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); jumpToPage(); }
+                if (e.key === 'Escape') hideJumpModal();
+            };
+            jumpModal.onclick = (e) => {
+                if (e.target === jumpModal) hideJumpModal();
+            };
+
+
 
             // 缩放
             scaleRange.addEventListener('input', () => {
@@ -1167,7 +2159,17 @@
                 if (e.key === 'ArrowLeft') { prevBtn.click(); e.preventDefault(); }
                 if (e.key === 'ArrowRight') { nextBtn.click(); e.preventDefault(); }
                 if (e.key === 'Home') { scrollTopBtn.click(); e.preventDefault(); }
-                
+
+                // G 键打开页码跳转弹窗
+                if ((e.key === 'g' || e.key === 'G') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    // 只有在非输入框状态下才触发
+                    const activeTag = document.activeElement.tagName;
+                    if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+                        showJumpModal();
+                        e.preventDefault();
+                    }
+                }
+
                 if (e.key === 'PageDown') { reader.scrollBy({ top: reader.clientHeight * 0.9, behavior: 'smooth' }); e.preventDefault(); }
                 if (e.key === 'PageUp') { reader.scrollBy({ top: reader.clientHeight * -0.9, behavior: 'smooth' }); e.preventDefault(); }
             });
@@ -1177,25 +2179,26 @@
             const DOUBLE_CLICK_TIME_THRESHOLD = 300; 
 
              function getHQImageUrl(lowQualityUrl) {
-                 // 将 /api/image/ 替换为 /hq_image/，移除查询参数使用静态路径
-                 if (!lowQualityUrl.includes('/api/image/')) return lowQualityUrl;
-                 
-                 try {
-                     const url = new URL(lowQualityUrl, window.location.origin);
-                     const seriesName = url.pathname.split('/')[3]; // /api/image/series/filename
-                     const filename = url.pathname.split('/')[4];
-                     const chapterPath = url.searchParams.get('chapterPath') || '';
-                     
-                     if (chapterPath) {
-                         return `/hq_image/${encodeURIComponent(seriesName)}/${encodeURIComponent(chapterPath)}/${encodeURIComponent(filename)}`;
-                     } else {
-                         return `/hq_image/${encodeURIComponent(seriesName)}/${encodeURIComponent(filename)}`;
-                     }
-                 } catch (e) {
-                     console.error('Error parsing URL for HQ image:', e);
-                     return lowQualityUrl.replace('/api/image/', '/hq_image/');
-                 }
-             }
+                  // 将 /api/image/ 替换为 /hq_image/，移除查询参数使用静态路径
+                  if (!lowQualityUrl.includes('/api/image/')) return lowQualityUrl;
+                  
+                  try {
+                      const url = new URL(lowQualityUrl, window.location.origin);
+                      // 先解码再编码，避免双重编码
+                      const seriesName = decodeURIComponent(url.pathname.split('/')[3]);
+                      const filename = decodeURIComponent(url.pathname.split('/')[4]);
+                      const chapterPath = url.searchParams.get('chapterPath') ? decodeURIComponent(url.searchParams.get('chapterPath')) : '';
+                      
+                      if (chapterPath) {
+                          return `/hq_image/${encodeURIComponent(seriesName)}/${encodeURIComponent(chapterPath)}/${encodeURIComponent(filename)}`;
+                      } else {
+                          return `/hq_image/${encodeURIComponent(seriesName)}/${encodeURIComponent(filename)}`;
+                      }
+                  } catch (e) {
+                      console.error('Error parsing URL for HQ image:', e);
+                      return lowQualityUrl.replace('/api/image/', '/hq_image/');
+                  }
+              }
             
             function handleImageClick(e) {
                 // 确保点击的是图片元素 (reader-img class) 并且是 <img> 标签
@@ -1270,11 +2273,10 @@
                     }
                 }
             }
-
+ 
             // 初始化入口
             header.classList.remove('hidden');
             footer.classList.remove('hidden');
-            updateSidebarState();
             await restoreReadingPosition();
         })();
     </script>

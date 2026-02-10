@@ -38,6 +38,21 @@ Spring Boot 4.0.2 + Java 21 后端，vanilla JavaScript + Tailwind CSS 前端，
 ./mvnw verify
 ```
 
+### Frontend Lint (JavaScript)
+```bash
+# 安装依赖 (如果需要)
+npm install
+
+# 运行 ESLint 检查代码
+npx eslint frontend/index.html
+
+# 或检查整个 frontend 目录
+npx eslint frontend/
+
+# 自动修复格式问题
+npx eslint frontend/ --fix
+```
+
 ### Docker
 ```bash
 # 启动所有服务
@@ -66,16 +81,40 @@ cd frontend && npx serve .
 - **包结构**: `com.nianer.comic.*` (Controller/, Config/, Component/)
 - **命名**: 类 PascalCase，方法和变量 camelCase，常量 UPPER_SNAKE_CASE
 - **注解**: 使用 Lombok (`@Slf4j`, `@Data`, `@Builder`)
-- **API**: 完整的 Swagger/OpenAPI 注解，中文描述
-- **导入顺序**: java.* → org.* → com.nianer.comic.*
+- **API**: 完整的 Swagger/OpenAPI 注解，中文描述 (必须包含 `@Operation`, `@Parameter`, `@ApiResponse`)
+- **导入顺序**: java.* → jakarta.* → org.* → com.* → static imports (分组间空行分隔)
 - **错误处理**: 文件存在性验证，适当 HTTP 状态码，结构化日志
+  - 禁止: `catch (Exception e) {}` (必须记录或抛出具体异常)
+  - 推荐: 自定义业务异常 + 全局异常处理器
 - **缓存**: Redis 为主，文件系统降级
+- **文件操作**: 必须使用 NIO `Path`/`Files` API，禁止 `File` 类
+- **日志**: 使用 `@Slf4j`，日志消息使用 `{}` 占位符，禁止字符串拼接
+- **REST**: 返回 `ResponseEntity<T>` 或具体类型，统一错误响应结构
 
 ### JavaScript 前端规范
 - **语法**: ES6+ (async/await, 箭头函数，解构)
+  - 禁止: `var`，使用 `const` 或 `let`
+  - 推荐: 优先使用 `const`，仅在需要重新赋值时用 `let`
 - **模块化**: 功能分离，一致的 try-catch 错误处理
-- **样式**: Tailwind 为主，自定义 CSS 仅用于动画
+  - 全局错误监听: `window.onerror` 和 `Promise.reject` 处理
+- **样式**: Tailwind 为主，自定义 CSS 仅用于动画和复杂视觉效果
+  - CSS 类名使用 kebab-case
+  - 避免内联样式 (除动态计算值外)
 - **性能**: 图片懒加载，虚拟滚动，本地存储进度
+  - 大列表使用 Intersection Observer
+  - 图片使用 `<picture>` 或 `srcset` (如适用)
+- **命名**: 变量和函数 camelCase，常量 UPPER_SNAKE_CASE，CSS 类 kebab-case
+  - DOM 元素变量名以 `El` 或 `Element` 后缀 (例如: `readerEl`, `chapterElement`)
+  - 事件处理函数以 `on` 前缀 (例如: `onClick`, `onScroll`)
+- **注释**: 复杂逻辑必须注释，API 调用说明参数用途
+  - JSDoc for public functions
+  - 单行注释 `//` (空格后内容)，多行注释 `/** */`
+
+### CSS 规范
+- **变量**: 使用 CSS 自定义属性 (`:root`) 定义颜色、字体、间距
+- **单位**: 字体 `rem`，布局 `flex/grid`，动画 `ms/s`
+- **选择器**: 避免嵌套过深 (不超过 3 层)，使用 BEM 命名约定 (可选)
+- **响应式**: 移动优先，使用 Tailwind 响应式前缀 (`sm:`, `md:`, `lg:`)
 
 ### 配置管理
 - **环境变量**: REDIS_HOST, REDIS_PORT, COMICS_ROOT, CACHE_EXPIRATION

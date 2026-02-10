@@ -1,14 +1,12 @@
 version: '3.8'
 
-# 基础配置 - 被开发环境和生产环境继承
-# 请使用以下命令启动：
-# 开发环境: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
-# 生产环境: docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+# 生产环境配置
+# 特点：资源限制、健康检查、优化镜像
 
 services:
   nginx:
     image: nginx:stable-alpine
-    container_name: comic13_nginx
+    container_name: comic13_nginx_prod
     ports:
       - "5000:80"
     volumes:
@@ -22,7 +20,7 @@ services:
   web:
     build:
       context: ./backend/comic
-    container_name: comic13_server
+    container_name: comic13_server_prod
     volumes:
       - *comic_mount
     depends_on:
@@ -33,7 +31,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: comic13_redis
+    container_name: comic13_redis_prod
     ports:
       - "6379:6379"
     volumes:
