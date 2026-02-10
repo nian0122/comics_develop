@@ -1,8 +1,0 @@
-go mod tidy
-go run main.go image_optimizer.go
-go build
-image-optimizer-go.exe
-停止并移除旧容器：
-docker compose down
-2.  重建镜像并启动新服务
-docker compose up --build -d
