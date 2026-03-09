@@ -1,0 +1,44 @@
+version: '3.8'
+
+# 基础配置 - 被开发环境和生产环境继承
+# 请使用以下命令启动：
+# 开发环境: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+# 生产环境: docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+
+services:
+  nginx:
+    image: nginx:stable-alpine
+    container_name: comic14_nginx
+    ports:
+      - "5000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+      - nginx_cache:/var/cache/nginx
+      - &comic_mount F:\games\comics:/comics:ro
+    depends_on:
+      - web
+
+  web:
+    build:
+      context: ./backend/comic
+    container_name: comic14_server
+    volumes:
+      - *comic_mount
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - COMICS_ROOT_DIR=/comics
+
+  redis:
+    image: redis:7-alpine
+    container_name: comic14_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
+  nginx_cache:
