@@ -1,10 +1,5 @@
 version: '3.8'
 
-# 基础配置 - 被开发环境和生产环境继承
-# 请使用以下命令启动：
-# 开发环境: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
-# 生产环境: docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
-
 services:
   nginx:
     image: nginx:stable-alpine

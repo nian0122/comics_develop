@@ -1,4 +1,0 @@
-停止并移除旧容器：
-docker compose down
-2.  重建镜像并启动新服务
-docker compose up --build -d
