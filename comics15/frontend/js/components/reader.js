@@ -206,7 +206,7 @@ export class Reader {
         }
     }
 
-    loadImageElement(container, useHQ = false) {
+    async loadImageElement(container, useHQ = false) {
         const { filename, pathId, seriesName } = container.dataset;
         const fileType = getFileType(filename);
 
@@ -217,10 +217,17 @@ export class Reader {
         if (retryState.status === 'success') return;
         if (retryState.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES && retryState.status === 'failed') return;
 
+        let shouldUseHQ = useHQ;
+        if (!useHQ && fileType !== 'video') {
+            const lqUrl = api.buildLQImageUrl(seriesName, filename, pathId);
+            const lqExists = await api.checkLQImageExists(lqUrl);
+            shouldUseHQ = !lqExists;
+        }
+
         const isVideo = useVideoPath(filename);
         const url = isVideo
             ? api.buildVideoUrl(seriesName, filename, pathId)
-            : (useHQ ? api.buildHQImageUrl(seriesName, filename, pathId) : api.buildLQImageUrl(seriesName, filename, pathId));
+            : (shouldUseHQ ? api.buildHQImageUrl(seriesName, filename, pathId) : api.buildLQImageUrl(seriesName, filename, pathId));
 
         this.clearMediaElement(container);
 
@@ -259,7 +266,7 @@ export class Reader {
         };
 
         const onImageError = () => {
-            if (!useHQ) {
+            if (!shouldUseHQ) {
                 retryState.status = 'loading';
                 this.loadImageElement(container, true);
                 return;

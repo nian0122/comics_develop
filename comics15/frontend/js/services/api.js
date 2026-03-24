@@ -47,5 +47,18 @@ export const api = {
         return chapterPath
             ? `/video/${encodeURIComponent(seriesName)}/${encodeURIComponent(chapterPath)}/${encodeURIComponent(filename)}`
             : `/video/${encodeURIComponent(seriesName)}/${encodeURIComponent(filename)}`;
+    },
+
+    /**
+     * 检查 LQ 图片是否存在
+     * @returns {Promise<boolean>} true = 图片存在 (200), false = 不存在 (204)
+     */
+    async checkLQImageExists(lqUrl) {
+        try {
+            const res = await fetch(lqUrl, { method: 'HEAD' });
+            return res.status === 200;
+        } catch {
+            return false;
+        }
     }
 };
