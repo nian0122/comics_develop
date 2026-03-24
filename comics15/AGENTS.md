@@ -4,7 +4,13 @@
 **请始终使用中文与用户对话**，包括所有回复、错误信息、代码注释和提交信息。
 
 ## Project Overview
-Spring Boot 4.0.2 + Java 21 后端，vanilla JavaScript + Tailwind CSS 前端，Redis 缓存的漫画阅读器。
+Spring Boot 4.0.2 + Java 21 后端，ES6 模块化 JavaScript + Tailwind CSS 前端，Redis 缓存的漫画阅读器。
+
+### 技术栈
+- **后端**: Spring Boot 4.0.2, Java 21, Redis, SpringDoc OpenAPI
+- **前端**: Vite, ES6 Modules, Tailwind CSS, Vitest
+- **构建**: Maven (后端), Vite (前端)
+- **容器化**: Docker + Docker Compose
 
 ## Build & Test Commands
 
@@ -38,19 +44,58 @@ Spring Boot 4.0.2 + Java 21 后端，vanilla JavaScript + Tailwind CSS 前端，
 ./mvnw verify
 ```
 
-### Frontend Lint (JavaScript)
+### Frontend (从 frontend/ 目录运行)
 ```bash
-# 安装依赖 (如果需要)
+# 安装依赖
 npm install
 
-# 运行 ESLint 检查代码
-npx eslint frontend/index.html
+# 开发模式 (热重载)
+npm run dev
+# 访问: http://localhost:3000
 
-# 或检查整个 frontend 目录
-npx eslint frontend/
+# 生产构建
+npm run build
+# 输出到 dist/ 目录
 
-# 自动修复格式问题
-npx eslint frontend/ --fix
+# 预览生产构建
+npm run preview
+
+# 运行测试
+npm test
+
+# 测试监听模式
+npm run test:watch
+
+# 测试覆盖率
+npm run test:coverage
+
+# 代码检查
+npm run lint
+
+# 自动修复代码问题
+npm run lint:fix
+```
+
+### Frontend 项目结构
+```
+frontend/
+├── index.html           # 入口 HTML
+├── package.json         # 项目配置
+├── vite.config.js       # Vite 构建配置
+├── vitest.config.js     # 测试配置
+├── eslint.config.js     # ESLint 配置
+├── css/
+│   ├── main.css         # 样式入口
+│   ├── variables.css    # CSS 变量
+│   ├── components.css   # 组件样式
+│   └── animations.css   # 动画样式
+└── js/
+    ├── main.js          # 应用入口
+    ├── config/          # 配置常量
+    ├── services/        # API 和存储服务
+    ├── state/           # 状态管理
+    ├── components/      # UI 组件
+    └── utils/           # 工具函数
 ```
 
 ### Docker
@@ -126,7 +171,8 @@ cd frontend && npx serve .
 ### 本地开发
 1. Redis: `docker run -p 6379:6379 redis:7-alpine`
 2. 后端: `cd backend/comic && ./mvnw spring-boot:run`
-3. 前端: `cd frontend && python -m http.server 8080`
+3. 前端: `cd frontend && npm install && npm run dev`
+4. 访问: http://localhost:3000
 
 ### Docker 开发
 1. `docker compose up --build`
@@ -159,6 +205,12 @@ cd frontend && npx serve .
 3. 文件系统降级测试
 4. Swagger 文档更新
 5. Docker 容器化测试
+
+### 前端测试要求
+1. 工具函数单元测试 (utils/)
+2. 服务层单元测试 (services/)
+3. 状态管理测试 (state/)
+4. 运行 `npm test` 确保所有测试通过
 
 ## 安全考虑
 - Spring AntPathMatcher 路径遍历保护
