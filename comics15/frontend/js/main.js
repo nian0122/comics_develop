@@ -12,8 +12,6 @@ class App {
         this.reader = null;
 
         this.elements = {
-            seriesTitle: $('#seriesTitle'),
-            chapterTitle: $('#chapterTitle'),
             status: $('#status'),
             prevBtn: $('#prevBtn'),
             nextBtn: $('#nextBtn'),
@@ -154,7 +152,6 @@ class App {
         if (store.series.current === name) return;
 
         store.setCurrentSeries(name);
-        this.elements.seriesTitle.textContent = name;
 
         await this.fetchAndRenderChapters(name);
 
@@ -163,7 +160,6 @@ class App {
     }
 
     async fetchAndRenderChapters(name) {
-        this.elements.chapterTitle.textContent = '加载中...';
         this.setStatus('加载章节...');
         this.sidebar.chaptersList.innerHTML = '<div class="status-text" style="text-align: center;">正在加载章节...</div>';
 
@@ -176,7 +172,6 @@ class App {
 
             this.sidebar.renderChapters(tree, '', -1);
 
-            this.elements.chapterTitle.textContent = `共 ${flatChapters.length} 章`;
             this.reader.container.innerHTML = '';
             this.elements.emptyDiv.style.display = 'flex';
             this.resetLoadingState();
@@ -243,7 +238,6 @@ class App {
         store.setCurrentChapterIndex(idx);
         const chapterData = store.chapters.flatList[idx];
 
-        this.elements.chapterTitle.textContent = chapterData.name;
         this.setStatus('加载文件元数据...');
 
         this.sidebar.renderChapters(store.chapters.tree, '', idx);
