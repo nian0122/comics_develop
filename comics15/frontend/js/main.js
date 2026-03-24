@@ -124,7 +124,7 @@ class App {
     }
 
     setStatus(message) {
-        this.elements.status.textContent = '状态：' + message;
+        this.elements.status.textContent = message;
     }
 
     showHeaderFooter() {
@@ -277,7 +277,7 @@ class App {
 
             await this.reader.loadChapter(store.reader.files, chapterData, seriesName);
 
-            this.setStatus(`章节加载完成，共 ${store.reader.files.length} 个文件`);
+            this.setStatus(`共 ${store.reader.files.length} 个文件`);
 
             this.preloadNextChapterMetadata();
 
