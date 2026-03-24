@@ -12,6 +12,8 @@ export class Sidebar {
         this.chaptersList = $('#chapters');
         this.filterInput = $('#filter');
         this.toggleBtn = $('#toggleSidebarBtn');
+        this.menuIcon = $('#menuIcon');
+        this.closeIcon = $('#closeIcon');
 
         this.init();
     }
@@ -22,7 +24,18 @@ export class Sidebar {
     }
 
     bindEvents() {
-        this.toggleBtn.onclick = () => this.toggle();
+        this.toggleBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.toggle();
+        };
+
+        document.addEventListener('click', (e) => {
+            if (!this.container.classList.contains('hidden')) {
+                if (!this.container.contains(e.target) && !this.toggleBtn.contains(e.target)) {
+                    this.hide();
+                }
+            }
+        });
 
         this.filterInput.addEventListener('input', debounce(() => {
             this.filterChapters(this.filterInput.value);
@@ -40,13 +53,15 @@ export class Sidebar {
 
     show() {
         this.container.classList.remove('hidden');
-        this.toggleBtn.textContent = '✕';
+        this.menuIcon.classList.add('hidden');
+        this.closeIcon.classList.remove('hidden');
         store.ui.sidebarVisible = true;
     }
 
     hide() {
         this.container.classList.add('hidden');
-        this.toggleBtn.textContent = '☰';
+        this.menuIcon.classList.remove('hidden');
+        this.closeIcon.classList.add('hidden');
         store.ui.sidebarVisible = false;
     }
 
