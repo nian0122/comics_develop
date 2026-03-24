@@ -670,3 +670,141 @@ hr {
         transform: scale(1) translateY(0);
     }
 }
+
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-fixed) - 1);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 1;
+    transition: opacity var(--transition-base);
+}
+
+.sidebar-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    #sidebar {
+        width: var(--sidebar-width);
+        box-shadow: var(--shadow-xl);
+    }
+
+    #toggleSidebarBtn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .header {
+        padding: 10px 16px;
+    }
+
+    .header-content {
+        gap: 6px;
+    }
+
+    .nav-btn {
+        padding: 10px 14px;
+        min-height: 44px;
+    }
+
+    .nav-btn-icon {
+        padding: 10px;
+        min-width: 44px;
+    }
+
+    .scale-control {
+        padding: 8px 10px;
+    }
+
+    input[type=range] {
+        width: 100px;
+    }
+
+    .scale-label {
+        min-width: 38px;
+        font-size: 11px;
+    }
+
+    .footer {
+        padding: 8px 12px;
+    }
+
+    .footer .status-text {
+        font-size: 11px;
+    }
+
+    .progress-text {
+        font-size: 11px;
+        padding: 5px 10px;
+    }
+
+    #reader {
+        padding-top: 60px;
+        padding-bottom: 52px;
+    }
+
+    .empty-state {
+        padding: 40px 20px;
+    }
+
+    .empty-state svg {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+    }
+
+    .empty-state-title {
+        font-size: 16px;
+    }
+
+    .empty-state-desc {
+        font-size: 13px;
+    }
+
+    .list-item {
+        padding: 12px 16px;
+        min-height: 44px;
+    }
+
+    .section-label {
+        padding: 8px 10px;
+        font-size: 10px;
+    }
+
+    .glass-input {
+        padding: 12px 14px;
+        font-size: 16px;
+    }
+
+    #jumpModal > div {
+        width: 90vw;
+        max-width: 320px;
+        padding: 20px;
+    }
+
+    #jumpModal .title {
+        font-size: 16px;
+    }
+
+    #jumpModal .glass-input {
+        font-size: 18px;
+    }
+
+    .glass-btn,
+    .primary-btn {
+        padding: 12px 16px;
+        min-height: 44px;
+    }
+
+    .chapter-title {
+        max-width: 150px;
+    }
+
+    .loading-indicator {
+        padding: 16px;
+    }
+}

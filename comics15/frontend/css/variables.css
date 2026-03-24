@@ -64,3 +64,14 @@
     --z-popover: 60;
     --z-tooltip: 70;
 }
+
+/* 移动端适配 (≤768px) */
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 80vw;
+        --header-height: 56px;
+        --footer-height: 44px;
+        --radius-xl: 16px;
+        --radius-2xl: 22px;
+    }
+}

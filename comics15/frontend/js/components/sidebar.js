@@ -14,6 +14,7 @@ export class Sidebar {
         this.toggleBtn = $('#toggleSidebarBtn');
         this.menuIcon = $('#menuIcon');
         this.closeIcon = $('#closeIcon');
+        this.overlay = $('#sidebarOverlay');
 
         this.init();
     }
@@ -27,6 +28,10 @@ export class Sidebar {
         this.toggleBtn.onclick = (e) => {
             e.stopPropagation();
             this.toggle();
+        };
+
+        this.overlay.onclick = () => {
+            this.hide();
         };
 
         document.addEventListener('click', (e) => {
@@ -55,6 +60,7 @@ export class Sidebar {
         this.container.classList.remove('hidden');
         this.menuIcon.classList.add('hidden');
         this.closeIcon.classList.remove('hidden');
+        this.overlay.classList.remove('hidden');
         store.ui.sidebarVisible = true;
     }
 
@@ -62,6 +68,7 @@ export class Sidebar {
         this.container.classList.add('hidden');
         this.menuIcon.classList.remove('hidden');
         this.closeIcon.classList.add('hidden');
+        this.overlay.classList.add('hidden');
         store.ui.sidebarVisible = false;
     }
 
