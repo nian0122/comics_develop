@@ -42,11 +42,13 @@ export class Reader {
             const img = e.target;
             const originalSrc = img.src;
 
-            if (originalSrc.includes('/hq_image/') || !originalSrc.includes('/api/image/')) {
+            if (!originalSrc.includes('/lq_image/')) {
                 return;
             }
 
-            const hqSrc = api.getHQImageUrlFromLQ(originalSrc);
+            const container = img.closest('.lazy-image-container');
+            const { filename, pathId, seriesName } = container.dataset;
+            const hqSrc = api.buildHQImageUrl(seriesName, filename, pathId);
 
             img.style.pointerEvents = 'none';
             img.src = hqSrc;
@@ -204,7 +206,7 @@ export class Reader {
         }
     }
 
-    loadImageElement(container) {
+    loadImageElement(container, useHQ = false) {
         const { filename, pathId, seriesName } = container.dataset;
         const fileType = getFileType(filename);
 
@@ -215,7 +217,10 @@ export class Reader {
         if (retryState.status === 'success') return;
         if (retryState.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES && retryState.status === 'failed') return;
 
-        const url = api.buildMediaUrl(filename, pathId, seriesName, useVideoPath(filename));
+        const isVideo = useVideoPath(filename);
+        const url = isVideo
+            ? api.buildVideoUrl(seriesName, filename, pathId)
+            : (useHQ ? api.buildHQImageUrl(seriesName, filename, pathId) : api.buildLQImageUrl(seriesName, filename, pathId));
 
         this.clearMediaElement(container);
 
@@ -253,7 +258,17 @@ export class Reader {
             window.dispatchEvent(new CustomEvent('reader:imageLoaded'));
         };
 
-        const onError = () => {
+        const onImageError = () => {
+            if (!useHQ) {
+                retryState.status = 'loading';
+                this.loadImageElement(container, true);
+                return;
+            }
+
+            onFinalError();
+        };
+
+        const onFinalError = () => {
             retryState.retries++;
 
             if (retryState.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES) {
@@ -266,23 +281,27 @@ export class Reader {
 
                 retryState.timeoutId = setTimeout(() => {
                     retryState.status = 'loading';
-                    this.loadImageElement(container);
+                    this.loadImageElement(container, false);
                 }, Math.min(delay, IMAGE_RETRY_CONFIG.MAX_DELAY));
             }
         };
 
         if (fileType === 'video') {
             element.onloadeddata = onSuccess;
-            element.onerror = onError;
+            element.onerror = onFinalError;
         } else {
             element.onload = onSuccess;
-            element.onerror = onError;
+            element.onerror = onImageError;
         }
 
         const timeoutId = setTimeout(() => {
             if (retryState.status === 'loading') {
                 element.src = '';
-                onError();
+                if (fileType === 'video') {
+                    onFinalError();
+                } else {
+                    onImageError();
+                }
             }
         }, 10000);
 

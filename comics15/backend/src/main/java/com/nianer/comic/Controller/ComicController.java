@@ -3,27 +3,19 @@ package com.nianer.comic.Controller;
 import com.nianer.comic.Config.ComicConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import net.greypanther.natsort.CaseInsensitiveSimpleNaturalComparator;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.CacheControl;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.HandlerMapping;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
@@ -43,7 +35,7 @@ import static com.nianer.comic.Component.RedisValidator.REDIS_ENABLED;
 @Slf4j
 @RestController
 @RequestMapping("/")
-@Tag(name = "漫画管理接口", description = "负责漫画系列扫描、章节目录索引及图片资源流化")
+@Tag(name = "漫画管理接口", description = "负责漫画系列扫描、章节目录索引")
 public class ComicController {
 
     @Autowired
@@ -145,7 +137,6 @@ public class ComicController {
             @PathVariable @Parameter(description = "漫画系列名称", required = true) String seriesName,
             @RequestParam @Parameter(description = "章节路径ID（多级目录）", required = false) String chapterPath) throws IOException {
 
-        // 处理空路径参数
         if (chapterPath == null || chapterPath.isEmpty()) {
             chapterPath = "";
         } else {
@@ -164,7 +155,6 @@ public class ComicController {
                 return ResponseEntity.ok(Collections.singletonMap("files", files));
             }
         }
-
 
         Path chapterPathResolved = config.getHqPath().resolve(seriesName).resolve(chapterPath);
         if (!Files.exists(chapterPathResolved) || !Files.isDirectory(chapterPathResolved)) {
@@ -199,73 +189,6 @@ public class ComicController {
         return ResponseEntity.ok(Collections.singletonMap("files", files));
     }
 
-    @Operation(
-            summary = "查看媒体文件",
-            description = "根据路径获取图片或视频流。优先返回 LQ WebP，不存在则回退 HQ 原图。",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "成功获取文件流"),
-                    @ApiResponse(responseCode = "404", description = "找不到指定文件")
-            }
-    )
-    @GetMapping("/api/image/{seriesName}/{filename}")
-    public ResponseEntity<Resource> serveImage(
-            @Parameter(description = "漫画系列名称", required = true)
-            @PathVariable String seriesName,
-
-            @Parameter(description = "章节路径（支持多级）", required = false)
-            @RequestParam(required = false) String chapterPath,
-
-            @Parameter(description = "文件名", required = true)
-            @PathVariable String filename
-    ) {
-
-        // 处理空路径参数
-        if (chapterPath == null || chapterPath.isEmpty()) {
-            chapterPath = "";
-        } else {
-            chapterPath = URLDecoder.decode(chapterPath, StandardCharsets.UTF_8);
-        }
-
-        // HQ: COMICS_ROOT/HQ/series/chapterPath/filename
-        Path hqFile = config.getHqPath()
-                .resolve(seriesName)
-                .resolve(chapterPath)
-                .resolve(filename);
-
-        // LQ: COMICS_ROOT/LQ/series/chapterPath/base.webp
-        String baseName = filename.substring(0, filename.lastIndexOf('.'));
-        Path lqFile = config.getLqPath()
-                .resolve(seriesName)
-                .resolve(chapterPath)
-                .resolve(baseName + ".webp");
-        log.debug("[Image] HQ 路径: {}", hqFile.toAbsolutePath());
-        log.debug("[Image] LQ 路径: {}", lqFile.toAbsolutePath());
-        Path finalFile;
-
-        if (Files.exists(lqFile)) {
-            log.debug("[Image] 命中 LQ WebP: {}", lqFile);
-            finalFile = lqFile;
-        } else if (Files.exists(hqFile)) {
-            log.debug("[Image] 回退 HQ 原图: {}", hqFile);
-            finalFile = hqFile;
-        } else {
-            log.error("[Image] 文件不存在: {}", hqFile);
-            return ResponseEntity.notFound().build();
-        }
-
-        String contentType = finalFile.toString().endsWith(".webp")
-                ? "image/webp"
-                : "image/jpeg";
-        log.debug("[Image] 返回文件: path={}, contentType={}",
-                finalFile.toAbsolutePath(), contentType);
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.maxAge(config.getCacheExpiration(), TimeUnit.SECONDS))
-                .header(HttpHeaders.CONTENT_TYPE, contentType)
-                .body(new FileSystemResource(finalFile));
-    }
-
-
-    // 辅助方法：递归发现包含媒体的目录
     private void findChaptersRecursive(Path root, String currentRel, List<String> result) throws IOException {
         Path fullPath = root.resolve(currentRel);
 
@@ -291,7 +214,6 @@ public class ComicController {
         }
     }
 
-    // 辅助方法：自然排序比较器
     private int naturalCompare(String s1, String s2) {
         return CaseInsensitiveSimpleNaturalComparator.getInstance().compare(s1, s2);
     }
