@@ -1,0 +1,81 @@
+/* ===== 关键帧动画 ===== */
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ===== 弹窗动画 ===== */
+#jumpModal:not(.hidden) > div {
+    animation: modalIn 0.2s ease-out;
+}
+
+/* ===== 骨架屏动画 ===== */
+.skeleton {
+    background: var(--skeleton-bg);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.skeleton-text {
+    height: 1em;
+    background: var(--skeleton-text-bg);
+    border-radius: var(--radius-sm);
+    margin: 8px 0;
+}
+
+.skeleton-image {
+    width: 100%;
+    height: 300px;
+    border-radius: var(--radius-lg);
+}
+
+.skeleton-wrapper {
+    padding: 4px;
+}
+
+/* ===== 渐进式图片加载动画 ===== */
+.progressive-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.progressive-image .placeholder {
+    filter: blur(20px);
+    transform: scale(1.1);
+    transition: opacity var(--transition-base);
+}
+
+.progressive-image .full-image {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.progressive-image.loaded .placeholder {
+    opacity: 0;
+}
+
+.progressive-image.loaded .full-image {
+    opacity: 1;
+}

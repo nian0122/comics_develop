@@ -1,0 +1,86 @@
+/**
+ * CSS 变量定义
+ * 统一管理颜色、字体、间距等设计系统变量
+ */
+
+:root {
+    /* ===== 颜色系统 ===== */
+    --color-primary: #8b7765;
+    --color-primary-dark: #4a4032;
+    --color-text: #5c5547;
+    --color-text-muted: #8b7765;
+    
+    /* 玻璃效果颜色 */
+    --glass-bg: rgba(255, 255, 250, 0.2);
+    --glass-bg-strong: rgba(255, 255, 250, 0.28);
+    --glass-blur: 12px;
+    --glass-blur-strong: 20px;
+    --glass-shadow: 0 8px 32px rgba(139, 119, 101, 0.12);
+    --glass-shadow-strong: 0 8px 32px rgba(139, 119, 101, 0.15);
+    
+    /* 渐变色 */
+    --gradient-primary: linear-gradient(135deg, #c9b99a 0%, #8b7765 100%);
+    --gradient-primary-hover: linear-gradient(135deg, #d4c9b8 0%, #9b8775 100%);
+    --gradient-selected: linear-gradient(90deg, rgba(201, 185, 154, 0.4), rgba(201, 185, 154, 0.2));
+    --gradient-selected-chapter: linear-gradient(90deg, rgba(201, 185, 154, 0.5), rgba(201, 185, 154, 0.3));
+    --gradient-body: linear-gradient(135deg, #f5f0e6 0%, #e8dfd0 30%, #d4c9b8 60%, #c9b99a 100%);
+    
+    /* 滚动条颜色 */
+    --scrollbar-thumb: rgba(139, 119, 101, 0.3);
+    --scrollbar-thumb-hover: rgba(139, 119, 101, 0.5);
+    --scrollbar-track: rgba(139, 119, 101, 0.08);
+    
+    /* 骨架屏颜色 */
+    --skeleton-bg: linear-gradient(90deg, rgba(201, 185, 154, 0.1) 25%, rgba(201, 185, 154, 0.3) 50%, rgba(201, 185, 154, 0.1) 75%);
+    --skeleton-text-bg: rgba(139, 119, 101, 0.15);
+    
+    /* ===== 字体系统 ===== */
+    --font-family: 'Helvetica Neue', 'Helvetica', 'Arial', 'Roboto', 'Circular', -apple-system, BlinkMacSystemFont, sans-serif;
+    
+    /* 字号 */
+    --font-size-display: 2.5rem;      /* 40px - 大标题 */
+    --font-size-h1: 1.875rem;         /* 30px - 主标题 */
+    --font-size-h2: 1.5rem;           /* 24px - 次标题 */
+    --font-size-h3: 1.25rem;          /* 20px - 章节标题 */
+    --font-size-body: 0.9375rem;      /* 15px - 正文 */
+    --font-size-small: 0.8125rem;     /* 13px - 次要内容 */
+    --font-size-caption: 0.75rem;     /* 12px - 辅助文字 */
+    
+    /* 字重 */
+    --font-weight-light: 300;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    /* ===== 间距系统 ===== */
+    --spacing-xs: 0.25rem;   /* 4px */
+    --spacing-sm: 0.5rem;    /* 8px */
+    --spacing-md: 1rem;      /* 16px */
+    --spacing-lg: 1.5rem;    /* 24px */
+    --spacing-xl: 2rem;      /* 32px */
+    --spacing-2xl: 3rem;     /* 48px */
+    
+    /* ===== 圆角 ===== */
+    --radius-sm: 0.25rem;    /* 4px */
+    --radius-md: 0.5rem;     /* 8px */
+    --radius-lg: 0.75rem;    /* 12px */
+    --radius-xl: 1rem;       /* 16px */
+    --radius-2xl: 1.5rem;    /* 24px */
+    --radius-full: 9999px;
+    
+    /* ===== 过渡动画 ===== */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+    
+    /* ===== 阴影 ===== */
+    --shadow-sm: 0 2px 8px rgba(139, 119, 101, 0.3);
+    --shadow-md: 0 4px 12px rgba(139, 119, 101, 0.15);
+    --shadow-lg: 0 4px 16px rgba(139, 119, 101, 0.3);
+    --shadow-xl: 0 6px 20px rgba(139, 119, 101, 0.4);
+    
+    /* ===== 懒加载配置 ===== */
+    --lazy-image-min-height: 200px;
+    --lazy-image-bg: rgba(201, 185, 154, 0.1);
+}
