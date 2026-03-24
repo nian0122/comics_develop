@@ -16,7 +16,7 @@ services:
 
   web:
     build:
-      context: ./backend/comic
+      context: ./backend
     container_name: comic15_server
     volumes:
       - *comic_mount
