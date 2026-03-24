@@ -56,15 +56,22 @@ export class Sidebar {
             return;
         }
 
-        const html = series.map(s => `
-            <div class="list-item series-item ${s === selectedSeries ? 'selected' : ''}"
-                 data-series="${escapeHtml(s)}">
+        this.seriesList.innerHTML = '';
+
+        series.forEach(s => {
+            const div = document.createElement('div');
+            div.className = `list-item series-item ${s === selectedSeries ? 'selected' : ''}`;
+            div.innerHTML = `
                 <div class="chapter-dot"></div>
                 <span>${escapeHtml(s)}</span>
-            </div>
-        `).join('');
-
-        this.seriesList.innerHTML = html;
+            `;
+            div.onclick = () => {
+                window.dispatchEvent(new CustomEvent('series:select', {
+                    detail: { name: s }
+                }));
+            };
+            this.seriesList.appendChild(div);
+        });
     }
 
     renderChapters(tree, filterText = '', currentIndex = -1) {
@@ -108,7 +115,7 @@ export class Sidebar {
                     if (!lowerFilter) {
                         node.isExpanded = !node.isExpanded;
                         storage.setExpandedPath(node.fullPath, node.isExpanded);
-                        this.renderChapters(store.chapters.tree, filterInput.value, currentIndex);
+                        this.renderChapters(store.chapters.tree, this.filterInput.value, currentIndex);
                     }
                 };
                 this.chaptersList.appendChild(titleDiv);

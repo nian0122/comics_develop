@@ -344,26 +344,19 @@ export class Reader {
         store.lazyLoad.loadedCount = 0;
     }
 
-    observeNextBatch() {
+    observeAllContainers() {
         if (!store.lazyLoad.observer) return;
 
         const allContainers = this.container.querySelectorAll('.lazy-image-container');
-        const totalContainers = allContainers.length;
-
-        const endIndex = Math.min(
-            store.lazyLoad.nextToObserve + LAZY_LOAD_CONFIG.BATCH_SIZE,
-            totalContainers
-        );
-
-        for (let i = store.lazyLoad.nextToObserve; i < endIndex; i++) {
-            const container = allContainers[i];
-            if (container && container.dataset.loaded !== 'true') {
+        allContainers.forEach(container => {
+            if (container.dataset.loaded !== 'true') {
                 store.lazyLoad.observer.observe(container);
             }
-            store.lazyLoad.nextToObserve = i + 1;
-        }
+        });
+    }
 
-        store.lazyLoad.nextToObserve = endIndex;
+    observeNextBatch() {
+        this.observeAllContainers();
     }
 
     clear() {

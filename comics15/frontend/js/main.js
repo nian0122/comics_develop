@@ -83,6 +83,10 @@ class App {
             this.openChapter(e.detail.index, true);
         });
 
+        window.addEventListener('series:select', (e) => {
+            this.selectSeries(e.detail.name);
+        });
+
         window.addEventListener('status:update', (e) => {
             this.setStatus(e.detail.message);
         });
