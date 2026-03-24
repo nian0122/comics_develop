@@ -1,19 +1,6 @@
-/* ===== 关键帧动画 ===== */
-
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
-}
-
-@keyframes modalIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
 }
 
 @keyframes shimmer {
@@ -26,36 +13,76 @@
     50% { opacity: 0.5; }
 }
 
-/* ===== 弹窗动画 ===== */
-#jumpModal:not(.hidden) > div {
-    animation: modalIn 0.2s ease-out;
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-/* ===== 骨架屏动画 ===== */
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 .skeleton {
-    background: var(--skeleton-bg);
+    background: linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.04) 25%,
+        rgba(0, 0, 0, 0.08) 50%,
+        rgba(0, 0, 0, 0.04) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
 }
 
 .skeleton-text {
-    height: 1em;
-    background: var(--skeleton-text-bg);
+    height: 14px;
+    background: rgba(0, 0, 0, 0.06);
     border-radius: var(--radius-sm);
-    margin: 8px 0;
+    margin: 6px 0;
 }
 
 .skeleton-image {
     width: 100%;
-    height: 300px;
-    border-radius: var(--radius-lg);
+    height: 200px;
+    border-radius: var(--radius-md);
 }
 
 .skeleton-wrapper {
     padding: 4px;
 }
 
-/* ===== 渐进式图片加载动画 ===== */
+#jumpModal:not(.hidden) > div {
+    animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 .progressive-image {
     position: relative;
     overflow: hidden;
@@ -69,7 +96,7 @@
 
 .progressive-image .full-image {
     opacity: 0;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.4s ease;
 }
 
 .progressive-image.loaded .placeholder {

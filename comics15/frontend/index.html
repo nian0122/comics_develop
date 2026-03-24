@@ -3,111 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>本地漫画阅读器</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <meta name="color-scheme" content="light">
+    <title>漫画阅读器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/main.css">
 </head>
-<body class="antialiased" style="color: #5c5547;">
+<body>
 
     <div id="preloader-container"></div>
+
     <div class="flex h-screen overflow-hidden">
-        <button id="toggleSidebarBtn" class="fixed top-4 left-4 z-100 p-3 glass rounded-full shadow-lg" style="color: #8b7765;">
-            ☰
+
+        <button id="toggleSidebarBtn" aria-label="切换侧边栏">
+            <svg id="menuIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+            <svg id="closeIcon" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
         </button>
 
-        <div id="sidebar"
-             class="sidebar fixed inset-y-0 left-0 w-72 glass-strong rounded-r-2xl
-                    p-4 flex flex-col z-50 transition-transform duration-300 ease-in-out">
-            <div class="section-label mb-4 px-2">漫画系列</div>
-            <div id="seriesWrapper" class="series-ratio-2 overflow-y-auto mb-4 glass rounded-xl p-2">
-                <div id="seriesList" class="list-block space-y-1">
-                    <div class="p-2 text-gray-500">正在加载...</div>
-                </div>
-            </div>
-
-            <hr style="border: none; height: 1px; background: rgba(139, 119, 101, 0.15); margin: 16px 0;">
-
-            <div class="section-label mt-2 mb-3 px-2">章节目录</div>
-            <input id="filter" class="search w-full glass-input rounded-lg mb-4" placeholder="过滤章节名..." />
-            <div id="chaptersWrapper" class="chapters-ratio-3 overflow-y-auto glass rounded-xl p-2">
-                <div id="chapters" class="list-block space-y-1">
-                    <div class="status-text" style="text-align: center;">请选择一个系列</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="main flex-grow flex flex-col overflow-hidden relative">
-
-            <div class="header absolute top-0 left-0 right-0 z-30 glass rounded-b-xl px-4 py-2 transition-all duration-300 ease-out transform"
-                 style="transform: translateY(0);">
-                <div class="flex flex-col items-center">
-                    <div class="flex flex-col items-center mb-2">
-                        <div class="title text-base" id="seriesTitle">本地漫画阅读器</div>
-                        <div class="chapter-title text-xs" id="chapterTitle">未选择章节</div>
-                    </div>
-
-                    <div class="flex items-center justify-center space-x-3">
-                        <span class="status-text text-xs">缩放</span>
-                        <input id="scaleRange" type="range" min="30" max="150" value="100" class="rounded-lg appearance-none cursor-pointer h-3">
-                        <span id="scaleLabel" class="progress-text w-12 text-xs text-center">100%</span>
+        <aside id="sidebar" class="glass-strong">
+            <div class="section-label">漫画系列</div>
+            <div id="seriesWrapper">
+                <div id="seriesList">
+                    <div class="loading-indicator">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                        </svg>
+                        正在加载...
                     </div>
                 </div>
+            </div>
 
-                <div class="flex justify-center space-x-3 mt-2">
-                    <button id="prevBtn" class="glass-btn rounded-xl px-3 py-1.5 text-xs">
-                        上一章
-                    </button>
-                    <button id="nextBtn" class="primary-btn rounded-xl shadow-lg px-3 py-1.5 text-xs">
-                        下一章
-                    </button>
-                    <button id="scrollTop" class="glass-btn rounded-xl px-3 py-1.5 text-xs">
-                        回到顶部
-                    </button>
+            <hr>
+
+            <div class="section-label">章节目录</div>
+            <input id="filter" class="glass-input" placeholder="搜索章节..." />
+            <div id="chaptersWrapper">
+                <div id="chapters">
+                    <div class="status-text" style="text-align: center; padding: 20px;">选择一个系列</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main flex-grow flex flex-col overflow-hidden relative">
+
+            <header class="header glass">
+                <div class="flex items-center justify-between w-full">
+                    <div class="flex flex-col">
+                        <div class="title" id="seriesTitle">漫画阅读器</div>
+                        <div class="chapter-title" id="chapterTitle">未选择章节</div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <span class="status-text">缩放</span>
+                            <input id="scaleRange" type="range" min="30" max="150" value="100">
+                            <span id="scaleLabel" class="progress-text" style="padding: 4px 8px; min-width: 48px; text-align: center;">100%</span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button id="prevBtn" class="glass-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                                上一章
+                            </button>
+                            <button id="nextBtn" class="primary-btn">
+                                下一章
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                            <button id="scrollTop" class="glass-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                                    <line x1="12" y1="19" x2="12" y2="5"></line>
+                                    <polyline points="5 12 12 5 19 12"></polyline>
+                                </svg>
+                                顶部
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div id="reader" class="reader flex-grow overflow-y-auto outline-none" tabindex="0">
+                <div id="empty" class="empty-state glass rounded-2xl mx-6 my-6">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5s3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18s-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    <div class="empty-state-title">选择漫画开始阅读</div>
+                    <div class="empty-state-desc">从侧边栏选择系列和章节</div>
                 </div>
             </div>
 
-            <div id="reader" class="reader flex-grow overflow-y-auto outline-none pt-14 pb-16" tabindex="0">
-                <div id="empty" class="empty-state glass rounded-2xl mx-4">
-                    <svg class="mx-auto" fill="none" stroke="#8b7765" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5s3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18s-3.332.477-4.5 1.253"></path></svg>
-                    <div class="empty-state-title">请先选择漫画系列和章节</div>
-                    <div class="empty-state-desc">侧边栏包含您所有的本地漫画系列和章节</div>
-                </div>
-            </div>
-
-             <div class="footer absolute bottom-0 left-0 right-0 z-30 glass rounded-t-2xl px-6 py-2 transition-all duration-300 ease-out transform">
+            <footer class="footer glass">
                 <div class="flex flex-row justify-between items-center">
-                    <div class="status-text text-xs" id="status">状态：未加载</div>
-                    <div class="flex items-center space-x-2">
-                        <button id="retryFailedBtn" class="status-text text-xs opacity-60 hover:opacity-100 transition-opacity px-2 py-1 rounded hover:bg-white/20" title="重试所有失败的图片" style="display:none;">
-                            🔄 重试失败
+                    <div class="status-text" id="status">未加载</div>
+                    <div class="flex items-center gap-3">
+                        <button id="retryFailedBtn" class="status-text hover:text-[var(--text-primary)] transition-colors px-2 py-1 rounded-lg hover:bg-[var(--bg-hover)]" style="display:none;">
+                            重试失败
                         </button>
-                        <div class="progress-text px-3 py-1 glass rounded-full cursor-pointer hover:bg-white/30 transition-colors text-xs" title="点击跳转页码 (或按 G 键)" id="progressStatus">0 / 0</div>
+                        <div class="progress-text cursor-default" id="progressStatus">0 / 0</div>
                     </div>
-                    <div class="status-text text-xs opacity-60">本地阅读器</div>
+                    <div class="status-text">本地阅读器</div>
                 </div>
-            </div>
+            </footer>
 
-            <!-- 跳转页码弹窗 -->
-            <div id="jumpModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden items-center justify-center">
-                <div class="glass-strong rounded-2xl p-6 w-72 shadow-2xl">
-                    <div class="text-center mb-4">
-                        <div class="title text-lg">跳转页码</div>
-                        <div class="chapter-title text-sm mt-1">共 <span id="totalPages">0</span> 页</div>
+            <div id="jumpModal" class="fixed inset-0 z-[60] hidden items-center justify-center">
+                <div class="glass-strong rounded-2xl p-6 w-80 shadow-2xl">
+                    <div class="text-center mb-5">
+                        <div class="title text-lg mb-1">跳转页码</div>
+                        <div class="chapter-title">共 <span id="totalPages">0</span> 页</div>
                     </div>
                     <input id="jumpPageInput" type="number" min="1"
-                           class="w-full glass-input rounded-xl text-center text-lg mb-4"
+                           class="glass-input text-center text-lg mb-5"
                            placeholder="输入页码">
-                    <div class="flex space-x-3">
-                        <button id="jumpCancelBtn" class="flex-1 glass-btn rounded-xl">取消</button>
-                        <button id="jumpConfirmBtn" class="flex-1 primary-btn rounded-xl">跳转</button>
+                    <div class="flex gap-3">
+                        <button id="jumpCancelBtn" class="glass-btn flex-1">取消</button>
+                        <button id="jumpConfirmBtn" class="primary-btn flex-1">跳转</button>
                     </div>
-                    <div class="mt-3 text-center">
-                        <span class="text-xs status-text opacity-50">按 G 键或点击状态栏打开跳转</span>
+                    <div class="mt-4 text-center">
+                        <span class="status-text">按 G 键快速跳转</span>
                     </div>
                 </div>
             </div>
-        </div>
+
+        </main>
     </div>
 
     <script type="module" src="js/main.js"></script>
