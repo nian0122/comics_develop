@@ -178,6 +178,14 @@ class ToolsPage {
                     </div>
                 `;
             }
+            if (param.type === 'select') {
+                return `
+                    <div class="flex items-center gap-3">
+                        <input id="param_${param.key}" type="checkbox" class="w-4 h-4 rounded">
+                        <label for="param_${param.key}" class="text-sm text-[var(--text-secondary)]">${param.label}</label>
+                    </div>
+                `;
+            }
             if (param.type === 'text') {
                 return `
                     <div class="space-y-1">
@@ -193,7 +201,7 @@ class ToolsPage {
                     <div class="space-y-1">
                         <label class="text-sm font-medium text-[var(--text-secondary)]">${param.label}</label>
                         <input id="param_${param.key}" type="number" class="glass-input" 
-                               value="${param.default || ''}" min="1" max="64">
+                               value="${param.default || ''}" min="0">
                     </div>
                 `;
             }
@@ -207,7 +215,13 @@ class ToolsPage {
         const params = {};
         this.selectedTool.params?.forEach(param => {
             const input = document.getElementById(`param_${param.key}`);
-            if (input && input.value) {
+            if (!input) return;
+
+            if (input.type === 'checkbox') {
+                if (input.checked) {
+                    params[param.key] = 'true';
+                }
+            } else if (input.value) {
                 params[param.key] = input.value;
             }
         });
@@ -243,7 +257,7 @@ class ToolsPage {
                 const execution = await toolsApi.getExecutionStatus(this.currentExecution);
                 if (execution) {
                     this.updateExecutionDisplay(execution);
-                    if (execution.isFinished) {
+                    if (execution.finished) {
                         this.stopPolling();
                         this.onExecutionComplete(execution);
                     }
@@ -300,9 +314,9 @@ class ToolsPage {
                 this.elements.toolTitle.textContent = this.selectedTool?.displayName || execution.toolName;
                 this.showLogPanel();
                 this.updateExecutionDisplay(execution);
-                this.elements.cancelBtn.style.display = execution.isFinished ? 'none' : 'inline-flex';
+                this.elements.cancelBtn.style.display = execution.finished ? 'none' : 'inline-flex';
 
-                if (!execution.isFinished) {
+                if (!execution.finished) {
                     this.startPolling();
                 }
             }

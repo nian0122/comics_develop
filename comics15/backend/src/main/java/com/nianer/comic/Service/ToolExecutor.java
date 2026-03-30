@@ -69,8 +69,10 @@ public class ToolExecutor {
             execution.addLog("开始执行工具: " + toolName);
 
             Path toolPath = resolveToolPath(toolName);
+            execution.addLog("工具路径: " + toolPath.toAbsolutePath());
+
             if (!Files.exists(toolPath)) {
-                execution.addLog("错误: 工具不存在 - " + toolPath);
+                execution.addLog("错误: 工具不存在 - " + toolPath.toAbsolutePath());
                 execution.markFailed();
                 return;
             }
@@ -103,39 +105,116 @@ public class ToolExecutor {
     }
 
     private Path resolveToolPath(String toolName) {
-        if ("image-optimizer".equals(toolName)) {
-            String os = System.getProperty("os.name").toLowerCase();
-            String exeName = os.contains("win") ? "image-optimizer-go4.exe" : "image-optimizer";
-            return toolConfig.getToolDir(toolName).resolve(exeName);
+        String os = System.getProperty("os.name").toLowerCase();
+        boolean isWindows = os.contains("win");
+
+        switch (toolName) {
+            case "image-optimizer":
+                String imageOptimizerExe = isWindows ? "image-optimizer.exe" : "image-optimizer";
+                return toolConfig.getToolDir(toolName).resolve(imageOptimizerExe);
+            case "replace_files_with_empty":
+                String cleanFilesExe = isWindows ? "clean_files.exe" : "clean_files";
+                return toolConfig.getToolDir(toolName).resolve(cleanFilesExe);
+            case "leaf-image-finder":
+                String leafImageExe = isWindows ? "leaf-image-finder.exe" : "leaf-image-finder";
+                return toolConfig.getToolDir(toolName).resolve(leafImageExe);
+            default:
+                return toolConfig.getToolPath(toolName);
         }
-        if ("replace_files_with_empty".equals(toolName)) {
-            String os = System.getProperty("os.name").toLowerCase();
-            String exeName = os.contains("win") ? "clean_files.exe" : "clean_files";
-            return toolConfig.getToolDir(toolName).resolve(exeName);
-        }
-        return toolConfig.getToolPath(toolName);
     }
 
     private ProcessBuilder buildProcess(String toolName, Path toolPath, Map<String, String> params) {
         List<String> command = new java.util.ArrayList<>();
         command.add(toolPath.toString());
 
-        if ("replace_files_with_empty".equals(toolName)) {
-            String targetDir = params.getOrDefault("dir", comicConfig.getRootDir());
-            command.add("-dir");
-            command.add(targetDir);
+        switch (toolName) {
+            case "image-optimizer":
+                String customDir = params.get("customDir");
+                if (customDir != null && !customDir.isEmpty()) {
+                    command.add("-scan-dir");
+                    command.add(customDir);
+                } else {
+                    String rootDir = params.get("rootDir");
+                    String effectiveRoot = (rootDir != null && !rootDir.isEmpty()) 
+                            ? rootDir : comicConfig.getRootDir();
+                    
+                    command.add("-root");
+                    command.add(effectiveRoot);
+                    command.add("-hq");
+                    command.add(comicConfig.getHqSubDir());
+                    command.add("-lq");
+                    command.add(comicConfig.getLqSubDir());
 
-            String ext = params.get("ext");
-            if (ext != null && !ext.isEmpty()) {
-                command.add("-ext");
-                command.add(ext);
-            }
+                    String series = params.get("series");
+                    if (series != null && !series.isEmpty()) {
+                        command.add("-series");
+                        command.add(series);
+                    }
+                }
 
-            String workers = params.get("workers");
-            if (workers != null && !workers.isEmpty()) {
-                command.add("-workers");
-                command.add(workers);
-            }
+                String imgWorkers = params.get("workers");
+                if (imgWorkers != null && !imgWorkers.isEmpty()) {
+                    command.add("-workers");
+                    command.add(imgWorkers);
+                }
+
+                String quality = params.get("quality");
+                if (quality != null && !quality.isEmpty()) {
+                    command.add("-quality");
+                    command.add(quality);
+                }
+
+                String force = params.get("force");
+                if ("true".equalsIgnoreCase(force) || "1".equals(force)) {
+                    command.add("-force");
+                }
+                break;
+
+            case "replace_files_with_empty":
+                String targetDir = params.getOrDefault("dir", comicConfig.getRootDir());
+                command.add("-dir");
+                command.add(targetDir);
+
+                String ext = params.get("ext");
+                if (ext != null && !ext.isEmpty()) {
+                    command.add("-ext");
+                    command.add(ext);
+                }
+
+                String workers = params.get("workers");
+                if (workers != null && !workers.isEmpty()) {
+                    command.add("-workers");
+                    command.add(workers);
+                }
+
+                String minSize = params.get("minSize");
+                if (minSize != null && !minSize.isEmpty() && !"0".equals(minSize)) {
+                    command.add("-min-size");
+                    command.add(minSize);
+                }
+
+                String dryRun = params.get("dryRun");
+                if ("true".equalsIgnoreCase(dryRun) || "1".equals(dryRun)) {
+                    command.add("-dry-run");
+                }
+                break;
+
+            case "leaf-image-finder":
+                String leafDir = params.getOrDefault("dir", comicConfig.getRootDir());
+                command.add("-dir");
+                command.add(leafDir);
+
+                String leafExt = params.get("ext");
+                if (leafExt != null && !leafExt.isEmpty()) {
+                    command.add("-ext");
+                    command.add(leafExt);
+                }
+
+                String jsonOutput = params.get("json");
+                if ("true".equalsIgnoreCase(jsonOutput) || "1".equals(jsonOutput)) {
+                    command.add("-json");
+                }
+                break;
         }
 
         ProcessBuilder pb = new ProcessBuilder(command);

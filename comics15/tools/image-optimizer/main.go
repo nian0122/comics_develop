@@ -1,190 +1,268 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-const highQualityBaseDir = `F:\games\comics\h_photograph`
-const lowQualityBaseDir = `F:\games\comics\l_photograph`
-const lowQualityExtension = ".webp"
+const (
+	defaultHQDir      = "h_photograph"
+	defaultLQDir      = "l_photograph"
+	defaultWorkers    = 8
+	defaultQuality    = 75
+	defaultExtensions = ".jpg,.jpeg,.png,.gif,.bmp"
+)
 
-const numWorkers = 16 
-
-// 用于存储处理结果的结构体
-type processResult struct {
-	processed bool
-	skipped   bool
-	err       error
+type Stats struct {
+	Total     int32
+	Processed int32
+	Skipped   int32
+	Failed    int32
 }
 
-// 定义待处理任务的结构体
-type imageTask struct {
-	highQualityPath string
-	lowQualityPath  string
-	relativePath    string // 用于打印日志
-}
-
-// worker 是一个协程函数，从 tasks 通道接收任务并执行图片处理
-func worker(id int, tasks <-chan imageTask, results chan<- processResult) {
-	for task := range tasks {
-		// 3. 检查是否需要处理 (文件时间戳和存在性检查)
-		hqInfo, err := os.Stat(task.highQualityPath)
-		if err != nil {
-			// 文件不存在或权限问题
-			results <- processResult{err: fmt.Errorf("stat failed for HQ: %v", err)}
-			continue
-		}
-
-		if hqInfo.Size() == 0 {
-			fmt.Printf("SKIP ZERO SIZE: %s\n", task.relativePath)
-			results <- processResult{skipped: true}
-			continue
-		}
-
-		// 检查低质量文件是否存在
-		lqInfo, err := os.Stat(task.lowQualityPath)
-
-		if err == nil { // 低质量文件存在
-			// 如果低质量文件比高质量文件新或一样新，则跳过
-			if lqInfo.ModTime().Unix() >= hqInfo.ModTime().Unix() {
-				results <- processResult{skipped: true}
-				fmt.Printf("SKIP: %s\n", task.relativePath) 
-				continue
-			}
-		} else if !os.IsNotExist(err) { // 存在其他错误 (不是文件不存在)
-			// 处理文件时间戳获取失败的情况
-			results <- processResult{err: fmt.Errorf("stat failed for LQ: %v", err)}
-			continue
-		}
-		
-		// 4. 执行图片处理
-		fmt.Printf("WORKER %d PROCESS: %s\n", id, task.relativePath)
-
-		if optimizeImageToWebP(task.highQualityPath, task.lowQualityPath) {
-			results <- processResult{processed: true}
-		} else {
-			// optimizeImageToWebP 内部会打印具体的错误信息
-			results <- processResult{err: fmt.Errorf("optimization failed")}
-		}
-	}
+type Config struct {
+	ScanDir    string
+	OutputDir  string
+	HQDir      string
+	LQDir      string
+	Series     string
+	Extensions map[string]bool
+	Workers    int
+	Quality    int
+	Force      bool
+	Quiet      bool
 }
 
 func main() {
-	fmt.Println("--- 批量图片优化任务启动 ---")
-	fmt.Printf("  源目录 (HQ): %s\n", highQualityBaseDir)
-	fmt.Printf("  目标目录 (LQ): %s\n", lowQualityBaseDir)
-	fmt.Printf("  并发工作者数量: %d\n", numWorkers)
-	fmt.Println(strings.Repeat("-", 30))
+	rootDir := flag.String("root", "", "漫画根目录")
+	scanDir := flag.String("scan-dir", "", "自定义扫描目录 (覆盖 root+series)")
+	hqSubDir := flag.String("hq", defaultHQDir, "HQ 子目录名")
+	lqSubDir := flag.String("lq", defaultLQDir, "LQ 子目录名")
+	series := flag.String("series", "", "指定系列名称")
+	extensions := flag.String("ext", defaultExtensions, "文件扩展名，逗号分隔")
+	workers := flag.Int("workers", defaultWorkers, "并发数")
+	quality := flag.Int("quality", defaultQuality, "WebP 质量 (1-100)")
+	force := flag.Bool("force", false, "强制重新处理")
+	quiet := flag.Bool("quiet", false, "安静模式")
+	flag.Parse()
 
-	startTime := time.Now()
-	
-	// 检查源目录是否存在
-	if _, err := os.Stat(highQualityBaseDir); os.IsNotExist(err) {
-		fmt.Printf("FATAL: Source directory not found: %s\n", highQualityBaseDir)
-		return
+	config := buildConfig(*rootDir, *scanDir, *hqSubDir, *lqSubDir, *series, *extensions, *workers, *quality, *force, *quiet)
+
+	if config.ScanDir == "" {
+		printUsage()
+		os.Exit(1)
 	}
 
-	// 任务通道和结果通道
-	tasks := make(chan imageTask)
-	results := make(chan processResult)
+	if _, err := os.Stat(config.ScanDir); os.IsNotExist(err) {
+		fmt.Printf("错误: 目录不存在: %s\n", config.ScanDir)
+		os.Exit(1)
+	}
+
+	if !config.Quiet {
+		printHeader(config)
+	}
+
+	stats := &Stats{}
+	startTime := time.Now()
+
+	run(config, stats)
+
+	duration := time.Since(startTime)
+
+	if !config.Quiet {
+		printFooter(stats, duration)
+	} else {
+		fmt.Printf("processed=%d,skipped=%d,failed=%d\n",
+			stats.Processed, stats.Skipped, stats.Failed)
+	}
+}
+
+func printUsage() {
+	fmt.Println("图片优化工具 - 将图片转换为 WebP 格式")
+	fmt.Println()
+	fmt.Println("用法: image-optimizer.exe [选项]")
+	fmt.Println()
+	fmt.Println("选项:")
+	flag.PrintDefaults()
+	fmt.Println()
+	fmt.Println("示例:")
+	fmt.Println("  # 使用 root + series")
+	fmt.Println("  image-optimizer.exe -root \"F:\\games\\comics\" -series \"MySeries\"")
+	fmt.Println()
+	fmt.Println("  # 使用自定义扫描目录")
+	fmt.Println("  image-optimizer.exe -scan-dir \"F:\\games\\comics\\h_photograph\\MySeries\"")
+}
+
+func buildConfig(rootDir, scanDir, hqSubDir, lqSubDir, series, extensions string, workers, quality int, force, quiet bool) *Config {
+	extSet := make(map[string]bool)
+	for _, ext := range strings.Split(extensions, ",") {
+		ext = strings.ToLower(strings.TrimSpace(ext))
+		if ext != "" {
+			extSet[ext] = true
+		}
+	}
+
+	config := &Config{
+		Extensions: extSet,
+		Workers:    workers,
+		Quality:    quality,
+		Force:      force,
+		Quiet:      quiet,
+		Series:     series,
+	}
+
+	if scanDir != "" {
+		config.ScanDir = scanDir
+		config.OutputDir = strings.Replace(scanDir, hqSubDir, lqSubDir, 1)
+		config.HQDir = scanDir
+		config.LQDir = config.OutputDir
+	} else if rootDir != "" {
+		config.HQDir = filepath.Join(rootDir, hqSubDir)
+		config.LQDir = filepath.Join(rootDir, lqSubDir)
+		if series != "" {
+			config.ScanDir = filepath.Join(config.HQDir, series)
+			config.OutputDir = filepath.Join(config.LQDir, series)
+		} else {
+			config.ScanDir = config.HQDir
+			config.OutputDir = config.LQDir
+		}
+	}
+
+	return config
+}
+
+func printHeader(config *Config) {
+	fmt.Println(strings.Repeat("-", 50))
+	fmt.Println("--- 图片优化工具 ---")
+	fmt.Printf("扫描目录: %s\n", config.ScanDir)
+	fmt.Printf("输出目录: %s\n", config.OutputDir)
+	fmt.Printf("并发数:   %d\n", config.Workers)
+	fmt.Printf("质量:     %d\n", config.Quality)
+	if config.Force {
+		fmt.Println("模式:     强制重新处理")
+	}
+	fmt.Println(strings.Repeat("-", 50))
+}
+
+func run(config *Config, stats *Stats) {
+	tasks := make(chan imageTask, config.Workers*2)
 	var wg sync.WaitGroup
 
-	// 1. 启动并发工作者
-	for i := 1; i <= numWorkers; i++ {
+	for i := 0; i < config.Workers; i++ {
 		wg.Add(1)
-		go func(workerID int) {
-			defer wg.Done()
-			worker(workerID, tasks, results)
-		}(i)
+		go worker(i, tasks, &wg, config, stats)
 	}
 
-	// 2. 启动文件扫描协程
-	go func() {
-		defer close(tasks) // 扫描完成后关闭任务通道
-
-		// 递归遍历高质量目录下的所有文件
-		err := filepath.Walk(highQualityBaseDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				// 打印错误并继续
-				fmt.Printf("WARNING: Preventing traversal into %s: %v\n", path, err)
-				return nil
+	filepath.Walk(config.ScanDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			if !config.Quiet {
+				fmt.Printf("WARN: 无法访问 %s: %v\n", path, err)
 			}
-			
-			if info.IsDir() {
-				return nil // 跳过目录
-			}
-
-			if !isSupportedImage(path) {
-				return nil // 跳过不支持的图片格式
-			}
-
-			// 构造当前路径相对于 BASE_DIR 的相对路径
-			relativePath, err := filepath.Rel(highQualityBaseDir, path)
-			if err != nil {
-				fmt.Printf("ERROR: Failed to get relative path for %s: %v\n", path, err)
-				return nil
-			}
-
-			// 构造低质量目标文件的完整路径
-			// a. 移除原始扩展名
-			baseFilename := strings.TrimSuffix(filepath.Base(relativePath), filepath.Ext(relativePath))
-			// b. 构造低质量文件名 (使用 .webp 扩展名)
-			lowQualityFilename := baseFilename + lowQualityExtension
-			
-			// c. 构造目标路径
-			lowQualityDir := filepath.Join(lowQualityBaseDir, filepath.Dir(relativePath))
-			lowQualityPath := filepath.Join(lowQualityDir, lowQualityFilename)
-
-			// 将任务发送到任务通道
-			tasks <- imageTask{
-				highQualityPath: path,
-				lowQualityPath:  lowQualityPath,
-				relativePath:    relativePath,
-			}
-			
 			return nil
-		})
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(path))
+		if !config.Extensions[ext] {
+			return nil
+		}
+
+		if info.Size() == 0 {
+			atomic.AddInt32(&stats.Skipped, 1)
+			return nil
+		}
+
+		relPath, err := filepath.Rel(config.ScanDir, path)
+		if err != nil {
+			return nil
+		}
+
+		baseFilename := strings.TrimSuffix(filepath.Base(relPath), filepath.Ext(relPath))
+		lqPath := filepath.Join(config.OutputDir, filepath.Dir(relPath), baseFilename+".webp")
+
+		atomic.AddInt32(&stats.Total, 1)
+
+		if !config.Force {
+			if lqInfo, err := os.Stat(lqPath); err == nil {
+				if lqInfo.ModTime().Unix() >= info.ModTime().Unix() {
+					atomic.AddInt32(&stats.Skipped, 1)
+					return nil
+				}
+			}
+		}
+
+		tasks <- imageTask{
+			HQPath:       path,
+			LQPath:       lqPath,
+			RelativePath: relPath,
+		}
+		return nil
+	})
+
+	close(tasks)
+	wg.Wait()
+}
+
+type imageTask struct {
+	HQPath       string
+	LQPath       string
+	RelativePath string
+}
+
+func worker(id int, tasks <-chan imageTask, wg *sync.WaitGroup, config *Config, stats *Stats) {
+	defer wg.Done()
+
+	for task := range tasks {
+		err := processImage(task.HQPath, task.LQPath, config.Quality)
 
 		if err != nil {
-			fmt.Printf("ERROR: File traversal failed: %v\n", err)
-		}
-	}()
-
-	// 3. 结果收集协程
-	processedCount := 0
-	skippedCount := 0
-	errorCount := 0
-	
-	// 等待所有工作者完成 (任务通道关闭后)
-	go func() {
-		wg.Wait()
-		close(results) // 所有工作完成后关闭结果通道
-	}()
-
-	// 监听结果通道
-	for result := range results {
-		if result.err != nil {
-			errorCount++
-		} else if result.processed {
-			processedCount++
-		} else if result.skipped {
-			skippedCount++
+			atomic.AddInt32(&stats.Failed, 1)
+			if !config.Quiet {
+				fmt.Printf("FAIL: %s - %v\n", filepath.Base(task.HQPath), err)
+			}
+		} else {
+			atomic.AddInt32(&stats.Processed, 1)
+			if !config.Quiet {
+				fmt.Printf("OK: %s\n", filepath.Base(task.RelativePath))
+			}
 		}
 	}
+}
 
-	// 4. 打印结果
-	endTime := time.Now()
-	
-	fmt.Println(strings.Repeat("-", 30))
-	fmt.Println("--- 批量图片优化任务完成 ---")
-	fmt.Printf("总耗时: %.2f 秒\n", endTime.Sub(startTime).Seconds())
-	fmt.Printf("处理图片数量: %d\n", processedCount)
-	fmt.Printf("跳过图片数量: %d\n", skippedCount)
-	fmt.Printf("处理失败数量: %d\n", errorCount)
-	fmt.Println(strings.Repeat("-", 30))
+func processImage(hqPath, lqPath string, quality int) error {
+	lqDir := filepath.Dir(lqPath)
+	if err := os.MkdirAll(lqDir, 0755); err != nil {
+		return fmt.Errorf("创建目录失败: %w", err)
+	}
+
+	webpQuality := float32(quality)
+	return optimizeImageToWebP(hqPath, lqPath, webpQuality)
+}
+
+func printFooter(stats *Stats, duration time.Duration) {
+	fmt.Println(strings.Repeat("-", 50))
+	fmt.Println("--- 任务完成 ---")
+	fmt.Printf("总耗时:   %.2f 秒\n", duration.Seconds())
+	fmt.Printf("扫描文件: %d\n", stats.Total)
+	fmt.Printf("处理成功: %d\n", stats.Processed)
+	fmt.Printf("跳过文件: %d\n", stats.Skipped)
+	fmt.Printf("失败数量: %d\n", stats.Failed)
+	if duration.Seconds() > 0 {
+		fmt.Printf("平均速度: %.0f 文件/秒\n", float64(stats.Processed)/duration.Seconds())
+	}
+	fmt.Println(strings.Repeat("-", 50))
+}
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 }

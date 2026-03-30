@@ -30,17 +30,34 @@ public class ToolController {
                     "displayName", "图片优化器",
                     "description", "将 HQ 图片转换为 LQ WebP 格式",
                     "params", Arrays.asList(
-                            Map.of("key", "series", "label", "系列名称", "type", "select", "required", false, "default", "")
+                            Map.of("key", "rootDir", "label", "根目录", "type", "text", "required", false, "default", ""),
+                            Map.of("key", "customDir", "label", "自定义扫描目录", "type", "text", "required", false, "default", ""),
+                            Map.of("key", "series", "label", "或选择系列", "type", "select", "required", false, "default", ""),
+                            Map.of("key", "workers", "label", "并发数", "type", "number", "required", false, "default", "8"),
+                            Map.of("key", "quality", "label", "WebP质量", "type", "number", "required", false, "default", "75"),
+                            Map.of("key", "force", "label", "强制重处理", "type", "select", "required", false, "default", "")
                     )
             ),
             Map.of(
                     "name", "replace_files_with_empty",
                     "displayName", "清空文件内容",
-                    "description", "删除指定目录文件并创建空文件占位",
+                    "description", "将文件截断为0字节，保留文件但清空内容",
                     "params", Arrays.asList(
                             Map.of("key", "dir", "label", "目标目录", "type", "text", "required", true, "default", ""),
-                            Map.of("key", "ext", "label", "扩展名过滤", "type", "text", "required", false, "default", ".jpg,.jpeg,.png,.gif,.bmp"),
-                            Map.of("key", "workers", "label", "并发数", "type", "number", "required", false, "default", "4")
+                            Map.of("key", "ext", "label", "扩展名过滤", "type", "text", "required", false, "default", ".jpg,.jpeg,.png,.gif,.bmp,.webp"),
+                            Map.of("key", "workers", "label", "并发数", "type", "number", "required", false, "default", "8"),
+                            Map.of("key", "minSize", "label", "最小大小(字节)", "type", "number", "required", false, "default", "0"),
+                            Map.of("key", "dryRun", "label", "干跑模式", "type", "select", "required", false, "default", "")
+                    )
+            ),
+            Map.of(
+                    "name", "leaf-image-finder",
+                    "displayName", "叶目录图片查找",
+                    "description", "查找目标路径下所有叶目录的第一张图片",
+                    "params", Arrays.asList(
+                            Map.of("key", "dir", "label", "目标目录", "type", "text", "required", true, "default", ""),
+                            Map.of("key", "ext", "label", "扩展名过滤", "type", "text", "required", false, "default", ".jpg,.jpeg,.png,.webp,.gif,.bmp"),
+                            Map.of("key", "json", "label", "JSON输出", "type", "select", "required", false, "default", "")
                     )
             )
     );
