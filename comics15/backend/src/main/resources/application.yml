@@ -5,6 +5,12 @@ comic:
   hq-sub-dir: ${HQ_SUB_DIR:h_photograph}
   cache-expiration: ${CACHE_EXPIRATION:604800}
 
+tool:
+  root-dir: ${TOOL_ROOT_DIR:tools}
+  executables:
+    image-optimizer: image-optimizer-go4.exe
+    replace_files_with_empty: clean_files.exe
+
 spring:
   application:
     name: comic
