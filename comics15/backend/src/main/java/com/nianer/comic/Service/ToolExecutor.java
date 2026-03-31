@@ -58,6 +58,7 @@ public class ToolExecutor {
         ToolExecution execution = ToolExecution.create(executionId, toolName);
         executions.put(executionId, execution);
 
+        log.info("[Executor] 提交工具执行 - ID: {}, 工具: {}, 参数: {}", executionId, toolName, params);
         executorService.submit(() -> runTool(execution, toolName, params));
 
         return executionId;
@@ -266,12 +267,16 @@ public class ToolExecutor {
     public void cancel(String executionId) {
         ToolExecution execution = executions.get(executionId);
         if (execution != null && !execution.isFinished()) {
+            log.info("[Executor] 取消执行: {}", executionId);
             execution.markCancelled();
             execution.addLog("用户取消执行");
         }
     }
 
     public void clearCompleted() {
+        int beforeSize = executions.size();
         executions.entrySet().removeIf(e -> e.getValue().isFinished());
+        int removedCount = beforeSize - executions.size();
+        log.info("[Executor] 清理已完成记录 - 清理数量: {}, 剩余数量: {}", removedCount, executions.size());
     }
 }

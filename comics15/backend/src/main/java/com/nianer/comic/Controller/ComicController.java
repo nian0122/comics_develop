@@ -61,7 +61,7 @@ public class ComicController {
                 return objectMapper.readValue(cached, new TypeReference<List<String>>() {
                 });
             }
-            log.debug("Redis 缓存未命中: key={}", cacheKey);
+            log.info("Redis 缓存未命中: key={}", cacheKey);
         }
         Path hqPath = config.getHqPath();
         log.info("开始扫描物理路径: {}", hqPath.toAbsolutePath());
@@ -104,6 +104,7 @@ public class ComicController {
                 return objectMapper.readValue(cachedData, new TypeReference<List<Map<String, String>>>() {
                 });
             }
+            log.info("[Chapters] 缓存未命中: {}", seriesName);
         }
 
         Path seriesPath = config.getHqPath().resolve(seriesName);
@@ -149,11 +150,12 @@ public class ComicController {
         if (REDIS_ENABLED) {
             String cachedData = redisTemplate.opsForValue().get(cacheKey);
             if (cachedData != null) {
-                log.debug("[Files] 缓存命中: {}", cacheKey);
+                log.info("[Files] 缓存命中: {}", cacheKey);
                 List<String> files = objectMapper.readValue(cachedData, new TypeReference<List<String>>() {
                 });
                 return ResponseEntity.ok(Collections.singletonMap("files", files));
             }
+            log.info("[Files] 缓存未命中: {}", cacheKey);
         }
 
         Path chapterPathResolved = config.getHqPath().resolve(seriesName).resolve(chapterPath);

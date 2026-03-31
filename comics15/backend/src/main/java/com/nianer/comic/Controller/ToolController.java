@@ -34,7 +34,7 @@ public class ToolController {
                             Map.of("key", "customDir", "label", "自定义扫描目录", "type", "text", "required", false, "default", ""),
                             Map.of("key", "series", "label", "或选择系列", "type", "select", "required", false, "default", ""),
                             Map.of("key", "workers", "label", "并发数", "type", "number", "required", false, "default", "8"),
-                            Map.of("key", "quality", "label", "WebP质量", "type", "number", "required", false, "default", "75"),
+                            Map.of("key", "quality", "label", "WebP质量", "type", "number", "required", false, "default", "15"),
                             Map.of("key", "force", "label", "强制重处理", "type", "select", "required", false, "default", "")
                     )
             ),
@@ -108,8 +108,10 @@ public class ToolController {
     public ResponseEntity<ToolExecution> getExecutionStatus(
             @Parameter(description = "执行 ID", required = true) @PathVariable String executionId) {
 
+        log.info("[Status] 查询执行状态: {}", executionId);
         ToolExecution execution = toolExecutor.getExecution(executionId);
         if (execution == null) {
+            log.warn("[Status] 执行记录不存在: {}", executionId);
             return ResponseEntity.notFound().build();
         }
 
@@ -130,18 +132,22 @@ public class ToolController {
     public ResponseEntity<Map<String, String>> cancelExecution(
             @Parameter(description = "执行 ID", required = true) @PathVariable String executionId) {
 
+        log.info("[Cancel] 请求取消执行: {}", executionId);
         ToolExecution execution = toolExecutor.getExecution(executionId);
         if (execution == null) {
+            log.warn("[Cancel] 执行记录不存在: {}", executionId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "执行记录不存在"));
         }
 
         if (execution.isFinished()) {
+            log.warn("[Cancel] 执行已完成，无法取消: {}", executionId);
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "执行已完成，无法取消"));
         }
 
         toolExecutor.cancel(executionId);
+        log.info("[Cancel] 执行已取消: {}", executionId);
         return ResponseEntity.ok(Map.of("message", "执行已取消"));
     }
 
@@ -149,7 +155,9 @@ public class ToolController {
     @ApiResponse(responseCode = "200", description = "清理成功")
     @PostMapping("/cleanup")
     public ResponseEntity<Map<String, String>> cleanupExecutions() {
+        log.info("[Cleanup] 清理已完成的执行记录");
         toolExecutor.clearCompleted();
+        log.info("[Cleanup] 清理完成");
         return ResponseEntity.ok(Map.of("message", "已完成记录已清理"));
     }
 }

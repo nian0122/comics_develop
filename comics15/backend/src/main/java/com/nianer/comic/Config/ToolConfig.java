@@ -1,6 +1,8 @@
 package com.nianer.comic.Config;
 
+import jakarta.annotation.PostConstruct;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,6 +15,7 @@ import java.util.Map;
  * 工具配置类
  * 配置外部工具的路径和参数
  */
+@Slf4j
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "tool")
@@ -29,6 +32,11 @@ public class ToolConfig {
      * value: 可执行文件名（相对于 rootDir）
      */
     private Map<String, String> executables = new HashMap<>();
+
+    @PostConstruct
+    public void init() {
+        log.info("工具配置初始化完成 - 工具根目录: {}, 已配置工具数量: {}", rootDir, executables.size());
+    }
 
     /**
      * 获取工具的完整路径
