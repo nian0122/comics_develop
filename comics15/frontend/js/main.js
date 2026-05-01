@@ -1,400 +1,488 @@
-// 应用主入口
+// 移动端优先应用入口
 
 import { store, progressState } from './state/index.js';
 import { api, storage } from './services/index.js';
-import { Sidebar, Reader } from './components/index.js';
-import { $ } from './utils/dom.js';
-import { naturalSort } from './utils/natural-sort.js';
+import { Reader } from './components/index.js';
+import { $, escapeHtml } from './utils/dom.js';
+import {
+    buildChapterTree,
+    getLevelNodes,
+    getParentPath,
+    formatChapterProgress,
+    getChapterDisplayName,
+    splitChapterPath,
+} from './utils/chapter-tree.js';
+import { isImageFile } from './utils/file-type.js';
+import { markCoverLoading, markCoverLoaded } from './utils/lazy-cover.js';
 
 class App {
     constructor() {
-        this.sidebar = null;
         this.reader = null;
-
+        this.chapterMetaCache = new Map();
+        this.coverObserver = null;
         this.elements = {
-            status: $('#status'),
+            seriesView: $('#seriesView'),
+            directoryView: $('#directoryView'),
+            readerView: $('#readerView'),
+            reader: $('#reader'),
+            readerMenuBtn: $('#readerMenuBtn'),
+            readerActions: $('#readerActions'),
+            restoreFabBtn: $('#restoreFabBtn'),
+            hideFabBtn: $('#hideFabBtn'),
+            backToDirectoryBtn: $('#backToDirectoryBtn'),
             prevBtn: $('#prevBtn'),
             nextBtn: $('#nextBtn'),
-            scrollTopBtn: $('#scrollTop'),
-            scaleRange: $('#scaleRange'),
-            scaleLabel: $('#scaleLabel'),
             progressStatus: $('#progressStatus'),
-            emptyDiv: $('#empty'),
-            header: document.querySelector('.header'),
-            footer: document.querySelector('.footer'),
-
             jumpModal: $('#jumpModal'),
             jumpPageInput: $('#jumpPageInput'),
             jumpCancelBtn: $('#jumpCancelBtn'),
             jumpConfirmBtn: $('#jumpConfirmBtn'),
             totalPages: $('#totalPages'),
-            retryFailedBtn: $('#retryFailedBtn'),
         };
     }
 
     async init() {
-        this.sidebar = new Sidebar();
         this.reader = new Reader();
-
         this.bindEvents();
-        this.showHeaderFooter();
-
-        await this.restoreReadingPosition();
+        await this.loadSeries();
+        await this.restoreLastSeries();
     }
 
     bindEvents() {
+        this.elements.readerMenuBtn.onclick = () => this.toggleReaderActions();
+        this.elements.restoreFabBtn.onclick = () => this.showFab();
+        this.elements.hideFabBtn.onclick = () => this.hideFab();
+        this.elements.backToDirectoryBtn.onclick = () => this.backToDirectory();
         this.elements.prevBtn.onclick = () => this.openPrevChapter();
         this.elements.nextBtn.onclick = () => this.openNextChapter();
-        this.elements.scrollTopBtn.onclick = () => this.reader.scrollToTop();
-
-        this.elements.scaleRange.addEventListener('input', () => {
-            const scale = this.elements.scaleRange.value;
-            this.elements.scaleLabel.textContent = scale + '%';
-            this.reader.setScale(scale);
-        });
-
         this.elements.progressStatus.onclick = () => this.showJumpModal();
         this.elements.jumpCancelBtn.onclick = () => this.hideJumpModal();
         this.elements.jumpConfirmBtn.onclick = () => this.jumpToPage();
 
-        this.elements.jumpPageInput.onkeydown = (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
+        this.elements.jumpPageInput.onkeydown = (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
                 this.jumpToPage();
             }
-            if (e.key === 'Escape') {
+            if (event.key === 'Escape') {
                 this.hideJumpModal();
             }
         };
 
-        this.elements.jumpModal.onclick = (e) => {
-            if (e.target === this.elements.jumpModal) {
-                this.hideJumpModal();
+        this.elements.jumpModal.onclick = (event) => {
+            if (event.target === this.elements.jumpModal) this.hideJumpModal();
+        };
+
+        this.elements.readerView.onclick = (event) => {
+            if (!this.elements.readerActions.classList.contains('hidden')
+                && !event.target.closest('#readerActions')
+                && !event.target.closest('#readerMenuBtn')) {
+                this.elements.readerActions.classList.add('hidden');
             }
         };
 
-        this.elements.retryFailedBtn.onclick = () => this.retryAllFailedImages();
-
-        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
-
-        window.addEventListener('chapter:select', (e) => {
-            this.openChapter(e.detail.index, true);
-        });
-
-        window.addEventListener('series:select', (e) => {
-            this.selectSeries(e.detail.name);
-        });
-
-        window.addEventListener('status:update', (e) => {
-            this.setStatus(e.detail.message);
-        });
-
-        window.addEventListener('reader:imageLoaded', () => {
-            this.updateProgressStatus();
-        });
+        document.addEventListener('keydown', (event) => this.handleKeyboard(event));
+        window.addEventListener('reader:imageLoaded', () => this.updateProgressStatus());
+        window.addEventListener('reader:pageChanged', () => this.updateProgressStatus());
     }
 
-    handleKeyboard(e) {
-        if (document.activeElement.tagName === 'INPUT') return;
-
-        if (e.key === 'ArrowLeft') {
-            this.elements.prevBtn.click();
-            e.preventDefault();
+    handleKeyboard(event) {
+        if (document.activeElement?.tagName === 'INPUT') return;
+        if (event.key === 'ArrowLeft') {
+            this.openPrevChapter();
+            event.preventDefault();
         }
-        if (e.key === 'ArrowRight') {
-            this.elements.nextBtn.click();
-            e.preventDefault();
+        if (event.key === 'ArrowRight') {
+            this.openNextChapter();
+            event.preventDefault();
         }
-        if (e.key === 'Home') {
-            this.elements.scrollTopBtn.click();
-            e.preventDefault();
-        }
-        if ((e.key === 'g' || e.key === 'G') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if ((event.key === 'g' || event.key === 'G') && !event.ctrlKey && !event.metaKey && !event.altKey) {
             this.showJumpModal();
-            e.preventDefault();
+            event.preventDefault();
         }
-        if (e.key === 'PageDown') {
-            this.reader.container.scrollBy({ top: this.reader.container.clientHeight * 0.9, behavior: 'smooth' });
-            e.preventDefault();
-        }
-        if (e.key === 'PageUp') {
-            this.reader.container.scrollBy({ top: this.reader.container.clientHeight * -0.9, behavior: 'smooth' });
-            e.preventDefault();
-        }
-    }
-
-    setStatus(message) {
-        this.elements.status.textContent = message;
-    }
-
-    showHeaderFooter() {
-        this.elements.header?.classList.remove('hidden');
-        this.elements.footer?.classList.remove('hidden');
     }
 
     async loadSeries() {
+        this.renderSeriesLoading();
         try {
-            this.sidebar.showLoading();
             const series = await api.getSeries();
-
             store.setSeries(series);
-            this.sidebar.renderSeriesList(series, store.series.current);
-
-            this.setStatus(`已加载系列：${series.length}`);
+            this.renderSeriesList(series);
         } catch (error) {
-            this.sidebar.showError('错误：无法连接到后端或加载系列列表。');
-            this.setStatus('错误：无法加载系列列表');
-            console.error('Error loading series:', error);
+            console.error('加载系列失败:', error);
+            this.renderSeriesError();
         }
+    }
+
+    async restoreLastSeries() {
+        const savedSeries = storage.getCurrentSeries();
+        if (!savedSeries || !store.series.list.includes(savedSeries)) return;
+        await this.selectSeries(savedSeries);
+    }
+
+    renderSeriesLoading() {
+        this.elements.seriesView.innerHTML = `
+            <div class="mobile-page-header">
+                <p class="mobile-kicker">Library</p>
+                <h1>漫画阅读器</h1>
+            </div>
+            <div class="mobile-state-card">正在加载系列...</div>
+        `;
+    }
+
+    renderSeriesError() {
+        this.elements.seriesView.innerHTML = `
+            <div class="mobile-page-header">
+                <p class="mobile-kicker">Library</p>
+                <h1>漫画阅读器</h1>
+            </div>
+            <div class="mobile-state-card error-state">
+                <strong>加载失败</strong>
+                <span>无法连接到后端或加载系列列表。</span>
+                <button id="retrySeriesBtn" class="primary-btn">重试</button>
+            </div>
+        `;
+        $('#retrySeriesBtn')?.addEventListener('click', () => this.loadSeries());
+    }
+
+    renderSeriesList(series) {
+        this.showView('seriesList');
+        const items = series.map(name => `
+            <button class="series-row" data-series="${escapeHtml(name)}">
+                <span>${escapeHtml(name)}</span>
+                <span class="row-chevron">›</span>
+            </button>
+        `).join('');
+
+        this.elements.seriesView.innerHTML = `
+            <div class="mobile-page-header">
+                <p class="mobile-kicker">Library</p>
+                <h1>漫画阅读器</h1>
+                <p>选择系列，继续进入逐级目录。</p>
+            </div>
+            <label class="mobile-search-label" for="seriesSearch">搜索系列</label>
+            <input id="seriesSearch" class="glass-input mobile-search" placeholder="搜索系列" autocomplete="off">
+            <div id="seriesList" class="series-list">
+                ${items || '<div class="mobile-state-card">暂无系列</div>'}
+            </div>
+        `;
+
+        const seriesListEl = $('#seriesList');
+        const searchEl = $('#seriesSearch');
+        seriesListEl.addEventListener('click', (event) => {
+            const rowEl = event.target.closest('.series-row');
+            if (!rowEl) return;
+            this.selectSeries(rowEl.dataset.series);
+        });
+        searchEl.addEventListener('input', () => this.filterSeries(searchEl.value));
+    }
+
+    filterSeries(keyword) {
+        const value = keyword.trim().toLowerCase();
+        const rows = this.elements.seriesView.querySelectorAll('.series-row');
+        rows.forEach(rowEl => {
+            rowEl.hidden = value && !rowEl.dataset.series.toLowerCase().includes(value);
+        });
     }
 
     async selectSeries(name) {
-        if (store.series.current === name) return;
-
         store.setCurrentSeries(name);
-
-        await this.fetchAndRenderChapters(name);
-
-        this.sidebar.renderSeriesList(store.series.list, name);
         storage.setCurrentSeries(name);
-    }
-
-    async fetchAndRenderChapters(name) {
-        this.setStatus('加载章节...');
-        this.sidebar.chaptersList.innerHTML = '<div class="status-text" style="text-align: center;">正在加载章节...</div>';
+        store.navigation.currentPath = '';
+        store.navigation.returnPath = '';
+        this.chapterMetaCache.clear();
+        this.renderDirectoryLoading(name);
 
         try {
             const flatChapters = await api.getChapters(name);
-
-            store.chapters.flatList = flatChapters;
-            const tree = this.buildChapterTree(flatChapters);
-            store.chapters.tree = tree;
-
-            this.sidebar.renderChapters(tree, '', -1);
-
-            this.reader.container.innerHTML = '';
-            this.elements.emptyDiv.style.display = 'flex';
-            this.resetLoadingState();
-
+            const tree = buildChapterTree(flatChapters);
+            store.setChapters(flatChapters, tree);
+            const savedChapterPath = storage.getCurrentChapterPath();
+            const savedChapter = flatChapters.find(chapter => chapter.path_id === savedChapterPath);
+            this.renderDirectory(savedChapter ? getParentPath(savedChapter.path_id) : '');
         } catch (error) {
-            this.sidebar.chaptersList.innerHTML = '<div class="p-2 text-red-400">错误：无法加载章节数据。</div>';
-            this.setStatus('错误：无法加载章节数据');
-            console.error('Error loading chapters:', error);
+            console.error('加载章节失败:', error);
+            this.renderDirectoryError(name);
         }
     }
 
-    buildChapterTree(flatChapters) {
-        const root = { name: 'root', children: {} };
-        const expandedPaths = storage.getExpandedPaths();
+    renderDirectoryLoading(seriesName) {
+        this.showView('directoryBrowser');
+        this.elements.directoryView.innerHTML = `
+            <div class="mobile-topbar">
+                <button class="text-back-btn" data-action="series">‹ 系列</button>
+            </div>
+            <div class="mobile-page-header compact">
+                <h1>${escapeHtml(seriesName)}</h1>
+                <p>正在加载目录...</p>
+            </div>
+        `;
+        this.bindDirectoryStaticActions();
+    }
 
-        flatChapters.forEach((chapter, index) => {
-            const parts = chapter.path_id.split(/[\\/]/).filter(p => p);
-            let current = root;
-            let fullPath = '';
+    renderDirectoryError(seriesName) {
+        this.elements.directoryView.innerHTML = `
+            <div class="mobile-topbar">
+                <button class="text-back-btn" data-action="series">‹ 系列</button>
+            </div>
+            <div class="mobile-state-card error-state">
+                <strong>加载失败</strong>
+                <span>无法加载 ${escapeHtml(seriesName)} 的章节目录。</span>
+                <button id="retryDirectoryBtn" class="primary-btn">重试</button>
+            </div>
+        `;
+        this.bindDirectoryStaticActions();
+        $('#retryDirectoryBtn')?.addEventListener('click', () => this.selectSeries(seriesName));
+    }
 
-            parts.forEach((part, i) => {
-                fullPath = fullPath ? `${fullPath}/${part}` : part;
+    renderDirectory(path) {
+        store.navigation.currentPath = path;
+        store.navigation.returnPath = path;
+        this.showView('directoryBrowser');
 
-                if (!current.children[part]) {
-                    current.children[part] = {
-                        name: part,
-                        fullPath: fullPath,
-                        children: {},
-                        isChapter: (i === parts.length - 1),
-                        flatIndex: (i === parts.length - 1) ? index : null,
-                        path_id: (i === parts.length - 1) ? chapter.path_id : null,
-                        isExpanded: expandedPaths[fullPath] !== false,
-                    };
-                }
-                current = current.children[part];
+        const nodes = getLevelNodes(store.chapters.tree, path);
+        const title = path ? splitChapterPath(path).at(-1) : store.series.current;
+        const backText = path ? `‹ ${getParentPath(path) || store.series.current}` : '‹ 系列';
+        const progress = storage.getSeriesProgress(store.series.current);
+        const items = nodes.map(node => node.type === 'directory'
+            ? this.renderDirectoryRow(node)
+            : this.renderChapterCard(node, progress[node.flatIndex])
+        ).join('');
+
+        this.elements.directoryView.innerHTML = `
+            <div class="mobile-topbar">
+                <button class="text-back-btn" data-action="back">${escapeHtml(backText)}</button>
+            </div>
+            <div class="mobile-page-header compact">
+                <p class="mobile-kicker">${escapeHtml(store.series.current || '')}</p>
+                <h1>${escapeHtml(title || '目录')}</h1>
+            </div>
+            <div class="directory-list">
+                ${items || '<div class="mobile-state-card">当前目录为空</div>'}
+            </div>
+        `;
+
+        this.bindDirectoryStaticActions();
+        this.bindDirectoryRows();
+        this.observeChapterCovers();
+    }
+
+    renderDirectoryRow(node) {
+        return `
+            <button class="directory-row" data-path="${escapeHtml(node.path)}">
+                <span class="folder-mark">⌁</span>
+                <span>${escapeHtml(node.name)}</span>
+                <span class="row-chevron">›</span>
+            </button>
+        `;
+    }
+
+    renderChapterCard(node, progress) {
+        const displayName = getChapterDisplayName(node.chapter);
+        const pathLabel = getParentPath(node.path_id) || store.series.current;
+        return `
+            <button class="chapter-card" data-index="${node.flatIndex}">
+                <span class="chapter-cover skeleton" data-cover-index="${node.flatIndex}"></span>
+                <span class="chapter-card-body">
+                    <strong>${escapeHtml(displayName)}</strong>
+                    <span data-progress-index="${node.flatIndex}">${escapeHtml(formatChapterProgress(progress, 0))}</span>
+                    <small>${escapeHtml(pathLabel)}</small>
+                </span>
+            </button>
+        `;
+    }
+
+    bindDirectoryStaticActions() {
+        this.elements.directoryView.querySelectorAll('[data-action="series"]').forEach(btn => {
+            btn.addEventListener('click', () => this.showView('seriesList'));
+        });
+        this.elements.directoryView.querySelectorAll('[data-action="back"]').forEach(btn => {
+            btn.addEventListener('click', () => this.goDirectoryBack());
+        });
+    }
+
+    bindDirectoryRows() {
+        this.elements.directoryView.querySelectorAll('.directory-row').forEach(rowEl => {
+            rowEl.addEventListener('click', () => this.renderDirectory(rowEl.dataset.path));
+        });
+        this.elements.directoryView.querySelectorAll('.chapter-card').forEach(cardEl => {
+            cardEl.addEventListener('click', () => this.openChapter(Number(cardEl.dataset.index), true));
+        });
+    }
+
+    goDirectoryBack() {
+        if (!store.navigation.currentPath) {
+            this.showView('seriesList');
+            return;
+        }
+        this.renderDirectory(getParentPath(store.navigation.currentPath));
+    }
+
+    observeChapterCovers() {
+        if (this.coverObserver) {
+            this.coverObserver.disconnect();
+        }
+
+        const coverEls = this.elements.directoryView.querySelectorAll('[data-cover-index]');
+        if (!('IntersectionObserver' in window)) {
+            coverEls.forEach(coverEl => this.loadChapterCover(coverEl));
+            return;
+        }
+
+        this.coverObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                this.coverObserver.unobserve(entry.target);
+                this.loadChapterCover(entry.target);
             });
+        }, {
+            root: null,
+            rootMargin: '260px 0px',
+            threshold: 0.01,
         });
 
-        const sortChildren = (node) => {
-            const childrenArray = Object.values(node.children);
-
-            childrenArray.sort((a, b) => {
-                const naturalKeysA = naturalSort(a.name);
-                const naturalKeysB = naturalSort(b.name);
-
-                for (let i = 0; i < Math.min(naturalKeysA.length, naturalKeysB.length); i++) {
-                    if (naturalKeysA[i] < naturalKeysB[i]) return -1;
-                    if (naturalKeysA[i] > naturalKeysB[i]) return 1;
-                }
-                return naturalKeysA.length - naturalKeysB.length;
-            });
-
-            childrenArray.forEach(sortChildren);
-            node.children = childrenArray;
-        };
-
-        sortChildren(root);
-        return root.children;
+        coverEls.forEach(coverEl => this.coverObserver.observe(coverEl));
     }
 
-    async openChapter(idx, isUiSelection = false) {
-        if (store.reader.isLoading || idx < 0 || idx >= store.chapters.flatList.length) return;
+    async loadChapterCover(coverEl) {
+        if (['loading', 'loaded'].includes(coverEl.dataset.coverState)) return;
 
-        store.setCurrentChapterIndex(idx);
-        const chapterData = store.chapters.flatList[idx];
+        markCoverLoading(coverEl);
+        const index = Number(coverEl.dataset.coverIndex);
+        const node = this.findChapterNodeByIndex(index);
+        const progressEl = this.elements.directoryView.querySelector(`[data-progress-index="${index}"]`);
+        if (!node || !progressEl) return;
 
-        this.setStatus('加载文件元数据...');
+        const meta = await this.getChapterMeta(index);
+        markCoverLoaded(coverEl);
+        coverEl.classList.remove('skeleton');
+        const progress = storage.getProgress(store.series.current, index);
+        progressEl.textContent = formatChapterProgress(progress, meta.totalPages);
 
-        this.sidebar.renderChapters(store.chapters.tree, '', idx);
-
-        this.resetLoadingState();
-        this.reader.container.innerHTML = '';
-        this.elements.emptyDiv.style.display = 'none';
-
-        if (idx === store.preload.nextChapterIndex && store.preload.nextChapterFiles) {
-            store.setReaderFiles(store.preload.nextChapterFiles);
-            this.setStatus(`章节加载完成（使用缓存）。共 ${store.reader.files.length} 个文件`);
-            store.preload.nextChapterFiles = null;
-
-            await this.reader.loadChapter(store.reader.files, chapterData, store.series.current);
+        if (meta.coverUrl) {
+            coverEl.innerHTML = `<img src="${meta.coverUrl}" alt="${escapeHtml(node.name)} 首图" loading="lazy" data-source="${meta.coverSource}">`;
         } else {
-            await this.loadChapterDataAndRender(chapterData);
+            coverEl.classList.add('chapter-cover-placeholder');
+            coverEl.textContent = '无预览';
         }
-
-        this.reader.container.scrollTop = 0;
-
-        storage.setCurrentSeries(store.series.current);
-        storage.setCurrentChapterPath(chapterData.path_id);
     }
 
-    async loadChapterDataAndRender(chapterData) {
-        store.setReaderLoading(true);
+    findChapterNodeByIndex(index) {
+        const nodes = getLevelNodes(store.chapters.tree, store.navigation.currentPath);
+        return nodes.find(node => node.type === 'chapter' && node.flatIndex === index);
+    }
 
-        const seriesName = store.series.current;
-        const { path_id } = chapterData;
+    async getChapterMeta(index) {
+        if (this.chapterMetaCache.has(index)) return this.chapterMetaCache.get(index);
+        const chapter = store.chapters.flatList[index];
+        const fallback = { totalPages: 0, files: [], coverUrl: '' };
+        if (!chapter) return fallback;
 
         try {
-            const data = await api.getChapterFiles(seriesName, path_id);
-
-            if (!data || !data.files) throw new Error('Invalid API response');
-
-            store.setReaderFiles(data.files);
-
-            await this.reader.loadChapter(store.reader.files, chapterData, seriesName);
-
-            this.setStatus(`共 ${store.reader.files.length} 个文件`);
-
-            this.preloadNextChapterMetadata();
-
+            const data = await api.getChapterFiles(store.series.current, chapter.path_id);
+            const files = data.files || [];
+            const firstImage = files.find(file => isImageFile(file));
+            const cover = firstImage
+                ? await api.resolveImageUrl(store.series.current, firstImage, chapter.path_id)
+                : { url: '', source: '' };
+            const meta = { totalPages: files.length, files, coverUrl: cover.url, coverSource: cover.source };
+            this.chapterMetaCache.set(index, meta);
+            return meta;
         } catch (error) {
-            this.setStatus('错误：加载文件元数据失败');
-            console.error('Error loading files metadata:', error);
-            store.reader.files = [];
-            this.reader.container.innerHTML = '<div class="p-4 text-red-400">无法加载章节文件列表，请检查后端服务。</div>';
+            console.warn('加载章节卡片元数据失败:', chapter.path_id, error);
+            this.chapterMetaCache.set(index, fallback);
+            return fallback;
+        }
+    }
+
+    async openChapter(index, isUiSelection = false) {
+        if (store.reader.isLoading || index < 0 || index >= store.chapters.flatList.length) return;
+        store.setCurrentChapterIndex(index);
+        const chapter = store.chapters.flatList[index];
+        store.navigation.returnPath = getParentPath(chapter.path_id);
+        store.currentChapter = chapter;
+        this.showView('reader');
+        this.elements.readerActions.classList.add('hidden');
+        this.resetReaderUi();
+
+        try {
+            store.setReaderLoading(true);
+            const meta = await this.getChapterMeta(index);
+            const files = meta.files.length > 0
+                ? meta.files
+                : (await api.getChapterFiles(store.series.current, chapter.path_id)).files || [];
+            store.setReaderFiles(files);
+            await this.reader.loadChapter(files, chapter, store.series.current);
+            this.updateProgressStatus();
+            storage.setCurrentSeries(store.series.current);
+            storage.setCurrentChapterPath(chapter.path_id);
+            if (isUiSelection) this.elements.reader.scrollTop = 0;
+            this.preloadNeighborChapter(index + 1);
+        } catch (error) {
+            console.error('加载章节失败:', error);
+            this.elements.reader.innerHTML = '<div class="mobile-state-card error-state">无法加载章节文件列表，请检查后端服务。</div>';
         } finally {
             store.setReaderLoading(false);
         }
     }
 
-    async preloadNextChapterMetadata() {
-        const nextIndex = store.chapters.currentIndex + 1;
-
-        if (nextIndex >= store.chapters.flatList.length) {
-            store.preload.nextChapterFiles = null;
-            return;
-        }
-
-        const chapterData = store.chapters.flatList[nextIndex];
-        const seriesName = store.series.current;
-        const { path_id } = chapterData;
-
-        try {
-            const data = await api.getChapterFiles(seriesName, path_id);
-            store.preload.nextChapterFiles = data.files || [];
-            store.preload.nextChapterIndex = nextIndex;
-        } catch (error) {
-            store.preload.nextChapterFiles = null;
-            console.error('Error preloading next chapter metadata:', error);
-        }
+    async preloadNeighborChapter(index) {
+        if (index >= store.chapters.flatList.length || this.chapterMetaCache.has(index)) return;
+        await this.getChapterMeta(index);
     }
 
-    openPrevChapter() {
-        if (store.chapters.currentIndex > 0) {
-            this.openChapter(store.chapters.currentIndex - 1);
-        }
-    }
-
-    openNextChapter() {
-        if (store.chapters.currentIndex < store.chapters.flatList.length - 1) {
-            this.openChapter(store.chapters.currentIndex + 1);
-        }
-    }
-
-    resetLoadingState() {
-        store.resetReader();
-        this.updateProgressStatus();
+    resetReaderUi() {
+        this.elements.reader.innerHTML = '';
+        this.elements.progressStatus.textContent = '0 / 0';
+        this.elements.readerMenuBtn.classList.remove('hidden');
+        this.elements.restoreFabBtn.classList.add('hidden');
+        this.elements.prevBtn.disabled = store.chapters.currentIndex <= 0;
+        this.elements.nextBtn.disabled = store.chapters.currentIndex >= store.chapters.flatList.length - 1;
     }
 
     updateProgressStatus() {
         progressState.setLoadedPages(store.lazyLoad.loadedCount);
-
         this.elements.progressStatus.textContent = progressState.getBriefText();
-        this.elements.progressStatus.title = `点击跳转页码 (或按 G 键)\n当前: ${progressState.getDisplayText()}`;
-
+        this.elements.progressStatus.title = `点击跳转页码 (或按 G 键)
+当前: ${progressState.getDisplayText()}`;
         this.elements.prevBtn.disabled = store.chapters.currentIndex <= 0;
         this.elements.nextBtn.disabled = store.chapters.currentIndex >= store.chapters.flatList.length - 1;
-
-        this.updateRetryButtonVisibility();
     }
 
-    updateRetryButtonVisibility() {
-        let failedCount = 0;
-        store.imageRetry.forEach((state) => {
-            if (state.status === 'failed' && state.retries >= 3) {
-                failedCount++;
-            }
-        });
-
-        if (failedCount > 0) {
-            this.elements.retryFailedBtn.style.display = 'block';
-            this.elements.retryFailedBtn.textContent = `🔄 重试失败 (${failedCount})`;
-        } else {
-            this.elements.retryFailedBtn.style.display = 'none';
-        }
+    openPrevChapter() {
+        if (store.chapters.currentIndex > 0) this.openChapter(store.chapters.currentIndex - 1);
     }
 
-    retryAllFailedImages() {
-        const failedContainers = [];
-        const containers = this.reader.container.querySelectorAll('.lazy-image-container');
+    openNextChapter() {
+        if (store.chapters.currentIndex < store.chapters.flatList.length - 1) this.openChapter(store.chapters.currentIndex + 1);
+    }
 
-        containers.forEach(container => {
-            const state = store.imageRetry.get(container);
-            if (state && state.status === 'failed' && state.retries >= 3) {
-                failedContainers.push(container);
-            }
-        });
+    backToDirectory() {
+        this.renderDirectory(store.navigation.returnPath || '');
+    }
 
-        if (failedContainers.length === 0) {
-            this.setStatus('没有失败的图片需要重试');
-            return;
-        }
+    toggleReaderActions() {
+        this.elements.readerActions.classList.toggle('hidden');
+    }
 
-        this.setStatus(`正在重试 ${failedContainers.length} 张失败的图片...`);
+    hideFab() {
+        this.elements.readerActions.classList.add('hidden');
+        this.elements.readerMenuBtn.classList.add('hidden');
+        this.elements.restoreFabBtn.classList.remove('hidden');
+    }
 
-        failedContainers.forEach((container, index) => {
-            setTimeout(() => {
-                const state = store.imageRetry.get(container);
-                state.retries = 0;
-                state.status = 'loading';
-                this.reader.loadImageElement(container);
-            }, index * 500);
-        });
+    showFab() {
+        this.elements.readerMenuBtn.classList.remove('hidden');
+        this.elements.restoreFabBtn.classList.add('hidden');
     }
 
     showJumpModal() {
         if (store.reader.files.length === 0) return;
-
         this.elements.totalPages.textContent = store.reader.files.length;
         this.elements.jumpPageInput.value = '';
         this.elements.jumpPageInput.max = store.reader.files.length;
         this.elements.jumpModal.classList.remove('hidden');
         this.elements.jumpModal.classList.add('flex');
-
         setTimeout(() => this.elements.jumpPageInput.focus(), 100);
     }
 
@@ -405,63 +493,28 @@ class App {
 
     jumpToPage() {
         const pageNum = parseInt(this.elements.jumpPageInput.value, 10);
-
-        if (isNaN(pageNum) || pageNum < 1) {
+        if (Number.isNaN(pageNum) || pageNum < 1 || pageNum > store.reader.files.length) {
             this.showInputError('请输入有效的页码');
             return;
         }
-        if (pageNum > store.reader.files.length) {
-            this.showInputError(`页码超出范围，最大为 ${store.reader.files.length}`);
-            return;
-        }
-
         this.hideJumpModal();
         this.reader.jumpToPage(pageNum);
-        this.setStatus(`已跳转至第 ${pageNum} 页`);
     }
 
     showInputError(message) {
         this.elements.jumpPageInput.classList.add('border-red-500', 'ring-2', 'ring-red-200');
         this.elements.jumpPageInput.title = message;
-
-        this.elements.jumpPageInput.animate([
-            { transform: 'translateX(0)' },
-            { transform: 'translateX(-10px)' },
-            { transform: 'translateX(10px)' },
-            { transform: 'translateX(-5px)' },
-            { transform: 'translateX(5px)' },
-            { transform: 'translateX(0)' }
-        ], { duration: 300, easing: 'ease-in-out' });
-
         setTimeout(() => {
             this.elements.jumpPageInput.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
             this.elements.jumpPageInput.title = '';
         }, 500);
     }
 
-    async restoreReadingPosition() {
-        const savedSeries = storage.getCurrentSeries();
-        const savedChapterPath = storage.getCurrentChapterPath();
-
-        await this.loadSeries();
-
-        if (savedSeries) {
-            await this.selectSeries(savedSeries);
-
-            if (savedChapterPath && store.chapters.flatList.length > 0) {
-                const savedIndex = store.chapters.flatList.findIndex(item => item.path_id === savedChapterPath);
-
-                if (savedIndex !== -1) {
-                    await this.openChapter(savedIndex, false);
-                }
-            }
-        } else {
-            if (store.series.list.length > 0) {
-                await this.selectSeries(store.series.list[0]);
-            } else {
-                this.setStatus('请配置后端服务和漫画目录。');
-            }
-        }
+    showView(view) {
+        store.currentView = view;
+        this.elements.seriesView.classList.toggle('hidden', view !== 'seriesList');
+        this.elements.directoryView.classList.toggle('hidden', view !== 'directoryBrowser');
+        this.elements.readerView.classList.toggle('hidden', view !== 'reader');
     }
 }
 

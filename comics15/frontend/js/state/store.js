@@ -3,6 +3,14 @@
 import { LAZY_LOAD_CONFIG, IMAGE_RETRY_CONFIG } from '../config/constants.js';
 
 export const store = {
+    currentView: 'seriesList',
+    currentChapter: null,
+
+    navigation: {
+        currentPath: '',
+        returnPath: '',
+    },
+
     series: {
         list: [],
         current: null,

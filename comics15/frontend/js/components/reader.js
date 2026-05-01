@@ -51,7 +51,13 @@ export class Reader {
             const hqSrc = api.buildHQImageUrl(seriesName, filename, pathId);
 
             img.style.pointerEvents = 'none';
-            img.src = hqSrc;
+            api.checkHQImageUsable(hqSrc).then((isUsable) => {
+                if (!isUsable) {
+                    img.style.pointerEvents = 'auto';
+                    return;
+                }
+                img.src = hqSrc;
+            });
 
             img.onload = () => {
                 img.style.pointerEvents = 'auto';
@@ -70,27 +76,9 @@ export class Reader {
 
     handleScroll() {
         this.updateCurrentPageOnScroll();
-
-        const st = this.container.scrollTop;
-        const deltaY = st - (this._lastScrollPos || 0);
-
-        if (Math.abs(deltaY) > 50) {
-            const header = document.querySelector('.header');
-            const footer = document.querySelector('.footer');
-
-            if (st < 10) {
-                header?.classList.remove('hidden');
-                footer?.classList.remove('hidden');
-            } else if (deltaY > 0 && !header?.classList.contains('hidden')) {
-                header?.classList.add('hidden');
-                footer?.classList.add('hidden');
-            } else if (deltaY < 0 && header?.classList.contains('hidden')) {
-                header?.classList.remove('hidden');
-                footer?.classList.remove('hidden');
-            }
-
-            this._lastScrollPos = st;
-        }
+        const scrollable = this.container.scrollHeight - this.container.clientHeight;
+        const percent = scrollable > 0 ? (this.container.scrollTop / scrollable) * 100 : 0;
+        progressState.updateScrollPercent(percent);
     }
 
     updateCurrentPageOnScroll() {
@@ -100,6 +88,7 @@ export class Reader {
             const currentPage = this.calculateCurrentPage();
             if (currentPage !== progressState.currentPage) {
                 progressState.setCurrentPage(currentPage);
+                window.dispatchEvent(new CustomEvent('reader:pageChanged'));
             }
             this.scrollUpdateTimer = null;
         }, 100);
@@ -217,17 +206,14 @@ export class Reader {
         if (retryState.status === 'success') return;
         if (retryState.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES && retryState.status === 'failed') return;
 
-        let shouldUseHQ = useHQ;
-        if (!useHQ && fileType !== 'video') {
-            const lqUrl = api.buildLQImageUrl(seriesName, filename, pathId);
-            const lqExists = await api.checkLQImageExists(lqUrl);
-            shouldUseHQ = !lqExists;
-        }
-
         const isVideo = useVideoPath(filename);
+        const imageSource = !isVideo
+            ? await api.resolveImageUrl(seriesName, filename, pathId)
+            : null;
+        const shouldUseHQ = useHQ || imageSource?.source === 'hq';
         const url = isVideo
             ? api.buildVideoUrl(seriesName, filename, pathId)
-            : (shouldUseHQ ? api.buildHQImageUrl(seriesName, filename, pathId) : api.buildLQImageUrl(seriesName, filename, pathId));
+            : (useHQ ? api.buildHQImageUrl(seriesName, filename, pathId) : imageSource.url);
 
         this.clearMediaElement(container);
 
