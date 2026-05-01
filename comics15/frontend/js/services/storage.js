@@ -31,7 +31,8 @@ export const storage = {
         try {
             localStorage.removeItem(key);
             return true;
-        } catch (e) {
+        } catch (error) {
+            console.warn('删除存储失败:', error);
             return false;
         }
     },

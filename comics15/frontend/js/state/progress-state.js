@@ -1,6 +1,7 @@
 // 阅读进度状态管理
 
 import { storage } from '../services/storage.js';
+import { store } from './store.js';
 
 export const progressState = {
     currentPage: 1,
@@ -44,8 +45,8 @@ export const progressState = {
     },
 
     saveToStorage() {
-        const currentSeries = window.__appState?.series?.current;
-        const currentIndex = window.__appState?.chapters?.currentIndex;
+        const currentSeries = store.series.current;
+        const currentIndex = store.chapters.currentIndex;
         if (!currentSeries || currentIndex < 0) return;
 
         storage.setProgress(currentSeries, currentIndex, {
@@ -68,9 +69,9 @@ export const progressState = {
     },
 
     clearCurrentProgress() {
-        const currentSeries = window.__appState?.series?.current;
-        const currentIndex = window.__appState?.chapters?.currentIndex;
+        const currentSeries = store.series.current;
+        const currentIndex = store.chapters.currentIndex;
         if (!currentSeries || currentIndex < 0) return;
-        localStorage.removeItem(storage.getProgressKey(currentSeries, currentIndex));
+        storage.remove(storage.getProgressKey(currentSeries, currentIndex));
     }
 };

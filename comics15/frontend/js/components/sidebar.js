@@ -61,7 +61,7 @@ export class Sidebar {
         this.menuIcon.classList.add('hidden');
         this.closeIcon.classList.remove('hidden');
         this.overlay.classList.remove('hidden');
-        store.ui.sidebarVisible = true;
+        store.setSidebarVisible(true);
     }
 
     hide() {
@@ -69,7 +69,7 @@ export class Sidebar {
         this.menuIcon.classList.remove('hidden');
         this.closeIcon.classList.add('hidden');
         this.overlay.classList.add('hidden');
-        store.ui.sidebarVisible = false;
+        store.setSidebarVisible(false);
     }
 
     renderSeriesList(series, selectedSeries) {
@@ -106,7 +106,6 @@ export class Sidebar {
         }
 
         let selectedChapterDiv = null;
-        const expandedPaths = storage.getExpandedPaths();
 
         const containsFilteredChapters = (node, filter) => {
             if (node.isChapter) {

@@ -1,3 +1,5 @@
+import { api } from './api.js';
+
 export class ToolsApiError extends Error {
     constructor(message, status) {
         super(message);
@@ -55,14 +57,18 @@ export const toolsApi = {
     },
 
     async getSeries() {
-        const res = await fetch('/api/series');
-        if (!res.ok) throw new ToolsApiError('获取系列列表失败', res.status);
-        return res.json();
+        try {
+            return await api.getSeries();
+        } catch (error) {
+            throw new ToolsApiError('获取系列列表失败', error.status);
+        }
     },
 
     async getChapters(seriesName) {
-        const res = await fetch(`/api/chapters/${encodeURIComponent(seriesName)}`);
-        if (!res.ok) throw new ToolsApiError('获取章节列表失败', res.status);
-        return res.json();
+        try {
+            return await api.getChapters(seriesName);
+        } catch (error) {
+            throw new ToolsApiError('获取章节列表失败', error.status);
+        }
     }
 };

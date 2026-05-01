@@ -188,8 +188,7 @@ class App {
     async selectSeries(name) {
         store.setCurrentSeries(name);
         storage.setCurrentSeries(name);
-        store.navigation.currentPath = '';
-        store.navigation.returnPath = '';
+        store.setNavigation('', '');
         this.chapterMetaCache.clear();
         this.renderDirectoryLoading(name);
 
@@ -236,8 +235,7 @@ class App {
     }
 
     renderDirectory(path) {
-        store.navigation.currentPath = path;
-        store.navigation.returnPath = path;
+        store.setNavigation(path);
         this.showView('directoryBrowser');
 
         const nodes = getLevelNodes(store.chapters.tree, path);
@@ -399,8 +397,8 @@ class App {
         if (store.reader.isLoading || index < 0 || index >= store.chapters.flatList.length) return;
         store.setCurrentChapterIndex(index);
         const chapter = store.chapters.flatList[index];
-        store.navigation.returnPath = getParentPath(chapter.path_id);
-        store.currentChapter = chapter;
+        store.setNavigation(store.navigation.currentPath, getParentPath(chapter.path_id));
+        store.setCurrentChapter(chapter);
         this.showView('reader');
         this.elements.readerActions.classList.add('hidden');
         this.resetReaderUi();
@@ -511,7 +509,7 @@ class App {
     }
 
     showView(view) {
-        store.currentView = view;
+        store.setCurrentView(view);
         this.elements.seriesView.classList.toggle('hidden', view !== 'seriesList');
         this.elements.directoryView.classList.toggle('hidden', view !== 'directoryBrowser');
         this.elements.readerView.classList.toggle('hidden', view !== 'reader');

@@ -5,7 +5,7 @@ export default defineConfig({
         globals: true,
         environment: 'jsdom',
         include: ['js/**/*.test.js', 'js/**/*.spec.js'],
-        exclude: ['node_modules', 'dist'],
+        exclude: ['node_modules', 'dist', 'coverage'],
         coverage: {
             provider: 'v8',
             reporter: ['text', 'html', 'lcov'],
@@ -13,7 +13,9 @@ export default defineConfig({
             exclude: [
                 'js/**/*.test.js',
                 'js/**/*.spec.js',
-                'js/main.js'
+                'js/main.js',
+                'js/tools-main.js',
+                'js/**/index.js'
             ]
         }
     }

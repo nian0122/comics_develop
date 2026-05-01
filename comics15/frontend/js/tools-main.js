@@ -1,4 +1,4 @@
-import { toolsApi } from './services/tools-api.js';
+import { toolsApi } from './services/index.js';
 
 class ToolsPage {
     constructor() {
@@ -237,7 +237,7 @@ class ToolsPage {
             this.startPolling();
 
         } catch (error) {
-            this.setStatus('执行失败: ' + error.message);
+            this.setStatus(`执行失败: ${error.message}`);
             this.elements.runBtn.disabled = false;
             console.error('Error executing tool:', error);
         }
@@ -300,7 +300,7 @@ class ToolsPage {
             this.showConfigPanel();
             this.loadExecutions();
         } catch (error) {
-            this.setStatus('取消失败: ' + error.message);
+            this.setStatus(`取消失败: ${error.message}`);
             console.error('Error canceling execution:', error);
         }
     }
@@ -331,7 +331,7 @@ class ToolsPage {
             this.loadExecutions();
             this.setStatus('已完成记录已清理');
         } catch (error) {
-            this.setStatus('清理失败: ' + error.message);
+            this.setStatus(`清理失败: ${error.message}`);
             console.error('Error cleanup:', error);
         }
     }

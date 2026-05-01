@@ -1,7 +1,5 @@
 // 全局状态管理
 
-import { LAZY_LOAD_CONFIG, IMAGE_RETRY_CONFIG } from '../config/constants.js';
-
 export const store = {
     currentView: 'seriesList',
     currentChapter: null,
@@ -66,6 +64,22 @@ export const store = {
         }
     },
 
+    setCurrentView(view) {
+        this.currentView = view;
+        this.notify('currentView');
+    },
+
+    setCurrentChapter(chapter) {
+        this.currentChapter = chapter;
+        this.notify('currentChapter');
+    },
+
+    setNavigation(currentPath, returnPath = currentPath) {
+        this.navigation.currentPath = currentPath;
+        this.navigation.returnPath = returnPath;
+        this.notify('navigation');
+    },
+
     setSeries(list, current = null) {
         this.series.list = list;
         this.series.current = current;
@@ -102,6 +116,27 @@ export const store = {
     setReaderScale(scale) {
         this.reader.scale = scale;
         this.notify('reader');
+    },
+
+    setSidebarVisible(visible) {
+        this.ui.sidebarVisible = visible;
+        this.notify('ui');
+    },
+
+    setLazyObserver(observer) {
+        this.lazyLoad.observer = observer;
+    },
+
+    setLazyNextToObserve(index) {
+        this.lazyLoad.nextToObserve = index;
+    },
+
+    setLazyLoadedCount(count) {
+        this.lazyLoad.loadedCount = count;
+    },
+
+    incrementLazyLoadedCount() {
+        this.lazyLoad.loadedCount += 1;
     },
 
     resetReader() {

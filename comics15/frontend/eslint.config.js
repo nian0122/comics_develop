@@ -16,7 +16,11 @@ export default [
             'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
             'no-console': 'off',
             'semi': ['error', 'always'],
-            'quotes': ['error', 'single', { avoidEscape: true }]
+            'quotes': ['error', 'single', { avoidEscape: true }],
+            'no-var': 'error',
+            'prefer-const': 'error',
+            'object-shorthand': ['error', 'always'],
+            'prefer-template': 'error'
         }
     },
     {

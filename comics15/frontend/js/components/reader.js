@@ -226,13 +226,13 @@ export class Reader {
             element.loop = false;
             element.preload = 'metadata';
             element.style.maxHeight = '80vh';
-            element.style.width = store.reader.scale + '%';
+            element.style.width = `${store.reader.scale}%`;
         } else {
             element = document.createElement('img');
             element.className = 'reader-img';
             element.loading = 'lazy';
             element.decoding = 'async';
-            element.style.width = store.reader.scale + '%';
+            element.style.width = `${store.reader.scale}%`;
         }
 
         const onSuccess = () => {
@@ -246,7 +246,7 @@ export class Reader {
 
             container.classList.add('loaded');
             container.classList.remove('failed');
-            store.lazyLoad.loadedCount++;
+            store.incrementLazyLoadedCount();
 
             window.dispatchEvent(new CustomEvent('reader:imageLoaded'));
         };
@@ -267,7 +267,7 @@ export class Reader {
             if (retryState.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES) {
                 retryState.status = 'failed';
                 container.classList.add('loaded', 'failed');
-                store.lazyLoad.loadedCount++;
+                store.incrementLazyLoadedCount();
             } else {
                 retryState.status = 'retrying';
                 const delay = IMAGE_RETRY_CONFIG.INITIAL_DELAY * Math.pow(IMAGE_RETRY_CONFIG.BACKOFF_MULTIPLIER, retryState.retries);
@@ -332,7 +332,7 @@ export class Reader {
             store.lazyLoad.observer.disconnect();
         }
 
-        store.lazyLoad.observer = new IntersectionObserver(
+        store.setLazyObserver(new IntersectionObserver(
             (entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
@@ -350,10 +350,10 @@ export class Reader {
                 rootMargin: LAZY_LOAD_CONFIG.ROOT_MARGIN,
                 threshold: 0
             }
-        );
+        ));
 
-        store.lazyLoad.nextToObserve = 0;
-        store.lazyLoad.loadedCount = 0;
+        store.setLazyNextToObserve(0);
+        store.setLazyLoadedCount(0);
     }
 
     observeAllContainers() {
@@ -383,7 +383,7 @@ export class Reader {
     setScale(scale) {
         store.setReaderScale(scale);
         this.container.querySelectorAll('.reader-img').forEach(img => {
-            img.style.width = scale + '%';
+            img.style.width = `${scale}%`;
         });
     }
 }
