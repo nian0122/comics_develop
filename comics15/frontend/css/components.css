@@ -736,11 +736,10 @@ hr {
     border: 0;
     border-radius: 999px;
     padding: 8px 16px;
-    background: rgba(15, 17, 21, 0.7);
+    background: transparent;
     color: white;
     font-family: var(--font-mono);
     font-size: 13px;
-    backdrop-filter: blur(12px);
 }
 
 .reader-fab {
@@ -752,14 +751,17 @@ hr {
     height: 54px;
     border-radius: 999px;
     border: 0;
-    background: rgba(255, 255, 255, 0.92);
-    color: #111827;
+    background: transparent;
+    color: white;
     font-size: 26px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+    box-shadow: none;
+    transition: opacity var(--transition-base), transform var(--transition-base);
 }
 
-.reader-fab-ghost {
-    opacity: 0.46;
+.reader-fab.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px);
 }
 
 .reader-actions {

@@ -14,12 +14,14 @@ import {
 } from './utils/chapter-tree.js';
 import { isImageFile } from './utils/file-type.js';
 import { markCoverLoading, markCoverLoaded } from './utils/lazy-cover.js';
+import { getReaderMenuVisibilityState } from './utils/reader-controls.js';
 
 class App {
     constructor() {
         this.reader = null;
         this.chapterMetaCache = new Map();
         this.coverObserver = null;
+        this.lastReaderScrollTop = 0;
         this.elements = {
             seriesView: $('#seriesView'),
             directoryView: $('#directoryView'),
@@ -27,8 +29,6 @@ class App {
             reader: $('#reader'),
             readerMenuBtn: $('#readerMenuBtn'),
             readerActions: $('#readerActions'),
-            restoreFabBtn: $('#restoreFabBtn'),
-            hideFabBtn: $('#hideFabBtn'),
             backToDirectoryBtn: $('#backToDirectoryBtn'),
             prevBtn: $('#prevBtn'),
             nextBtn: $('#nextBtn'),
@@ -50,12 +50,11 @@ class App {
 
     bindEvents() {
         this.elements.readerMenuBtn.onclick = () => this.toggleReaderActions();
-        this.elements.restoreFabBtn.onclick = () => this.showFab();
-        this.elements.hideFabBtn.onclick = () => this.hideFab();
         this.elements.backToDirectoryBtn.onclick = () => this.backToDirectory();
         this.elements.prevBtn.onclick = () => this.openPrevChapter();
         this.elements.nextBtn.onclick = () => this.openNextChapter();
         this.elements.progressStatus.onclick = () => this.showJumpModal();
+        this.elements.reader.addEventListener('scroll', () => this.handleReaderControlsScroll());
         this.elements.jumpCancelBtn.onclick = () => this.hideJumpModal();
         this.elements.jumpConfirmBtn.onclick = () => this.jumpToPage();
 
@@ -432,8 +431,8 @@ class App {
     resetReaderUi() {
         this.elements.reader.innerHTML = '';
         this.elements.progressStatus.textContent = '0 / 0';
+        this.lastReaderScrollTop = 0;
         this.elements.readerMenuBtn.classList.remove('hidden');
-        this.elements.restoreFabBtn.classList.add('hidden');
         this.elements.prevBtn.disabled = store.chapters.currentIndex <= 0;
         this.elements.nextBtn.disabled = store.chapters.currentIndex >= store.chapters.flatList.length - 1;
     }
@@ -463,15 +462,17 @@ class App {
         this.elements.readerActions.classList.toggle('hidden');
     }
 
-    hideFab() {
-        this.elements.readerActions.classList.add('hidden');
-        this.elements.readerMenuBtn.classList.add('hidden');
-        this.elements.restoreFabBtn.classList.remove('hidden');
-    }
+    handleReaderControlsScroll() {
+        const { shouldHide, nextScrollTop } = getReaderMenuVisibilityState({
+            previousScrollTop: this.lastReaderScrollTop,
+            currentScrollTop: this.elements.reader.scrollTop,
+        });
 
-    showFab() {
-        this.elements.readerMenuBtn.classList.remove('hidden');
-        this.elements.restoreFabBtn.classList.add('hidden');
+        this.lastReaderScrollTop = nextScrollTop;
+        this.elements.readerMenuBtn.classList.toggle('hidden', shouldHide);
+        if (shouldHide) {
+            this.elements.readerActions.classList.add('hidden');
+        }
     }
 
     showJumpModal() {
