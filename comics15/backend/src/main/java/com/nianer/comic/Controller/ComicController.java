@@ -33,6 +33,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -121,8 +125,7 @@ public class ComicController {
             return Collections.emptyList();
         }
 
-        List<Map<String, String>> chaptersData = new ArrayList<>();
-        findChaptersRecursive(seriesPath, "", seriesName, chaptersData);
+        List<Map<String, String>> chaptersData = findChaptersRecursive(seriesPath, "", seriesName);
 
         log.info("[Chapters] 递归扫描完成: {}, 找到章节数: {}", seriesName, chaptersData.size());
 
@@ -189,22 +192,59 @@ public class ComicController {
         return ResponseEntity.ok(Collections.singletonMap("files", files));
     }
 
-    private void findChaptersRecursive(Path root, String currentRel, String seriesName, List<Map<String, String>> result) throws IOException {
+    private List<Map<String, String>> findChaptersRecursive(Path root, String currentRel, String seriesName) throws IOException {
         Path fullPath = root.resolve(currentRel);
         List<String> mediaFiles = listSupportedMediaFiles(fullPath);
 
         if (!mediaFiles.isEmpty()) {
-            result.add(buildChapterData(seriesName, currentRel, mediaFiles));
-            return;
+            return List.of(buildChapterData(seriesName, currentRel, mediaFiles));
         }
 
-        try (Stream<Path> list = Files.list(fullPath)) {
-            List<Path> subDirs = list.filter(Files::isDirectory)
+        List<Path> subDirs = listSortedSubDirectories(fullPath);
+        if (subDirs.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        try (ExecutorService scanExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
+            List<CompletableFuture<List<Map<String, String>>>> futures = subDirs.stream()
+                    .map(dir -> CompletableFuture.supplyAsync(() -> scanSubDirectory(root, currentRel, dir, seriesName), scanExecutor))
+                    .collect(Collectors.toList());
+
+            List<Map<String, String>> result = new ArrayList<>();
+            for (CompletableFuture<List<Map<String, String>>> future : futures) {
+                result.addAll(joinScanResult(future));
+            }
+            return result;
+        }
+    }
+
+    private List<Path> listSortedSubDirectories(Path directory) throws IOException {
+        try (Stream<Path> list = Files.list(directory)) {
+            return list.filter(Files::isDirectory)
                     .sorted(Comparator.comparing(p -> p.getFileName().toString(), this::naturalCompare))
                     .collect(Collectors.toList());
-            for (Path dir : subDirs) {
-                findChaptersRecursive(root, currentRel.isEmpty() ? dir.getFileName().toString() : currentRel + "/" + dir.getFileName().toString(), seriesName, result);
+        }
+    }
+
+    private List<Map<String, String>> scanSubDirectory(Path root, String currentRel, Path dir, String seriesName) {
+        try {
+            String childRel = currentRel.isEmpty()
+                    ? dir.getFileName().toString()
+                    : currentRel + "/" + dir.getFileName().toString();
+            return findChaptersRecursive(root, childRel, seriesName);
+        } catch (IOException e) {
+            throw new CompletionException(e);
+        }
+    }
+
+    private List<Map<String, String>> joinScanResult(CompletableFuture<List<Map<String, String>>> future) throws IOException {
+        try {
+            return future.join();
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof IOException ioException) {
+                throw ioException;
             }
+            throw e;
         }
     }
 

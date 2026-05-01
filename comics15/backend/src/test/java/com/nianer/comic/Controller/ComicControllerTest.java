@@ -79,4 +79,23 @@ class ComicControllerTest {
                 .containsEntry("cover_source", "hq")
                 .containsEntry("total_files", "1");
     }
+
+    @Test
+    void listChaptersPreservesNaturalOrderWhenScanningNestedDirectories() throws Exception {
+        createChapter("测试系列", "Volume 1/Chapter 10", "001.jpg");
+        createChapter("测试系列", "Volume 1/Chapter 2", "001.jpg");
+        createChapter("测试系列", "Volume 1/Chapter 1", "001.jpg");
+        createChapter("测试系列", "Volume 2/Chapter 1", "001.jpg");
+
+        List<Map<String, String>> chapters = controller.listChapters("测试系列");
+
+        assertThat(chapters).extracting(chapter -> chapter.get("path_id"))
+                .containsExactly("Volume 1/Chapter 1", "Volume 1/Chapter 2", "Volume 1/Chapter 10", "Volume 2/Chapter 1");
+    }
+
+    private void createChapter(String seriesName, String chapterPath, String filename) throws Exception {
+        Path chapter = comicsRoot.resolve("h_photograph").resolve(seriesName).resolve(chapterPath);
+        Files.createDirectories(chapter);
+        Files.writeString(chapter.resolve(filename), "hq");
+    }
 }
