@@ -42,6 +42,19 @@ describe('api', () => {
 
             expect(fetch).toHaveBeenCalledWith('/api/chapters/%E6%B5%8B%E8%AF%95%E7%B3%BB%E5%88%97');
         });
+
+        it('should preserve optional cover metadata from chapters response', async () => {
+            const mockChapters = [
+                { path_id: '第 1 话', name: '第 1 话', cover_file: '001.jpg', cover_source: 'lq', total_files: '32' },
+                { path_id: '第 2 话', name: '第 2 话' },
+            ];
+            fetch.mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve(mockChapters)
+            });
+
+            await expect(api.getChapters('Series')).resolves.toEqual(mockChapters);
+        });
     });
 
     describe('buildImageUrl', () => {

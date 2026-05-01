@@ -529,6 +529,19 @@ hr {
     .loading-indicator {
         padding: 16px;
     }
+
+    .glass,
+    .glass-strong,
+    #jumpModal {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .series-row,
+    .directory-row,
+    .chapter-card {
+        box-shadow: none;
+    }
 }
 
 /* 移动端优先三页阅读体验 */
@@ -660,10 +673,14 @@ hr {
 
 .chapter-cover {
     display: block;
+    width: 88px;
+    height: 104px;
+    min-width: 88px;
+    min-height: 104px;
     overflow: hidden;
     border-radius: 16px;
     background: var(--bg-tertiary);
-    min-height: 104px;
+    contain: layout paint;
 }
 
 .chapter-cover img {
@@ -816,5 +833,9 @@ hr {
 
     .chapter-card {
         grid-template-columns: 120px 1fr;
+    }
+
+    .chapter-cover {
+        width: 120px;
     }
 }

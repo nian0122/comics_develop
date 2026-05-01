@@ -14,14 +14,19 @@ import {
     splitChapterPath,
 } from './utils/chapter-tree.js';
 import { isImageFile } from './utils/file-type.js';
+import { getChapterCoverMeta } from './utils/chapter-cover-meta.js';
 import { markCoverLoading, markCoverLoaded } from './utils/lazy-cover.js';
+import { RequestQueue } from './utils/request-queue.js';
 import { getReaderMenuVisibilityState } from './utils/reader-controls.js';
+import { LAZY_LOAD_CONFIG } from './config/constants.js';
 
 class App {
     constructor() {
         this.reader = null;
         this.chapterMetaCache = new Map();
         this.coverObserver = null;
+        this.coverLoadQueue = new RequestQueue(LAZY_LOAD_CONFIG.COVER_MAX_CONCURRENT);
+        this.coverLoadToken = 0;
         this.lastReaderScrollTop = 0;
         this.elements = {
             seriesView: $('#seriesView'),
@@ -325,9 +330,11 @@ class App {
             this.coverObserver.disconnect();
         }
 
+        this.coverLoadToken += 1;
+        const coverLoadToken = this.coverLoadToken;
         const coverEls = this.elements.directoryView.querySelectorAll('[data-cover-index]');
         if (!('IntersectionObserver' in window)) {
-            coverEls.forEach(coverEl => this.loadChapterCover(coverEl));
+            coverEls.forEach(coverEl => this.enqueueChapterCoverLoad(coverEl, coverLoadToken));
             return;
         }
 
@@ -335,18 +342,27 @@ class App {
             entries.forEach(entry => {
                 if (!entry.isIntersecting) return;
                 this.coverObserver.unobserve(entry.target);
-                this.loadChapterCover(entry.target);
+                this.enqueueChapterCoverLoad(entry.target, coverLoadToken);
             });
         }, {
             root: null,
-            rootMargin: '260px 0px',
+            rootMargin: LAZY_LOAD_CONFIG.COVER_ROOT_MARGIN,
             threshold: 0.01,
         });
 
         coverEls.forEach(coverEl => this.coverObserver.observe(coverEl));
     }
 
-    async loadChapterCover(coverEl) {
+    enqueueChapterCoverLoad(coverEl, coverLoadToken = this.coverLoadToken) {
+        if (['loading', 'loaded'].includes(coverEl.dataset.coverState)) return;
+        this.coverLoadQueue.add(() => {
+            if (coverLoadToken !== this.coverLoadToken || !coverEl.isConnected) return undefined;
+            return this.loadChapterCover(coverEl, coverLoadToken);
+        });
+    }
+
+    async loadChapterCover(coverEl, coverLoadToken = this.coverLoadToken) {
+        if (coverLoadToken !== this.coverLoadToken || !coverEl.isConnected) return;
         if (['loading', 'loaded'].includes(coverEl.dataset.coverState)) return;
 
         markCoverLoading(coverEl);
@@ -356,6 +372,7 @@ class App {
         if (!node || !progressEl) return;
 
         const meta = await this.getChapterMeta(index);
+        if (coverLoadToken !== this.coverLoadToken || !coverEl.isConnected) return;
         markCoverLoaded(coverEl);
         coverEl.classList.remove('skeleton');
         const progress = storage.getProgress(store.series.current, index);
@@ -379,6 +396,12 @@ class App {
         const chapter = store.chapters.flatList[index];
         const fallback = { totalPages: 0, files: [], coverUrl: '' };
         if (!chapter) return fallback;
+
+        const chapterCoverMeta = getChapterCoverMeta(chapter, store.series.current);
+        if (chapterCoverMeta) {
+            this.chapterMetaCache.set(index, chapterCoverMeta);
+            return chapterCoverMeta;
+        }
 
         try {
             const data = await api.getChapterFiles(store.series.current, chapter.path_id);

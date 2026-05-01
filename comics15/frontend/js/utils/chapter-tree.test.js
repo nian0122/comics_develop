@@ -55,4 +55,18 @@ describe('chapter-tree mobile helpers', () => {
         expect(getInitialDirectoryPath(flatChapters, '第一卷/第 1 话', true)).toBe('第一卷');
     });
 
+
+    it('构建章节树时保留后端返回的首图元数据', () => {
+        const chaptersWithCover = [
+            { path_id: '第一卷/第 1 话', name: '第 1 话', cover_file: '001.jpg', cover_source: 'lq', total_files: '24' },
+        ];
+
+        const tree = buildChapterTree(chaptersWithCover);
+        const firstChapter = getLevelNodes(tree, '第一卷')[0];
+
+        expect(firstChapter.chapter.cover_file).toBe('001.jpg');
+        expect(firstChapter.chapter.cover_source).toBe('lq');
+        expect(firstChapter.chapter.total_files).toBe('24');
+    });
+
 });

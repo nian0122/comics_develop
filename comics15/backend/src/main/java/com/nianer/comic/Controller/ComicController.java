@@ -25,7 +25,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -48,6 +55,7 @@ public class ComicController {
     private ObjectMapper objectMapper;
 
     private static final List<String> SUPPORTED_EXT = Arrays.asList(".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".mov");
+    private static final List<String> IMAGE_EXT = Arrays.asList(".jpg", ".jpeg", ".png", ".webp");
 
     @Operation(summary = "获取所有漫画系列", description = "扫描 HQ 根目录下的顶级文件夹作为漫画系列，支持 Redis 缓存。")
     @ApiResponse(responseCode = "200", description = "请求成功，返回漫画系列名称数组")
@@ -113,15 +121,8 @@ public class ComicController {
             return Collections.emptyList();
         }
 
-        List<String> relativePaths = new ArrayList<>();
-        findChaptersRecursive(seriesPath, "", relativePaths);
-
-        List<Map<String, String>> chaptersData = relativePaths.stream().map(p -> {
-            Map<String, String> map = new HashMap<>();
-            map.put("path_id", p);
-            map.put("name", p.isEmpty() ? seriesName : Paths.get(p).getFileName().toString());
-            return map;
-        }).collect(Collectors.toList());
+        List<Map<String, String>> chaptersData = new ArrayList<>();
+        findChaptersRecursive(seriesPath, "", seriesName, chaptersData);
 
         log.info("[Chapters] 递归扫描完成: {}, 找到章节数: {}", seriesName, chaptersData.size());
 
@@ -169,10 +170,7 @@ public class ComicController {
             files = stream
                     .filter(Files::isRegularFile)
                     .map(p -> p.getFileName().toString())
-                    .filter(name -> {
-                        String lowerName = name.toLowerCase();
-                        return SUPPORTED_EXT.stream().anyMatch(lowerName::endsWith);
-                    })
+                    .filter(this::isSupportedMediaFile)
                     .sorted(this::naturalCompare)
                     .collect(Collectors.toList());
         }
@@ -191,29 +189,70 @@ public class ComicController {
         return ResponseEntity.ok(Collections.singletonMap("files", files));
     }
 
-    private void findChaptersRecursive(Path root, String currentRel, List<String> result) throws IOException {
+    private void findChaptersRecursive(Path root, String currentRel, String seriesName, List<Map<String, String>> result) throws IOException {
         Path fullPath = root.resolve(currentRel);
+        List<String> mediaFiles = listSupportedMediaFiles(fullPath);
 
-        boolean hasMedia;
-        try (Stream<Path> list = Files.list(fullPath)) {
-            hasMedia = list.anyMatch(p -> {
-                String name = p.getFileName().toString().toLowerCase();
-                return SUPPORTED_EXT.stream().anyMatch(name::endsWith);
-            });
+        if (!mediaFiles.isEmpty()) {
+            result.add(buildChapterData(seriesName, currentRel, mediaFiles));
+            return;
         }
 
-        if (hasMedia) {
-            result.add(currentRel.replace("\\", "/"));
-        } else {
-            try (Stream<Path> list = Files.list(fullPath)) {
-                List<Path> subDirs = list.filter(Files::isDirectory)
-                        .sorted(Comparator.comparing(p -> p.getFileName().toString(), this::naturalCompare))
-                        .collect(Collectors.toList());
-                for (Path dir : subDirs) {
-                    findChaptersRecursive(root, currentRel.isEmpty() ? dir.getFileName().toString() : currentRel + "/" + dir.getFileName().toString(), result);
-                }
+        try (Stream<Path> list = Files.list(fullPath)) {
+            List<Path> subDirs = list.filter(Files::isDirectory)
+                    .sorted(Comparator.comparing(p -> p.getFileName().toString(), this::naturalCompare))
+                    .collect(Collectors.toList());
+            for (Path dir : subDirs) {
+                findChaptersRecursive(root, currentRel.isEmpty() ? dir.getFileName().toString() : currentRel + "/" + dir.getFileName().toString(), seriesName, result);
             }
         }
+    }
+
+    private List<String> listSupportedMediaFiles(Path chapterPath) throws IOException {
+        try (Stream<Path> stream = Files.list(chapterPath)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .map(p -> p.getFileName().toString())
+                    .filter(this::isSupportedMediaFile)
+                    .sorted(this::naturalCompare)
+                    .collect(Collectors.toList());
+        }
+    }
+
+    private Map<String, String> buildChapterData(String seriesName, String relativePath, List<String> mediaFiles) {
+        String normalizedPath = relativePath.replace("\\", "/");
+        Map<String, String> chapterData = new HashMap<>();
+        chapterData.put("path_id", normalizedPath);
+        chapterData.put("name", normalizedPath.isEmpty() ? seriesName : Paths.get(normalizedPath).getFileName().toString());
+        chapterData.put("total_files", String.valueOf(mediaFiles.size()));
+
+        Optional<String> coverFile = mediaFiles.stream().filter(this::isImageFile).findFirst();
+        if (coverFile.isPresent()) {
+            chapterData.put("cover_file", coverFile.get());
+            chapterData.put("cover_source", resolveCoverSource(seriesName, normalizedPath, coverFile.get()));
+        }
+        return chapterData;
+    }
+
+    private String resolveCoverSource(String seriesName, String chapterPath, String coverFile) {
+        String baseName = stripExtension(coverFile);
+        Path lqCoverPath = config.getLqPath().resolve(seriesName).resolve(chapterPath).resolve(baseName + ".webp");
+        return Files.exists(lqCoverPath) ? "lq" : "hq";
+    }
+
+    private String stripExtension(String filename) {
+        int dotIndex = filename.lastIndexOf('.');
+        return dotIndex > -1 ? filename.substring(0, dotIndex) : filename;
+    }
+
+    private boolean isSupportedMediaFile(String filename) {
+        String lowerName = filename.toLowerCase();
+        return SUPPORTED_EXT.stream().anyMatch(lowerName::endsWith);
+    }
+
+    private boolean isImageFile(String filename) {
+        String lowerName = filename.toLowerCase();
+        return IMAGE_EXT.stream().anyMatch(lowerName::endsWith);
     }
 
     private int naturalCompare(String s1, String s2) {

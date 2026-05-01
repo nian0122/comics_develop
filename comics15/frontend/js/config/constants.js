@@ -2,8 +2,10 @@
 
 export const LAZY_LOAD_CONFIG = {
     ROOT_MARGIN: '1500px',
+    COVER_ROOT_MARGIN: '80px 0px',
     INITIAL_BATCH: 10,
     BATCH_SIZE: 10,
+    COVER_MAX_CONCURRENT: 3,
 };
 
 export const IMAGE_RETRY_CONFIG = {
