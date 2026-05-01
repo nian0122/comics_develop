@@ -11,7 +11,7 @@ frontend/
 ├── js/
 │   ├── main.js             # App 类，移动优先目录/阅读流程
 │   ├── tools-main.js       # ToolsPage 类，工具执行 UI
-│   ├── components/         # Reader, Sidebar + index.js
+│   ├── components/         # Reader + index.js
 │   ├── services/           # api, storage, tools-api + index.js
 │   ├── state/              # store, progress-state + index.js
 │   ├── utils/              # 纯函数 + 同目录 *.test.js

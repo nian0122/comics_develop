@@ -8,7 +8,6 @@ describe('store', () => {
         store.currentChapter = null;
         store.navigation.currentPath = '';
         store.navigation.returnPath = '';
-        store.ui.sidebarVisible = false;
         store.lazyLoad.observer = null;
         store.lazyLoad.nextToObserve = 0;
         store.lazyLoad.loadedCount = 0;
@@ -57,17 +56,6 @@ describe('store', () => {
         expect(store.currentChapter).toBe(chapter);
         expect(listener).toHaveBeenCalledWith(chapter);
     });
-
-    it('updates sidebar visibility through ui setter', () => {
-        const listener = vi.fn();
-        store.subscribe('ui', listener);
-
-        store.setSidebarVisible(true);
-
-        expect(store.ui.sidebarVisible).toBe(true);
-        expect(listener).toHaveBeenCalledWith(store.ui);
-    });
-
     it('updates lazy load state through dedicated helpers', () => {
         const observer = { disconnect: vi.fn() };
 
@@ -79,5 +67,12 @@ describe('store', () => {
         expect(store.lazyLoad.observer).toBe(observer);
         expect(store.lazyLoad.loadedCount).toBe(3);
         expect(store.lazyLoad.nextToObserve).toBe(5);
+    });
+
+    it('does not expose debug globals or unused preload state', () => {
+        expect(window.__appState).toBeUndefined();
+        expect('preload' in store).toBe(false);
+        expect('ui' in store).toBe(false);
+        expect('setSidebarVisible' in store).toBe(false);
     });
 });

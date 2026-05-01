@@ -10,7 +10,6 @@ import { LAZY_LOAD_CONFIG, IMAGE_RETRY_CONFIG, DOUBLE_CLICK_THRESHOLD } from '..
 export class Reader {
     constructor() {
         this.container = $('#reader');
-        this.preloaderContainer = $('#preloader-container');
         this.lastClickTime = 0;
         this.scrollUpdateTimer = null;
 

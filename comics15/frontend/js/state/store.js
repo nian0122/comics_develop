@@ -27,17 +27,6 @@ export const store = {
         scale: 100,
     },
 
-    preload: {
-        nextChapterFiles: null,
-        nextChapterIndex: -1,
-    },
-
-    ui: {
-        sidebarVisible: false,
-        headerVisible: true,
-        footerVisible: true,
-    },
-
     lazyLoad: {
         observer: null,
         nextToObserve: 0,
@@ -118,11 +107,6 @@ export const store = {
         this.notify('reader');
     },
 
-    setSidebarVisible(visible) {
-        this.ui.sidebarVisible = visible;
-        this.notify('ui');
-    },
-
     setLazyObserver(observer) {
         this.lazyLoad.observer = observer;
     },
@@ -143,8 +127,6 @@ export const store = {
         this.reader.files = [];
         this.reader.loadedCount = 0;
         this.reader.isLoading = false;
-        this.preload.nextChapterFiles = null;
-        this.preload.nextChapterIndex = -1;
         this.notify('reader');
     },
 
@@ -164,5 +146,3 @@ export const store = {
         this.notify('lazyLoad');
     }
 };
-
-window.__appState = store;
