@@ -10,12 +10,12 @@ services:
       - nginx_cache:/var/cache/nginx
       - &comic_mount F:\games\comics:/comics:ro
     depends_on:
-      - web
+      - backend
 
-  web:
+  backend:
     build:
       context: ./backend
-    container_name: comic15_server
+    container_name: comic15_backend
     volumes:
       - *comic_mount
     depends_on:
