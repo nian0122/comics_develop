@@ -5,6 +5,7 @@ import {
     getParentPath,
     formatChapterProgress,
     getChapterDisplayName,
+    getInitialDirectoryPath,
 } from './chapter-tree.js';
 
 describe('chapter-tree mobile helpers', () => {
@@ -44,4 +45,14 @@ describe('chapter-tree mobile helpers', () => {
         expect(getChapterDisplayName({ path_id: '第一卷/第 001 话', name: 'ignored' })).toBe('第 001 话');
         expect(getChapterDisplayName({ path_id: '', name: '番外篇' })).toBe('番外篇');
     });
+    it('手动进入系列时停留根目录而不是恢复已读叶节点父目录', () => {
+        const flatChapters = [
+            { path_id: '第一卷/第 1 话', name: '第 1 话' },
+            { path_id: '第二卷/第 1 话', name: '第 1 话' },
+        ];
+
+        expect(getInitialDirectoryPath(flatChapters, '第一卷/第 1 话', false)).toBe('');
+        expect(getInitialDirectoryPath(flatChapters, '第一卷/第 1 话', true)).toBe('第一卷');
+    });
+
 });

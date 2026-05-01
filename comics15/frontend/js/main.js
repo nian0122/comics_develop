@@ -10,6 +10,7 @@ import {
     getParentPath,
     formatChapterProgress,
     getChapterDisplayName,
+    getInitialDirectoryPath,
     splitChapterPath,
 } from './utils/chapter-tree.js';
 import { isImageFile } from './utils/file-type.js';
@@ -116,7 +117,7 @@ class App {
     async restoreLastSeries() {
         const savedSeries = storage.getCurrentSeries();
         if (!savedSeries || !store.series.list.includes(savedSeries)) return;
-        await this.selectSeries(savedSeries);
+        await this.selectSeries(savedSeries, { restoreLastChapter: true });
     }
 
     renderSeriesLoading() {
@@ -184,7 +185,7 @@ class App {
         });
     }
 
-    async selectSeries(name) {
+    async selectSeries(name, options = {}) {
         store.setCurrentSeries(name);
         storage.setCurrentSeries(name);
         store.setNavigation('', '');
@@ -196,8 +197,12 @@ class App {
             const tree = buildChapterTree(flatChapters);
             store.setChapters(flatChapters, tree);
             const savedChapterPath = storage.getCurrentChapterPath();
-            const savedChapter = flatChapters.find(chapter => chapter.path_id === savedChapterPath);
-            this.renderDirectory(savedChapter ? getParentPath(savedChapter.path_id) : '');
+            const initialPath = getInitialDirectoryPath(
+                flatChapters,
+                savedChapterPath,
+                options.restoreLastChapter === true
+            );
+            this.renderDirectory(initialPath);
         } catch (error) {
             console.error('加载章节失败:', error);
             this.renderDirectoryError(name);

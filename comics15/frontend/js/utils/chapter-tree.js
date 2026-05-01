@@ -39,6 +39,13 @@ export function getParentPath(path) {
     return parts.slice(0, -1).join('/');
 }
 
+export function getInitialDirectoryPath(flatChapters, savedChapterPath, shouldRestoreLastChapter = false) {
+    if (!shouldRestoreLastChapter || !savedChapterPath) return '';
+
+    const savedChapter = flatChapters.find(chapter => chapter.path_id === savedChapterPath);
+    return savedChapter ? getParentPath(savedChapter.path_id) : '';
+}
+
 export function buildChapterTree(flatChapters) {
     const root = {
         name: 'root',
