@@ -1,11 +1,12 @@
 // 移动端优先应用入口
 
 import { store } from './state/store.js';
-import { api, storage } from './services/index.js';
+import { api, persistence } from './services/index.js';
 import { Reader } from './components/index.js';
 import { $ } from './utils/dom.js';
 import { buildChapterTree, getInitialDirectoryPath, getParentPath } from './utils/chapter-tree.js';
 import { ChapterMetaCache, SeriesView, DirectoryView, ReaderShell } from './app/index.js';
+import { Router, toDirectoryUrl, toReaderUrl, toSeriesListUrl, toSeriesUrl } from './router/index.js';
 
 class App {
     constructor() {
@@ -14,6 +15,7 @@ class App {
         this.seriesView = null;
         this.directoryView = null;
         this.readerShell = null;
+        this.router = new Router((route) => this.renderRoute(route));
 
         this.elements = {
             seriesView: $('#seriesView'),
@@ -25,22 +27,30 @@ class App {
 
     async init() {
         this.initViews();
-        this.reader = new Reader();
+        this.reader = new Reader({
+            onImageLoaded: () => this.readerShell.updateProgressStatus(),
+            onPageChanged: () => this.readerShell.updateProgressStatus(),
+            onStatusUpdate: ({ message }) => console.info(message),
+        });
         this.bindGlobalEvents();
         await this.loadSeries();
-        await this.restoreLastSeries();
+        if (window.location.pathname === '/') {
+            await this.restoreLastRoute();
+        } else {
+            this.router.start();
+        }
     }
 
     initViews() {
         this.seriesView = new SeriesView(this.elements.seriesView, {
-            onSelectSeries: (name) => this.selectSeries(name),
+            onSelectSeries: (name) => this.router.navigate(toSeriesUrl(name)),
             onRetry: () => this.loadSeries(),
         });
 
         this.directoryView = new DirectoryView(this.elements.directoryView, this.chapterMetaCache, {
-            onShowSeries: () => this.showView('seriesList'),
-            onOpenChapter: (index, isUiSelection) => this.openChapter(index, isUiSelection),
-            onRenderDirectory: (path) => this.renderDirectory(path),
+            onShowSeries: () => this.router.navigate(toSeriesListUrl()),
+            onOpenChapter: (index) => this.navigateToChapter(index),
+            onRenderDirectory: (path) => this.router.navigate(toDirectoryUrl(store.series.current, path)),
             onRetrySeries: (name) => this.selectSeries(name),
         });
 
@@ -56,8 +66,6 @@ class App {
         this.readerShell.bindEvents();
 
         document.addEventListener('keydown', (event) => this.handleKeyboard(event));
-        window.addEventListener('reader:imageLoaded', () => this.readerShell.updateProgressStatus());
-        window.addEventListener('reader:pageChanged', () => this.readerShell.updateProgressStatus());
     }
 
     handleKeyboard(event) {
@@ -88,15 +96,22 @@ class App {
         }
     }
 
-    async restoreLastSeries() {
-        const savedSeries = storage.getCurrentSeries();
-        if (!savedSeries || !store.series.list.includes(savedSeries)) return;
-        await this.selectSeries(savedSeries, { restoreLastChapter: true });
+    async restoreLastRoute() {
+        const savedSeries = persistence.getCurrentSeries();
+        if (!savedSeries || !store.series.list.includes(savedSeries)) {
+            this.router.start();
+            return;
+        }
+
+        const savedChapterPath = persistence.getCurrentChapterPath();
+        const url = savedChapterPath
+            ? toReaderUrl(savedSeries, savedChapterPath)
+            : toSeriesUrl(savedSeries);
+        this.router.replace(url);
     }
 
     async selectSeries(name, options = {}) {
         store.setCurrentSeries(name);
-        storage.setCurrentSeries(name);
         store.setNavigation('', '');
         this.chapterMetaCache.clear();
         this.directoryView.renderLoading(name);
@@ -105,7 +120,7 @@ class App {
             const flatChapters = await api.getChapters(name);
             const tree = buildChapterTree(flatChapters);
             store.setChapters(flatChapters, tree);
-            const savedChapterPath = storage.getCurrentChapterPath();
+            const savedChapterPath = persistence.getCurrentChapterPath();
             const initialPath = getInitialDirectoryPath(
                 flatChapters,
                 savedChapterPath,
@@ -142,8 +157,7 @@ class App {
             store.setReaderFiles(files);
             await this.reader.loadChapter(files, chapter, store.series.current);
             this.readerShell.updateProgressStatus();
-            storage.setCurrentSeries(store.series.current);
-            storage.setCurrentChapterPath(chapter.path_id);
+            persistence.saveCurrentPosition(store.series.current, chapter.path_id);
             if (isUiSelection) this.elements.reader.scrollTop = 0;
             this.preloadNeighborChapter(index + 1);
         } catch (error) {
@@ -160,19 +174,53 @@ class App {
     }
 
     openPrevChapter() {
-        if (store.chapters.currentIndex > 0) {
-            this.openChapter(store.chapters.currentIndex - 1);
-        }
+        this.navigateToChapter(store.chapters.currentIndex - 1);
     }
 
     openNextChapter() {
-        if (store.chapters.currentIndex < store.chapters.flatList.length - 1) {
-            this.openChapter(store.chapters.currentIndex + 1);
-        }
+        this.navigateToChapter(store.chapters.currentIndex + 1);
     }
 
     backToDirectory() {
-        this.renderDirectory(store.navigation.returnPath || '');
+        this.router.navigate(toDirectoryUrl(store.series.current, store.navigation.returnPath || ''));
+    }
+
+
+    async renderRoute(route) {
+        if (route.name === 'seriesList') {
+            this.showView('seriesList');
+            return;
+        }
+
+        if (route.name === 'directory') {
+            await this.ensureSeriesLoaded(route.series);
+            this.renderDirectory(route.path);
+            return;
+        }
+
+        if (route.name === 'reader') {
+            await this.ensureSeriesLoaded(route.series);
+            const index = store.chapters.flatList.findIndex(chapter => chapter.path_id === route.path);
+            if (index === -1) {
+                this.renderDirectory('');
+                return;
+            }
+            await this.openChapter(index);
+            return;
+        }
+
+        this.showView('seriesList');
+    }
+
+    async ensureSeriesLoaded(series) {
+        if (store.series.current === series && store.chapters.flatList.length > 0) return;
+        await this.selectSeries(series);
+    }
+
+    navigateToChapter(index) {
+        if (index < 0 || index >= store.chapters.flatList.length) return;
+        const chapter = store.chapters.flatList[index];
+        this.router.navigate(toReaderUrl(store.series.current, chapter.path_id));
     }
 
     showView(view) {
