@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { progressState } from './progress-state.js';
 import { store } from './store.js';
-import { storage } from '../services/storage.js';
+import { persistence } from '../services/persistence.js';
 
 describe('progressState', () => {
     beforeEach(() => {
@@ -18,7 +18,7 @@ describe('progressState', () => {
     });
 
     it('saves progress using store state instead of window globals', () => {
-        const setProgressSpy = vi.spyOn(storage, 'setProgress').mockImplementation(() => true);
+        const setProgressSpy = vi.spyOn(persistence, 'saveProgress').mockImplementation(() => true);
         delete window.__appState;
 
         progressState.updateScrollPercent(42);
@@ -32,7 +32,7 @@ describe('progressState', () => {
     });
 
     it('does not save progress without current series or valid chapter index', () => {
-        const setProgressSpy = vi.spyOn(storage, 'setProgress').mockImplementation(() => true);
+        const setProgressSpy = vi.spyOn(persistence, 'saveProgress').mockImplementation(() => true);
         store.setCurrentSeries(null);
         store.setCurrentChapterIndex(-1);
 
@@ -42,11 +42,11 @@ describe('progressState', () => {
     });
 
     it('clears current progress using storage remove helper', () => {
-        const removeSpy = vi.spyOn(storage, 'remove').mockImplementation(() => true);
+        const removeSpy = vi.spyOn(persistence, 'clearProgress').mockImplementation(() => true);
         delete window.__appState;
 
         progressState.clearCurrentProgress();
 
-        expect(removeSpy).toHaveBeenCalledWith('progress_测试系列_2');
+        expect(removeSpy).toHaveBeenCalledWith('测试系列', 2);
     });
 });

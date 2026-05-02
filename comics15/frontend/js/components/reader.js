@@ -8,8 +8,11 @@ import { getFileType, useVideoPath } from '../utils/file-type.js';
 import { LAZY_LOAD_CONFIG, IMAGE_RETRY_CONFIG, DOUBLE_CLICK_THRESHOLD } from '../config/constants.js';
 
 export class Reader {
-    constructor() {
+    constructor(callbacks = {}) {
         this.container = $('#reader');
+        this.onImageLoaded = callbacks.onImageLoaded || (() => {});
+        this.onPageChanged = callbacks.onPageChanged || (() => {});
+        this.onStatusUpdate = callbacks.onStatusUpdate || (() => {});
         this.lastClickTime = 0;
         this.scrollUpdateTimer = null;
 
@@ -87,7 +90,7 @@ export class Reader {
             const currentPage = this.calculateCurrentPage();
             if (currentPage !== progressState.currentPage) {
                 progressState.setCurrentPage(currentPage);
-                window.dispatchEvent(new CustomEvent('reader:pageChanged'));
+                this.onPageChanged();
             }
             this.scrollUpdateTimer = null;
         }, 100);
@@ -124,9 +127,7 @@ export class Reader {
 
         const savedProgress = progressState.restoreFromStorage(seriesName, store.chapters.currentIndex);
         if (savedProgress) {
-            window.dispatchEvent(new CustomEvent('status:update', {
-                detail: { message: `已恢复阅读进度：第 ${savedProgress.page} 页` }
-            }));
+            this.onStatusUpdate({ message: `已恢复阅读进度：第 ${savedProgress.page} 页` });
         }
 
         this.initLazyObserver();
@@ -259,7 +260,7 @@ export class Reader {
             container.classList.remove('failed');
             store.incrementLazyLoadedCount();
 
-            window.dispatchEvent(new CustomEvent('reader:imageLoaded'));
+            this.onImageLoaded();
         };
 
         const onImageError = () => {

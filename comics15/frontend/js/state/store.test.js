@@ -69,6 +69,18 @@ describe('store', () => {
         expect(store.lazyLoad.nextToObserve).toBe(5);
     });
 
+
+    it('notifies lazy load subscribers when loaded count changes', () => {
+        const listener = vi.fn();
+        store.subscribe('lazyLoad', listener);
+
+        store.setLazyLoadedCount(2);
+        store.incrementLazyLoadedCount();
+
+        expect(store.lazyLoad.loadedCount).toBe(3);
+        expect(listener).toHaveBeenLastCalledWith(store.lazyLoad);
+    });
+
     it('does not expose debug globals or unused preload state', () => {
         expect(window.__appState).toBeUndefined();
         expect('preload' in store).toBe(false);

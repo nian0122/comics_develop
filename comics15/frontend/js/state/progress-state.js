@@ -1,6 +1,6 @@
 // 阅读进度状态管理
 
-import { storage } from '../services/storage.js';
+import { persistence } from '../services/persistence.js';
 import { store } from './store.js';
 
 export const progressState = {
@@ -49,7 +49,7 @@ export const progressState = {
         const currentIndex = store.chapters.currentIndex;
         if (!currentSeries || currentIndex < 0) return;
 
-        storage.setProgress(currentSeries, currentIndex, {
+        persistence.saveProgress(currentSeries, currentIndex, {
             page: this.currentPage,
             scrollPercent: this.scrollPercent,
             timestamp: this.lastReadTime
@@ -58,7 +58,7 @@ export const progressState = {
 
     restoreFromStorage(series, index) {
         if (!series || index < 0) return null;
-        const data = storage.getProgress(series, index);
+        const data = persistence.getProgress(series, index);
         if (data) {
             this.currentPage = data.page || 1;
             this.scrollPercent = data.scrollPercent || 0;
@@ -72,6 +72,6 @@ export const progressState = {
         const currentSeries = store.series.current;
         const currentIndex = store.chapters.currentIndex;
         if (!currentSeries || currentIndex < 0) return;
-        storage.remove(storage.getProgressKey(currentSeries, currentIndex));
+        persistence.clearProgress(currentSeries, currentIndex);
     }
 };

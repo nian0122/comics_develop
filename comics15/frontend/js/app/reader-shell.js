@@ -14,6 +14,7 @@ export class ReaderShell {
         this.onOpenNext = callbacks.onOpenNext || (() => {});
         this.onBackToDirectory = callbacks.onBackToDirectory || (() => {});
         this.onJumpToPage = callbacks.onJumpToPage || (() => {});
+        this.unsubscribeStore = null;
 
         this.elements = {
             readerMenuBtn: $('#readerMenuBtn'),
@@ -31,6 +32,12 @@ export class ReaderShell {
     }
 
     bindEvents() {
+        const unsubscribeLazyLoad = store.subscribe('lazyLoad', () => this.updateProgressStatus());
+        const unsubscribeChapters = store.subscribe('chapters', () => this.updateChapterButtons());
+        this.unsubscribeStore = () => {
+            unsubscribeLazyLoad();
+            unsubscribeChapters();
+        };
         this.elements.readerMenuBtn.onclick = () => this.toggleActions();
         this.elements.backToDirectoryBtn.onclick = () => this.onBackToDirectory();
         this.elements.prevBtn.onclick = () => this.onOpenPrev();
@@ -87,8 +94,8 @@ export class ReaderShell {
         this.elements.progressStatus.textContent = '0 / 0';
         this.lastScrollTop = 0;
         this.elements.readerMenuBtn.classList.remove('hidden');
-        this.elements.prevBtn.disabled = store.chapters.currentIndex <= 0;
-        this.elements.nextBtn.disabled = store.chapters.currentIndex >= store.chapters.flatList.length - 1;
+        this.updateChapterButtons();
+        this.updateProgressStatus();
     }
 
     updateProgressStatus() {
@@ -96,6 +103,10 @@ export class ReaderShell {
         this.elements.progressStatus.textContent = progressState.getBriefText();
         this.elements.progressStatus.title = `点击跳转页码 (或按 G 键)
 当前: ${progressState.getDisplayText()}`;
+        this.updateChapterButtons();
+    }
+
+    updateChapterButtons() {
         this.elements.prevBtn.disabled = store.chapters.currentIndex <= 0;
         this.elements.nextBtn.disabled = store.chapters.currentIndex >= store.chapters.flatList.length - 1;
     }
@@ -144,5 +155,12 @@ export class ReaderShell {
 
     hide() {
         this.readerView.classList.add('hidden');
+    }
+
+    destroy() {
+        if (this.unsubscribeStore) {
+            this.unsubscribeStore();
+            this.unsubscribeStore = null;
+        }
     }
 }

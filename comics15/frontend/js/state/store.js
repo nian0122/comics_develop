@@ -109,18 +109,22 @@ export const store = {
 
     setLazyObserver(observer) {
         this.lazyLoad.observer = observer;
+        this.notify('lazyLoad');
     },
 
     setLazyNextToObserve(index) {
         this.lazyLoad.nextToObserve = index;
+        this.notify('lazyLoad');
     },
 
     setLazyLoadedCount(count) {
         this.lazyLoad.loadedCount = count;
+        this.notify('lazyLoad');
     },
 
     incrementLazyLoadedCount() {
         this.lazyLoad.loadedCount += 1;
+        this.notify('lazyLoad');
     },
 
     resetReader() {

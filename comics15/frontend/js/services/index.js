@@ -3,3 +3,5 @@
 export * from './api.js';
 export * from './storage.js';
 export * from './tools-api.js';
+
+export * from './persistence.js';

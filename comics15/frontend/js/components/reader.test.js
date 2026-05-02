@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Reader } from './reader.js';
 import { api } from '../services/api.js';
 import { store } from '../state/store.js';
+import { progressState } from '../state/progress-state.js';
 
 class MockIntersectionObserver {
     observe = vi.fn();
@@ -96,4 +97,44 @@ describe('Reader chapter source strategy', () => {
         expect(video.getAttribute('src')).toBe('/video/Series/PV/clip.mp4');
         expect(gif.getAttribute('src')).toBe('/video/Series/PV/animation.gif');
     });
+
+    it('图片加载完成时使用回调通知进度刷新，不派发全局事件', async () => {
+        const onImageLoaded = vi.fn();
+        const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+        reader = new Reader({ onImageLoaded });
+
+        await reader.loadChapter(['001.jpg'], {
+            path_id: 'chapter',
+            cover_source: 'hq',
+        }, 'Series');
+        const container = document.querySelector('.lazy-image-container');
+
+        await reader.loadImageElement(container);
+        container.querySelector('img').onload();
+
+        expect(onImageLoaded).toHaveBeenCalledTimes(1);
+        expect(dispatchSpy).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'reader:imageLoaded' }));
+    });
+
+    it('页码变化时使用回调通知进度刷新，不派发全局事件', () => {
+        vi.useFakeTimers();
+        const onPageChanged = vi.fn();
+        const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+        reader = new Reader({ onPageChanged });
+        progressState.init(3);
+        reader.container.innerHTML = `
+            <div class="lazy-image-container"></div>
+            <div class="lazy-image-container"></div>
+            <div class="lazy-image-container"></div>
+        `;
+        vi.spyOn(reader, 'calculateCurrentPage').mockReturnValue(2);
+
+        reader.updateCurrentPageOnScroll();
+        vi.advanceTimersByTime(100);
+
+        expect(onPageChanged).toHaveBeenCalledTimes(1);
+        expect(dispatchSpy).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'reader:pageChanged' }));
+        vi.useRealTimers();
+    });
+
 });
