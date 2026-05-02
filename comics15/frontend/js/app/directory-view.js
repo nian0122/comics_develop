@@ -12,15 +12,18 @@ import {
 } from '../utils/chapter-tree.js';
 import { markCoverLoading, markCoverLoaded, markCoverIdle, unloadCoverImage } from '../utils/lazy-cover.js';
 import { RequestQueue } from '../utils/request-queue.js';
-import { LAZY_LOAD_CONFIG } from '../config/constants.js';
+import { getCoverLoadPolicy } from '../utils/cover-load-policy.js';
 
 export class DirectoryView {
     constructor(container, chapterMetaCache, callbacks = {}) {
         this.container = container;
         this.chapterMetaCache = chapterMetaCache;
         this.coverObserver = null;
-        this.coverLoadQueue = new RequestQueue(LAZY_LOAD_CONFIG.COVER_MAX_CONCURRENT);
+        this.coverLoadPolicy = callbacks.coverLoadPolicy || getCoverLoadPolicy();
+        this.coverLoadQueue = new RequestQueue(this.coverLoadPolicy.maxConcurrent);
         this.coverLoadToken = 0;
+        this.coverUnloadTimers = new Map();
+        this.activeCoverIndexes = [];
         this.onShowSeries = callbacks.onShowSeries || (() => {});
         this.onOpenChapter = callbacks.onOpenChapter || (() => {});
         this.onRenderDirectory = callbacks.onRenderDirectory || (() => {});
@@ -102,7 +105,7 @@ export class DirectoryView {
         const pathLabel = getParentPath(node.path_id) || store.series.current;
         return `
             <button class="chapter-card" data-index="${node.flatIndex}">
-                <span class="chapter-cover skeleton" data-cover-index="${node.flatIndex}"></span>
+                ${this.renderCoverPlaceholder(node.flatIndex)}
                 <span class="chapter-card-body">
                     <strong>${escapeHtml(displayName)}</strong>
                     <span data-progress-index="${node.flatIndex}">${escapeHtml(formatChapterProgress(progress, 0))}</span>
@@ -110,6 +113,14 @@ export class DirectoryView {
                 </span>
             </button>
         `;
+    }
+
+    renderCoverPlaceholder(index) {
+        if (this.coverLoadPolicy.autoLoadCovers !== false) {
+            return `<span class="chapter-cover skeleton" data-cover-index="${index}"></span>`;
+        }
+
+        return `<span class="chapter-cover chapter-cover-manual" data-cover-index="${index}" data-cover-action="load">点击加载封面</span>`;
     }
 
     bindStaticActions() {
@@ -126,7 +137,17 @@ export class DirectoryView {
             rowEl.addEventListener('click', () => this.onRenderDirectory(rowEl.dataset.path));
         });
         this.container.querySelectorAll('.chapter-card').forEach(cardEl => {
-            cardEl.addEventListener('click', () => this.onOpenChapter(Number(cardEl.dataset.index), true));
+            cardEl.addEventListener('click', (event) => {
+                const coverEl = event.target.closest('[data-cover-action="load"]');
+                if (coverEl) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    coverEl.dataset.coverVisible = 'true';
+                    this.enqueueCoverLoad(coverEl);
+                    return;
+                }
+                this.onOpenChapter(Number(cardEl.dataset.index), true);
+            });
         });
     }
 
@@ -159,14 +180,17 @@ export class DirectoryView {
             entries.forEach(entry => {
                 entry.target.dataset.coverVisible = entry.isIntersecting ? 'true' : 'false';
                 if (!entry.isIntersecting) {
-                    unloadCoverImage(entry.target);
+                    this.scheduleCoverUnload(entry.target);
                     return;
                 }
-                this.enqueueCoverLoad(entry.target, coverLoadToken);
+                this.cancelCoverUnload(entry.target);
+                if (this.coverLoadPolicy.autoLoadCovers !== false) {
+                    this.enqueueCoverLoad(entry.target, coverLoadToken);
+                }
             });
         }, {
             root: null,
-            rootMargin: LAZY_LOAD_CONFIG.COVER_ROOT_MARGIN,
+            rootMargin: this.coverLoadPolicy.rootMargin,
             threshold: 0.01,
         });
 
@@ -179,6 +203,61 @@ export class DirectoryView {
             if (coverLoadToken !== this.coverLoadToken || !coverEl.isConnected) return undefined;
             return this.loadCover(coverEl, coverLoadToken);
         });
+    }
+
+    scheduleCoverUnload(coverEl) {
+        this.cancelCoverUnload(coverEl);
+        const index = Number(coverEl.dataset.coverIndex);
+        const unload = () => {
+            this.coverUnloadTimers.delete(index);
+            unloadCoverImage(coverEl);
+            this.activeCoverIndexes = this.activeCoverIndexes.filter(activeIndex => activeIndex !== index);
+        };
+
+        if (this.coverLoadPolicy.unloadDelayMs > 0) {
+            this.coverUnloadTimers.set(index, window.setTimeout(unload, this.coverLoadPolicy.unloadDelayMs));
+            return;
+        }
+
+        unload();
+    }
+
+    cancelCoverUnload(coverEl) {
+        const index = Number(coverEl.dataset.coverIndex);
+        const timerId = this.coverUnloadTimers.get(index);
+        if (!timerId) return;
+
+        window.clearTimeout(timerId);
+        this.coverUnloadTimers.delete(index);
+    }
+
+    rememberActiveCover(coverEl) {
+        const index = Number(coverEl.dataset.coverIndex);
+        this.activeCoverIndexes = this.activeCoverIndexes.filter(activeIndex => activeIndex !== index);
+        this.activeCoverIndexes.push(index);
+
+        while (this.activeCoverIndexes.length > this.coverLoadPolicy.maxActiveCovers) {
+            const staleIndex = this.activeCoverIndexes.shift();
+            const staleCoverEl = this.container.querySelector(`[data-cover-index="${staleIndex}"]`);
+            if (staleCoverEl) {
+                this.cancelCoverUnload(staleCoverEl);
+                unloadCoverImage(staleCoverEl);
+            }
+        }
+    }
+
+    cleanupChapterCovers() {
+        if (this.coverObserver) {
+            this.coverObserver.disconnect();
+            this.coverObserver = null;
+        }
+
+        this.coverLoadQueue.clear();
+        this.coverLoadToken += 1;
+        this.coverUnloadTimers.forEach(timerId => window.clearTimeout(timerId));
+        this.coverUnloadTimers.clear();
+        this.activeCoverIndexes = [];
+        this.container.querySelectorAll('[data-cover-index]').forEach(coverEl => unloadCoverImage(coverEl));
     }
 
     async loadCover(coverEl, coverLoadToken = this.coverLoadToken) {
@@ -197,13 +276,20 @@ export class DirectoryView {
             markCoverIdle(coverEl);
             return;
         }
+        if (meta.coverUrl && coverEl.querySelector('img')) {
+            unloadCoverImage(coverEl);
+        }
+
         markCoverLoaded(coverEl);
         coverEl.classList.remove('skeleton');
         const progress = storage.getProgress(store.series.current, index);
         progressEl.textContent = formatChapterProgress(progress, meta.totalPages);
 
         if (meta.coverUrl) {
+            delete coverEl.dataset.coverAction;
+            coverEl.classList.remove('chapter-cover-manual');
             coverEl.innerHTML = `<img src="${meta.coverUrl}" alt="${escapeHtml(node.name)} 首图" loading="lazy" data-source="${meta.coverSource}">`;
+            this.rememberActiveCover(coverEl);
         } else {
             coverEl.classList.add('chapter-cover-placeholder');
             coverEl.textContent = '无预览';

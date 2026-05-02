@@ -690,6 +690,19 @@ hr {
     display: block;
 }
 
+
+.chapter-cover-manual {
+    display: grid;
+    place-items: center;
+    padding: 8px;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: center;
+    background: var(--bg-tertiary);
+}
+
 .chapter-cover-placeholder {
     display: grid;
     place-items: center;

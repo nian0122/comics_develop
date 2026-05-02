@@ -23,8 +23,9 @@ export function unloadCoverImage(coverEl) {
     const imgEl = coverEl.querySelector('img');
     if (!imgEl) return;
 
-    imgEl.src = '';
+    imgEl.removeAttribute('src');
     imgEl.load && imgEl.load();
+    imgEl.remove();
     coverEl.textContent = '';
     markCoverIdle(coverEl);
 }

@@ -224,6 +224,9 @@ class App {
     }
 
     showView(view) {
+        if (view !== 'directoryBrowser') {
+            this.directoryView.cleanupChapterCovers();
+        }
         store.setCurrentView(view);
         this.seriesView.container.classList.toggle('hidden', view !== 'seriesList');
         this.directoryView.container.classList.toggle('hidden', view !== 'directoryBrowser');
