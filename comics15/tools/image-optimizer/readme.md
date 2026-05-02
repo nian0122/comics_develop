@@ -42,7 +42,7 @@ image-optimizer.exe -root "F:\games\comics" -force
 | `-series` | 否 | - | 指定系列名称 |
 | `-ext` | 否 | .jpg,.jpeg,.png,.gif,.bmp | 文件扩展名 |
 | `-workers` | 否 | 8 | 并发数 |
-| `-quality` | 否 | 75 | WebP 质量 (1-100) |
+| `-quality` | 否 | 15 | WebP 质量 (1-100) |
 | `-force` | 否 | false | 强制重新处理 |
 | `-quiet` | 否 | false | 安静模式 |
 
@@ -63,10 +63,13 @@ image-optimizer.exe -root "F:\games\comics" -force
 扫描目录: F:\games\comics\h_photograph\MySeries
 输出目录: F:\games\comics\l_photograph\MySeries
 并发数:   8
-质量:     75
+质量:     15
 --------------------------------------------------
-OK: chapter1/001.jpg
-OK: chapter1/002.jpg
+跳过: chapter1/001.jpg | 已存在最新版本 (150.2KB)
+完成: chapter1/002.jpg | 2.5MB → 150.5KB (6.0%)
+完成: chapter1/003.png | 3.2MB → 180.3KB (5.6%)
+跳过: chapter2/empty.jpg | 空文件
+失败: chapter2/bad.jpg → 解码图片失败: unsupported format
 --------------------------------------------------
 --- 任务完成 ---
 总耗时:   5.23 秒

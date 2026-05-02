@@ -239,28 +239,32 @@ public class ToolExecutor {
     }
 
     private void parseProgress(String line, ToolExecution execution) {
-        if (line.contains("处理") && line.contains("数量")) {
-            try {
-                if (line.contains("处理图片数量") || line.contains("处理文件数")) {
-                    String numStr = line.replaceAll("[^0-9]", "");
-                    if (!numStr.isEmpty()) {
-                        execution.setProcessedCount(Integer.parseInt(numStr));
-                    }
+        try {
+            // 匹配 "处理成功: X" / "处理图片数量: X" / "处理文件数: X"
+            if (line.contains("处理成功") || line.contains("处理图片数量") || line.contains("处理文件数")) {
+                String numStr = line.replaceAll("[^0-9]", "");
+                if (!numStr.isEmpty()) {
+                    execution.setProcessedCount(Integer.parseInt(numStr));
                 }
-                if (line.contains("跳过图片数量") || line.contains("跳过")) {
-                    String numStr = line.replaceAll("[^0-9]", "");
-                    if (!numStr.isEmpty()) {
-                        execution.setSkippedCount(Integer.parseInt(numStr));
-                    }
-                }
-                if (line.contains("处理失败数量") || line.contains("失败数量")) {
-                    String numStr = line.replaceAll("[^0-9]", "");
-                    if (!numStr.isEmpty()) {
-                        execution.setErrorCount(Integer.parseInt(numStr));
-                    }
-                }
-            } catch (NumberFormatException ignored) {
             }
+            // 匹配 "跳过文件: X" / "跳过图片数量: X" (排除逐行 "跳过: xxx" 日志)
+            if (line.contains("跳过文件") || line.contains("跳过图片数量") || 
+                (line.contains("跳过") && line.contains(":") && !line.startsWith("跳过:"))) {
+                String numStr = line.replaceAll("[^0-9]", "");
+                if (!numStr.isEmpty()) {
+                    execution.setSkippedCount(Integer.parseInt(numStr));
+                }
+            }
+            // 匹配 "失败数量: X" / "处理失败数量: X"
+            if (line.contains("失败数量") || line.contains("处理失败数量")) {
+                String numStr = line.replaceAll("[^0-9]", "");
+                if (!numStr.isEmpty()) {
+                    execution.setErrorCount(Integer.parseInt(numStr));
+                }
+            }
+        } catch (NumberFormatException e) {
+            // 进度解析失败属边缘情况，debug 级别记录即可
+            log.debug("进度解析失败，行内容: {}", line, e);
         }
     }
 

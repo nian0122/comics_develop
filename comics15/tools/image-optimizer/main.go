@@ -40,6 +40,18 @@ type Config struct {
 	Quiet      bool
 }
 
+func formatSize(bytes int64) string {
+	const KB = 1024
+	const MB = KB * 1024
+	if bytes >= MB {
+		return fmt.Sprintf("%.1fMB", float64(bytes)/float64(MB))
+	}
+	if bytes >= KB {
+		return fmt.Sprintf("%.1fKB", float64(bytes)/float64(KB))
+	}
+	return fmt.Sprintf("%dB", bytes)
+}
+
 func main() {
 	rootDir := flag.String("root", "", "漫画根目录")
 	scanDir := flag.String("scan-dir", "", "自定义扫描目录 (覆盖 root+series)")
@@ -163,8 +175,10 @@ func run(config *Config, stats *Stats) {
 	filepath.Walk(config.ScanDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			if !config.Quiet {
-				fmt.Printf("WARN: 无法访问 %s: %v\n", path, err)
+				relPath, _ := filepath.Rel(config.ScanDir, path)
+				fmt.Printf("跳过: %s | 无法访问: %v\n", relPath, err)
 			}
+			atomic.AddInt32(&stats.Skipped, 1)
 			return nil
 		}
 
@@ -178,6 +192,10 @@ func run(config *Config, stats *Stats) {
 		}
 
 		if info.Size() == 0 {
+			relPath, _ := filepath.Rel(config.ScanDir, path)
+			if !config.Quiet {
+				fmt.Printf("跳过: %s | 空文件\n", relPath)
+			}
 			atomic.AddInt32(&stats.Skipped, 1)
 			return nil
 		}
@@ -195,6 +213,9 @@ func run(config *Config, stats *Stats) {
 		if !config.Force {
 			if lqInfo, err := os.Stat(lqPath); err == nil {
 				if lqInfo.ModTime().Unix() >= info.ModTime().Unix() {
+					if !config.Quiet {
+						fmt.Printf("跳过: %s | 已存在最新版本 (%s)\n", relPath, formatSize(lqInfo.Size()))
+					}
 					atomic.AddInt32(&stats.Skipped, 1)
 					return nil
 				}
@@ -223,26 +244,32 @@ func worker(id int, tasks <-chan imageTask, wg *sync.WaitGroup, config *Config, 
 	defer wg.Done()
 
 	for task := range tasks {
-		err := processImage(task.HQPath, task.LQPath, config.Quality)
+		result, err := processImage(task.HQPath, task.LQPath, config.Quality)
 
 		if err != nil {
 			atomic.AddInt32(&stats.Failed, 1)
 			if !config.Quiet {
-				fmt.Printf("FAIL: %s - %v\n", filepath.Base(task.HQPath), err)
+				fmt.Printf("[Worker %d] 失败: %s → %v\n", id, task.RelativePath, err)
 			}
 		} else {
 			atomic.AddInt32(&stats.Processed, 1)
 			if !config.Quiet {
-				fmt.Printf("OK: %s\n", filepath.Base(task.RelativePath))
+				compressionRatio := float64(result.OutputSize) / float64(result.InputSize) * 100
+				fmt.Printf("[Worker %d] 完成: %s | %s → %s (%.1f%%)\n",
+					id,
+					task.RelativePath,
+					formatSize(result.InputSize),
+					formatSize(result.OutputSize),
+					compressionRatio)
 			}
 		}
 	}
 }
 
-func processImage(hqPath, lqPath string, quality int) error {
+func processImage(hqPath, lqPath string, quality int) (OptimizeResult, error) {
 	lqDir := filepath.Dir(lqPath)
 	if err := os.MkdirAll(lqDir, 0755); err != nil {
-		return fmt.Errorf("创建目录失败: %w", err)
+		return OptimizeResult{}, fmt.Errorf("创建目录失败: %w", err)
 	}
 
 	webpQuality := float32(quality)
