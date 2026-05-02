@@ -57,4 +57,30 @@ describe('RequestQueue', () => {
         await expect(nextTask).resolves.toBe('ok');
         expect(calls).toEqual(['first', 'second']);
     });
+
+    it('清理队列后不会继续执行待处理任务', async () => {
+        const queue = new RequestQueue(1);
+        const releaseTasks = [];
+        const calls = [];
+
+        const activeTask = queue.add(async () => {
+            calls.push('active');
+            await new Promise(resolve => releaseTasks.push(resolve));
+        });
+        const pendingTask = queue.add(async () => {
+            calls.push('pending');
+            return 'should-not-run';
+        });
+
+        await flushMicrotasks();
+        expect(calls).toEqual(['active']);
+
+        queue.clear();
+        releaseTasks.shift()();
+        await activeTask;
+
+        await expect(pendingTask).resolves.toBeUndefined();
+        expect(calls).toEqual(['active']);
+    });
+
 });

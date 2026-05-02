@@ -34,7 +34,12 @@ describe('chapter cover metadata', () => {
         });
     });
 
-    it('缺少首图字段时返回 null 以便走旧链路回退', () => {
-        expect(getChapterCoverMeta({ path_id: '第 3 话' }, 'Series')).toBeNull();
+    it('缺少首图字段时返回占位元数据而不是触发旧链路回退', () => {
+        expect(getChapterCoverMeta({ path_id: '第 3 话', total_files: '12' }, 'Series')).toEqual({
+            totalPages: 12,
+            files: [],
+            coverUrl: '',
+            coverSource: '',
+        });
     });
 });

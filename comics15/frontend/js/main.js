@@ -13,9 +13,8 @@ import {
     getInitialDirectoryPath,
     splitChapterPath,
 } from './utils/chapter-tree.js';
-import { isImageFile } from './utils/file-type.js';
 import { getChapterCoverMeta } from './utils/chapter-cover-meta.js';
-import { markCoverLoading, markCoverLoaded } from './utils/lazy-cover.js';
+import { markCoverLoading, markCoverLoaded, markCoverIdle, unloadCoverImage } from './utils/lazy-cover.js';
 import { RequestQueue } from './utils/request-queue.js';
 import { getReaderMenuVisibilityState } from './utils/reader-controls.js';
 import { LAZY_LOAD_CONFIG } from './config/constants.js';
@@ -330,18 +329,25 @@ class App {
             this.coverObserver.disconnect();
         }
 
+        this.coverLoadQueue.clear();
         this.coverLoadToken += 1;
         const coverLoadToken = this.coverLoadToken;
         const coverEls = this.elements.directoryView.querySelectorAll('[data-cover-index]');
         if (!('IntersectionObserver' in window)) {
-            coverEls.forEach(coverEl => this.enqueueChapterCoverLoad(coverEl, coverLoadToken));
+            coverEls.forEach(coverEl => {
+                coverEl.dataset.coverVisible = 'true';
+                this.enqueueChapterCoverLoad(coverEl, coverLoadToken);
+            });
             return;
         }
 
         this.coverObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
-                if (!entry.isIntersecting) return;
-                this.coverObserver.unobserve(entry.target);
+                entry.target.dataset.coverVisible = entry.isIntersecting ? 'true' : 'false';
+                if (!entry.isIntersecting) {
+                    unloadCoverImage(entry.target);
+                    return;
+                }
                 this.enqueueChapterCoverLoad(entry.target, coverLoadToken);
             });
         }, {
@@ -373,6 +379,10 @@ class App {
 
         const meta = await this.getChapterMeta(index);
         if (coverLoadToken !== this.coverLoadToken || !coverEl.isConnected) return;
+        if (coverEl.dataset.coverVisible !== 'true') {
+            markCoverIdle(coverEl);
+            return;
+        }
         markCoverLoaded(coverEl);
         coverEl.classList.remove('skeleton');
         const progress = storage.getProgress(store.series.current, index);
@@ -394,30 +404,12 @@ class App {
     async getChapterMeta(index) {
         if (this.chapterMetaCache.has(index)) return this.chapterMetaCache.get(index);
         const chapter = store.chapters.flatList[index];
-        const fallback = { totalPages: 0, files: [], coverUrl: '' };
+        const fallback = { totalPages: 0, files: [], coverUrl: '', coverSource: '' };
         if (!chapter) return fallback;
 
         const chapterCoverMeta = getChapterCoverMeta(chapter, store.series.current);
-        if (chapterCoverMeta) {
-            this.chapterMetaCache.set(index, chapterCoverMeta);
-            return chapterCoverMeta;
-        }
-
-        try {
-            const data = await api.getChapterFiles(store.series.current, chapter.path_id);
-            const files = data.files || [];
-            const firstImage = files.find(file => isImageFile(file));
-            const cover = firstImage
-                ? await api.resolveImageUrl(store.series.current, firstImage, chapter.path_id)
-                : { url: '', source: '' };
-            const meta = { totalPages: files.length, files, coverUrl: cover.url, coverSource: cover.source };
-            this.chapterMetaCache.set(index, meta);
-            return meta;
-        } catch (error) {
-            console.warn('加载章节卡片元数据失败:', chapter.path_id, error);
-            this.chapterMetaCache.set(index, fallback);
-            return fallback;
-        }
+        this.chapterMetaCache.set(index, chapterCoverMeta);
+        return chapterCoverMeta;
     }
 
     async openChapter(index, isUiSelection = false) {

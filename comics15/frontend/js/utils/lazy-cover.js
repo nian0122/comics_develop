@@ -12,3 +12,19 @@ export function markCoverLoading(coverEl) {
 export function markCoverLoaded(coverEl) {
     coverEl.dataset.coverState = 'loaded';
 }
+
+export function markCoverIdle(coverEl) {
+    delete coverEl.dataset.coverState;
+    coverEl.classList.add('skeleton');
+    coverEl.classList.remove('chapter-cover-placeholder');
+}
+
+export function unloadCoverImage(coverEl) {
+    const imgEl = coverEl.querySelector('img');
+    if (!imgEl) return;
+
+    imgEl.src = '';
+    imgEl.load && imgEl.load();
+    coverEl.textContent = '';
+    markCoverIdle(coverEl);
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getUnloadedCoverIndexes, markCoverLoading, markCoverLoaded } from './lazy-cover.js';
+import { getUnloadedCoverIndexes, markCoverLoading, markCoverLoaded, unloadCoverImage } from './lazy-cover.js';
 
 describe('lazy-cover helpers', () => {
     it('只返回尚未加载且未加载中的章节首图索引', () => {
@@ -22,4 +22,18 @@ describe('lazy-cover helpers', () => {
         markCoverLoaded(coverEl);
         expect(coverEl.dataset.coverState).toBe('loaded');
     });
+
+    it('卸载已加载首图并恢复为可再次懒加载状态', () => {
+        document.body.innerHTML = '<span class="chapter-cover" data-cover-index="7" data-cover-state="loaded"><img src="/lq_image/a/b.webp" alt="首图"></span>';
+        const coverEl = document.querySelector('[data-cover-index="7"]');
+
+        unloadCoverImage(coverEl);
+
+        expect(coverEl.dataset.coverState).toBeUndefined();
+        expect(coverEl.querySelector('img')).toBeNull();
+        expect(coverEl.textContent).toBe('');
+        expect(coverEl.classList.contains('skeleton')).toBe(true);
+        expect(getUnloadedCoverIndexes(document.body)).toEqual([7]);
+    });
+
 });
