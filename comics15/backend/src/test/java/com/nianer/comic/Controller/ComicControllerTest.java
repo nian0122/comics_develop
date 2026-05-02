@@ -81,6 +81,22 @@ class ComicControllerTest {
     }
 
     @Test
+    void listChaptersReturnsNoCoverMetadataForVideoOnlyChapter() throws Exception {
+        Path hqChapter = comicsRoot.resolve("h_photograph").resolve("测试系列").resolve("PV");
+        Files.createDirectories(hqChapter);
+        Files.writeString(hqChapter.resolve("001.mp4"), "video");
+        Files.writeString(hqChapter.resolve("002.gif"), "gif");
+
+        List<Map<String, String>> chapters = controller.listChapters("测试系列");
+
+        assertThat(chapters).hasSize(1);
+        assertThat(chapters.getFirst())
+                .containsEntry("path_id", "PV")
+                .containsEntry("total_files", "2")
+                .doesNotContainKeys("cover_file", "cover_source");
+    }
+
+    @Test
     void listChaptersPreservesNaturalOrderWhenScanningNestedDirectories() throws Exception {
         createChapter("测试系列", "Volume 1/Chapter 10", "001.jpg");
         createChapter("测试系列", "Volume 1/Chapter 2", "001.jpg");

@@ -130,16 +130,28 @@ config.getHqPath()/{seriesName}
 [
   {
     "path_id": "第一卷/第 001 话",
-    "name": "第 001 话"
+    "name": "第 001 话",
+    "total_files": "120",
+    "cover_file": "001.jpg",
+    "cover_source": "lq"
   }
 ]
 ```
+
+字段说明：
+
+- `path_id`：章节相对路径，使用 `/` 作为多级目录分隔符。
+- `name`：章节显示名，取章节路径最后一级。
+- `total_files`：章节内支持媒体文件总数，包含图片、视频和 GIF。
+- `cover_file`：自然排序后的第一张普通图片，仅章节包含 `.jpg/.jpeg/.png/.webp` 时返回。
+- `cover_source`：`cover_file` 的推荐来源，`lq` 表示对应 LQ WebP 存在，`hq` 表示没有对应 LQ。
 
 行为：
 
 - 递归扫描 HQ 系列目录。
 - 包含媒体文件的目录被视为叶子章节。
-- `path_id` 使用 `/` 作为多级目录分隔符。
+- 图片+视频混合章节会跳过 `.mp4/.mov/.gif`，使用第一张普通图片作为首图。
+- 纯视频/GIF 章节不返回 `cover_file` 和 `cover_source`，前端目录页显示“无预览”。
 - Redis 缓存键：`chapters_list:{series}`。
 
 ### `/api/chapter/{seriesName}?chapterPath=`
@@ -167,6 +179,7 @@ config.getHqPath()/{seriesName}/{chapterPath}
 - 不判断 HQ 是否为空白占位。
 - 不扫描 LQ 目录。
 - 前端必须基于 HQ 文件名推导 LQ 文件路径。
+- 阅读器的章节级图片源策略来自 `/api/chapters/{seriesName}` 的 `cover_source`，不是这个接口。
 - Redis 缓存键：`chapter_files:{series}:{chapter}`。
 
 ## 5. 静态资源服务
@@ -369,39 +382,44 @@ LQ: 001.webp
 
 ## 8. 图片加载策略
 
-图片加载策略必须符合本项目的 HQ/LQ 存储模型。
+图片加载策略必须符合本项目的 HQ/LQ 存储模型。章节级图片源策略的完整设计见：[章节图片源策略设计](./chapter-source-strategy-design.md)。
 
 ### 基本原则
 
 ```text
-从 HQ 获取文件名 -> 推导 LQ WebP -> LQ 存在则显示 LQ -> LQ 不存在才回退 HQ
+/api/chapters 返回首张普通图片的 cover_source -> 普通图片优先按章节级来源加载 -> 异常时兜底
 ```
+
+- `cover_source = lq`：本章普通图片默认直接构建 LQ WebP URL。
+- `cover_source = hq`：本章普通图片默认直接构建 HQ URL。
+- `cover_source` 缺失或异常：回退旧 `api.resolveImageUrl()`，逐张 HEAD 探测。
+- 视频/GIF 始终走 `/video/`，不参与 LQ/HQ 图片策略。
 
 ### 章节卡片首图
 
-入口：`main.js` 的 `getChapterMeta()` / `hydrateChapterCard()`
+入口：`frontend/js/utils/chapter-cover-meta.js` 的 `getChapterCoverMeta()`，由 `DirectoryView.loadCover()` 懒加载触发。
 
 流程：
 
-1. 调用 `/api/chapter/{seriesName}` 获取 HQ 文件名列表。
-2. 找到第一个图片文件名。
-3. 调用 `api.resolveImageUrl(series, filename, chapterPath)`。
-4. 如果 LQ 存在，卡片首图显示 LQ。
-5. 如果 LQ 不存在，卡片首图显示 HQ。
-6. 如果都不可用，显示占位。
+1. `api.getChapters(series)` 获取章节列表，后端已返回 `cover_file` 和 `cover_source`。
+2. `cover_source = lq` 时直接调用 `api.buildLQImageUrl(series, cover_file, path_id)`。
+3. `cover_source = hq` 时直接调用 `api.buildHQImageUrl(series, cover_file, path_id)`。
+4. 缺少 `cover_file` 或 `cover_source` 时显示“无预览”。
+5. 目录首图不调用 `/api/chapter/{seriesName}`，也不调用 `api.resolveImageUrl()`，因此不产生 LQ HEAD 探测。
 
 ### 阅读页图片
 
-入口：`reader.js` 的 `loadImageElement()`
+入口：`reader.js` 的 `loadChapter()` 和 `loadImageElement()`。
 
 流程：
 
-1. 当前页容器保存 `filename`、`pathId`、`seriesName`。
-2. 图片文件调用 `api.resolveImageUrl()`。
-3. LQ 存在时使用 LQ。
-4. LQ 不存在时使用 HQ。
-5. 图片加载失败进入重试逻辑。
-6. 视频文件走 `/video/`，不走 LQ/HQ 图片策略。
+1. `loadChapter()` 把当前章节的合法 `cover_source` 写入每个媒体容器的 `data-cover-source`。
+2. `loadImageElement()` 对普通图片读取 `data-cover-source`。
+3. `cover_source = lq` 时直接调用 `api.buildLQImageUrl()`。
+4. `cover_source = hq` 时直接调用 `api.buildHQImageUrl()`。
+5. `cover_source` 缺失或异常时回退旧 `api.resolveImageUrl()`，通过 `HEAD /lq_image/...` 判断 LQ 是否存在。
+6. 默认 LQ 加载失败时，图片 `onerror` 会再次调用 `loadImageElement(container, true)` 回退 HQ。
+7. 视频和 GIF 使用 `api.buildVideoUrl()`，不读取 `cover_source`。
 
 ### 双击加载 HQ
 
@@ -507,7 +525,7 @@ encodeURIComponent(chapterPath)
 
 前端不要把 204 当成图片可用。
 
-`checkLQImageExists()` 只在 `status === 200` 时返回 true。
+`checkLQImageExists()` 只在 `status === 200` 时返回 true。该逐张 HEAD 探测现在只用于 `cover_source` 缺失或异常时的兼容兜底；正常章节阅读优先复用 `/api/chapters` 返回的 `cover_source`。
 
 ### HQ 空白占位不能直接显示
 
@@ -515,15 +533,19 @@ encodeURIComponent(chapterPath)
 
 双击切 HQ 前必须检查 `content-length`。
 
-### 目录卡片和阅读页必须共用图片解析规则
+### 目录卡片和阅读页必须共用章节级来源语义
 
-不要在卡片里直接拼 LQ URL，否则会再次出现首图加载失败或无法回退 HQ 的问题。
+目录卡片和阅读页都以 `/api/chapters/{seriesName}` 返回的 `cover_source` 作为章节级图片来源判断，避免两条链路各自探测导致结果不一致。
 
-统一使用：
+使用规则：
 
-```js
-api.resolveImageUrl(seriesName, filename, chapterPath)
+```text
+cover_source = lq → buildLQImageUrl()
+cover_source = hq → buildHQImageUrl()
+cover_source 缺失 → resolveImageUrl() 兜底
 ```
+
+不要在新代码中重新逐文件设计 LQ 探测逻辑；如果必须兜底，应复用 `api.resolveImageUrl()`。
 
 ## 11. 测试与验证
 
@@ -539,16 +561,24 @@ npm run build
 关键测试文件：
 
 ```text
+backend/src/test/java/com/nianer/comic/Controller/ComicControllerTest.java
+frontend/js/components/reader.test.js
 frontend/js/services/api.test.js
+frontend/js/utils/chapter-cover-meta.test.js
 frontend/js/utils/chapter-tree.test.js
+frontend/js/utils/file-type.test.js
 ```
 
 图片加载相关测试必须覆盖：
 
+- `/api/chapters` 为图片+视频混合章节返回第一张普通图片的 `cover_file` 和 `cover_source`。
+- 纯视频/GIF 章节返回 `total_files`，但不返回 `cover_file` 和 `cover_source`。
 - 多级中文路径不生成 `%2F`。
 - Windows 反斜杠路径会规范化。
-- LQ 存在时优先返回 LQ。
-- LQ 不存在时回退 HQ。
+- 目录首图根据 `cover_source` 直接构建 LQ/HQ URL。
+- 阅读器在 `cover_source = lq/hq` 时跳过逐张 LQ HEAD 探测。
+- `cover_source` 缺失时阅读器回退 `api.resolveImageUrl()`。
+- 视频/GIF 始终走 `/video/`，不读取 `cover_source`。
 - HQ `content-length: 0` 被视为不可用。
 - 缺少 `content-length` 时不误杀 HQ。
 
@@ -578,4 +608,4 @@ frontend/js/utils/chapter-tree.test.js
 - 仅 HQ
 - 仅 LQ
 
-当前实现保持后端简单，前端通过 HEAD 请求完成 LQ 优先和 HQ 可用性判断。
+当前实现保持后端简单：`/api/chapters` 只提供章节级 `cover_source`，阅读器优先复用该字段；只有旧缓存、异常数据或缺失字段时，前端才通过 HEAD 请求完成 LQ 优先和 HQ 可用性判断。

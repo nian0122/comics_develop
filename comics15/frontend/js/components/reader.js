@@ -132,7 +132,7 @@ export class Reader {
         this.initLazyObserver();
 
         const fragment = document.createDocumentFragment();
-        const { path_id } = chapterData;
+        const { path_id, cover_source } = chapterData;
 
         files.forEach((filename, index) => {
             const container = document.createElement('div');
@@ -141,6 +141,9 @@ export class Reader {
             container.dataset.filename = filename;
             container.dataset.pathId = path_id;
             container.dataset.seriesName = seriesName;
+            if (cover_source === 'lq' || cover_source === 'hq') {
+                container.dataset.coverSource = cover_source;
+            }
             container.dataset.loaded = 'false';
 
             container.innerHTML = `
@@ -206,13 +209,22 @@ export class Reader {
         if (retryState.retries >= IMAGE_RETRY_CONFIG.MAX_RETRIES && retryState.status === 'failed') return;
 
         const isVideo = useVideoPath(filename);
-        const imageSource = !isVideo
-            ? await api.resolveImageUrl(seriesName, filename, pathId)
-            : null;
-        const shouldUseHQ = useHQ || imageSource?.source === 'hq';
-        const url = isVideo
-            ? api.buildVideoUrl(seriesName, filename, pathId)
-            : (useHQ ? api.buildHQImageUrl(seriesName, filename, pathId) : imageSource.url);
+        const chapterSource = container.dataset.coverSource;
+        let shouldUseHQ = useHQ;
+        let url = api.buildVideoUrl(seriesName, filename, pathId);
+
+        if (!isVideo) {
+            if (useHQ || chapterSource === 'hq') {
+                shouldUseHQ = true;
+                url = api.buildHQImageUrl(seriesName, filename, pathId);
+            } else if (chapterSource === 'lq') {
+                url = api.buildLQImageUrl(seriesName, filename, pathId);
+            } else {
+                const imageSource = await api.resolveImageUrl(seriesName, filename, pathId);
+                shouldUseHQ = imageSource.source === 'hq';
+                url = imageSource.url;
+            }
+        }
 
         this.clearMediaElement(container);
 
