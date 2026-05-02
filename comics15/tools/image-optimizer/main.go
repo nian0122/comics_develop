@@ -16,7 +16,7 @@ const (
 	defaultHQDir      = "h_photograph"
 	defaultLQDir      = "l_photograph"
 	defaultWorkers    = 8
-	defaultQuality    = 75
+	defaultQuality    = 15
 	defaultExtensions = ".jpg,.jpeg,.png,.gif,.bmp"
 )
 
