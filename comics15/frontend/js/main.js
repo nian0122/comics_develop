@@ -1,7 +1,8 @@
 // 移动端优先应用入口
 
 import { store } from './state/store.js';
-import { api, persistence } from './services/index.js';
+import { progressState } from './state/progress-state.js';
+import { api, persistence, storage } from './services/index.js';
 import { Reader } from './components/index.js';
 import { $ } from './utils/dom.js';
 import { buildChapterTree, getInitialDirectoryPath, getParentPath } from './utils/chapter-tree.js';
@@ -29,7 +30,10 @@ class App {
         this.initViews();
         this.reader = new Reader({
             onImageLoaded: () => this.readerShell.updateProgressStatus(),
-            onPageChanged: () => this.readerShell.updateProgressStatus(),
+            onPageChanged: () => {
+                this.readerShell.updateProgressStatus();
+                this.saveSeriesLastReading();
+            },
             onStatusUpdate: ({ message }) => console.info(message),
         });
         this.bindGlobalEvents();
@@ -228,6 +232,19 @@ class App {
         this.seriesView.container.classList.toggle('hidden', view !== 'seriesList');
         this.directoryView.container.classList.toggle('hidden', view !== 'directoryBrowser');
         this.readerShell.readerView.classList.toggle('hidden', view !== 'reader');
+    }
+
+    saveSeriesLastReading() {
+        const seriesName = store.series.current;
+        const chapter = store.currentChapter;
+        if (!seriesName || !chapter) return;
+
+        storage.saveSeriesLastReading(
+            seriesName,
+            chapter.path_id,
+            progressState.currentPage,
+            progressState.totalPages
+        );
     }
 }
 

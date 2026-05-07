@@ -1,6 +1,7 @@
 // 系列页面视图模块
 
 import { $, escapeHtml } from '../utils/dom.js';
+import { storage } from '../services/storage.js';
 
 export class SeriesView {
     constructor(container, callbacks = {}) {
@@ -38,12 +39,19 @@ export class SeriesView {
     }
 
     renderList(series) {
-        const items = series.map(name => `
-            <button class="series-row" data-series="${escapeHtml(name)}">
-                <span>${escapeHtml(name)}</span>
-                <span class="row-chevron">›</span>
-            </button>
-        `).join('');
+        const items = series.map(name => {
+            const lastReading = storage.getSeriesLastReading(name);
+            const hint = lastReading && lastReading.page > 0
+                ? `<span class="series-reading-hint">读到第 ${lastReading.page}/${lastReading.totalPages} 页</span>`
+                : '';
+            return `
+                <button class="series-row" data-series="${escapeHtml(name)}">
+                    <span class="series-name">${escapeHtml(name)}</span>
+                    ${hint}
+                    <span class="row-chevron">›</span>
+                </button>
+            `;
+        }).join('');
 
         this.container.innerHTML = `
             <div class="mobile-page-header">

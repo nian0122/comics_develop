@@ -97,5 +97,32 @@ export const storage = {
             console.warn('获取系列阅读进度失败:', e);
         }
         return progress;
+    },
+
+    getSeriesLastReading(seriesName) {
+        const key = `lastReading_${seriesName}`;
+        const saved = localStorage.getItem(key);
+        if (!saved) return null;
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.warn('读取最近阅读进度失败:', e);
+            return null;
+        }
+    },
+
+    saveSeriesLastReading(seriesName, chapterPath, page, totalPages) {
+        const key = `lastReading_${seriesName}`;
+        const data = {
+            chapterPath,
+            page,
+            totalPages,
+            updatedAt: Date.now()
+        };
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (e) {
+            console.warn('保存最近阅读进度失败:', e);
+        }
     }
 };
