@@ -124,5 +124,12 @@ export const api = {
             url: this.buildHQImageUrl(seriesName, filename, chapterPath),
             source: 'hq',
         };
+    },
+
+    async getLevelNodes(seriesName, path = '') {
+        const url = `/api/levels/${encodeURIComponent(seriesName)}${path ? `?path=${encodeURIComponent(path)}` : ''}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new ApiError('获取层级节点失败', res.status);
+        return res.json();
     }
 };

@@ -192,6 +192,112 @@ public class ComicController {
         return ResponseEntity.ok(Collections.singletonMap("files", files));
     }
 
+    @Operation(summary = "按需获取层级节点", description = "返回指定系列和相对路径下的直接子节点，目录与章节混合返回。")
+    @ApiResponse(responseCode = "200", description = "返回当前层级路径和节点数组")
+    @ApiResponse(responseCode = "400", description = "路径非法")
+    @ApiResponse(responseCode = "404", description = "目标目录不存在")
+    @GetMapping("/api/levels/{seriesName}")
+    public ResponseEntity<Map<String, Object>> listLevelNodes(
+            @PathVariable @Parameter(description = "漫画系列名称", required = true) String seriesName,
+            @RequestParam(required = false, defaultValue = "") @Parameter(description = "系列内相对路径", required = false) String path) throws IOException {
+
+        String decodedPath = path.isEmpty() ? "" : URLDecoder.decode(path, StandardCharsets.UTF_8);
+        log.info("[Levels] 请求层级节点 - 系列: {}, 路径: {}", seriesName, decodedPath);
+
+        String cacheKey = "v2:level:" + seriesName + ":" + decodedPath;
+        if (REDIS_ENABLED) {
+            String cachedData = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedData != null) {
+                log.info("[Levels] 缓存命中: {}", cacheKey);
+                Map<String, Object> cachedResponse = objectMapper.readValue(cachedData, new TypeReference<Map<String, Object>>() {
+                });
+                return ResponseEntity.ok(cachedResponse);
+            }
+            log.info("[Levels] 缓存未命中: {}", cacheKey);
+        }
+
+        Path seriesPath = config.getHqPath().resolve(seriesName).normalize();
+        Path targetPath = decodedPath.isEmpty() ? seriesPath : seriesPath.resolve(decodedPath).normalize();
+        if (!targetPath.startsWith(seriesPath)) {
+            log.warn("[Levels] 非法路径访问 - 系列: {}, 路径: {}", seriesName, decodedPath);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(buildLevelResponse(decodedPath, Collections.<Map<String, Object>>emptyList()));
+        }
+        if (!Files.exists(targetPath) || !Files.isDirectory(targetPath)) {
+            log.warn("[Levels] 目录不存在: {}", targetPath.toAbsolutePath());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(buildLevelResponse(decodedPath, Collections.<Map<String, Object>>emptyList()));
+        }
+
+        List<Map<String, Object>> nodes = scanLevelNodes(targetPath, decodedPath, seriesName);
+        Map<String, Object> response = buildLevelResponse(decodedPath, nodes);
+        log.info("[Levels] 扫描完成 - 系列: {}, 路径: {}, 节点数: {}", seriesName, decodedPath, nodes.size());
+
+        if (REDIS_ENABLED) {
+            redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(response), config.getCacheExpiration(), TimeUnit.SECONDS);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    private Map<String, Object> buildLevelResponse(String decodedPath, List<Map<String, Object>> nodes) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("path", decodedPath);
+        response.put("nodes", nodes);
+        return response;
+    }
+
+    private List<Map<String, Object>> scanLevelNodes(Path targetPath, String currentRel, String seriesName) throws IOException {
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        try (Stream<Path> stream = Files.list(targetPath)) {
+            List<Path> entries = stream
+                    .filter(Files::isDirectory)
+                    .sorted(Comparator.comparing(p -> p.getFileName().toString(), this::naturalCompare))
+                    .collect(Collectors.toList());
+
+            for (Path entry : entries) {
+                String name = entry.getFileName().toString();
+                String entryRel = currentRel.isEmpty() ? name : currentRel + "/" + name;
+                List<String> mediaFiles = listSupportedMediaFiles(entry);
+                if (mediaFiles.isEmpty()) {
+                    nodes.add(buildDirectoryNode(entry, name, entryRel));
+                } else {
+                    nodes.add(buildLevelChapterNode(seriesName, name, entryRel, mediaFiles));
+                }
+            }
+        }
+        return nodes;
+    }
+
+    private Map<String, Object> buildDirectoryNode(Path directory, String name, String relativePath) throws IOException {
+        Map<String, Object> node = new HashMap<>();
+        node.put("type", "directory");
+        node.put("name", name);
+        node.put("path", relativePath);
+        node.put("has_children", hasChildDirectories(directory));
+        return node;
+    }
+
+    private boolean hasChildDirectories(Path directory) throws IOException {
+        try (Stream<Path> stream = Files.list(directory)) {
+            return stream.anyMatch(Files::isDirectory);
+        }
+    }
+
+    private Map<String, Object> buildLevelChapterNode(String seriesName, String name, String relativePath, List<String> mediaFiles) {
+        Map<String, Object> node = new HashMap<>();
+        String normalizedPath = relativePath.replace("\\", "/");
+        node.put("type", "chapter");
+        node.put("name", name);
+        node.put("path_id", normalizedPath);
+        node.put("total_files", mediaFiles.size());
+
+        Optional<String> coverFile = mediaFiles.stream().filter(this::isImageFile).findFirst();
+        if (coverFile.isPresent()) {
+            node.put("cover_file", coverFile.get());
+            node.put("cover_source", resolveCoverSource(seriesName, normalizedPath, coverFile.get()));
+        }
+        return node;
+    }
+
     private List<Map<String, String>> findChaptersRecursive(Path root, String currentRel, String seriesName) throws IOException {
         Path fullPath = root.resolve(currentRel);
         List<String> mediaFiles = listSupportedMediaFiles(fullPath);

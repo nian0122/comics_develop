@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.ObjectMapper;
 
@@ -107,6 +108,71 @@ class ComicControllerTest {
 
         assertThat(chapters).extracting(chapter -> chapter.get("path_id"))
                 .containsExactly("Volume 1/Chapter 1", "Volume 1/Chapter 2", "Volume 1/Chapter 10", "Volume 2/Chapter 1");
+    }
+
+    @Test
+    void listLevelNodesReturnsDirectDirectoriesAndChapters() throws Exception {
+        Path lqChapter = comicsRoot.resolve("l_photograph").resolve("测试系列").resolve("第 2 话");
+        Files.createDirectories(lqChapter);
+        Files.writeString(lqChapter.resolve("001.webp"), "lq");
+        createChapter("测试系列", "第 10 话", "001.jpg");
+        createChapter("测试系列", "第 2 话", "001.jpg");
+        Files.createDirectories(comicsRoot.resolve("h_photograph").resolve("测试系列").resolve("第一卷").resolve("番外篇"));
+
+        ResponseEntity<Map<String, Object>> response = controller.listLevelNodes("测试系列", "");
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).containsEntry("path", "");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> nodes = (List<Map<String, Object>>) response.getBody().get("nodes");
+        assertThat(nodes).hasSize(3);
+        Map<String, Object> directoryNode = findNodeByName(nodes, "第一卷");
+        Map<String, Object> chapter2Node = findNodeByName(nodes, "第 2 话");
+        Map<String, Object> chapter10Node = findNodeByName(nodes, "第 10 话");
+
+        assertThat(directoryNode)
+                .containsEntry("type", "directory")
+                .containsEntry("path", "第一卷")
+                .containsEntry("has_children", true)
+                .doesNotContainKeys("cover_file", "cover_source");
+        assertThat(chapter2Node)
+                .containsEntry("type", "chapter")
+                .containsEntry("path_id", "第 2 话")
+                .containsEntry("total_files", 1)
+                .containsEntry("cover_file", "001.jpg")
+                .containsEntry("cover_source", "lq");
+        assertThat(chapter10Node)
+                .containsEntry("type", "chapter")
+                .containsEntry("path_id", "第 10 话")
+                .containsEntry("total_files", 1)
+                .containsEntry("cover_source", "hq");
+    }
+
+    @Test
+    void listLevelNodesDecodesPathAndReturnsCurrentLevelChildren() throws Exception {
+        createChapter("测试系列", "第一卷/第 1 话", "001.png");
+
+        ResponseEntity<Map<String, Object>> response = controller.listLevelNodes("测试系列", "%E7%AC%AC%E4%B8%80%E5%8D%B7");
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).containsEntry("path", "第一卷");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> nodes = (List<Map<String, Object>>) response.getBody().get("nodes");
+        assertThat(nodes).hasSize(1);
+        assertThat(nodes.getFirst())
+                .containsEntry("type", "chapter")
+                .containsEntry("name", "第 1 话")
+                .containsEntry("path_id", "第一卷/第 1 话")
+                .containsEntry("total_files", 1)
+                .containsEntry("cover_file", "001.png")
+                .containsEntry("cover_source", "hq");
+    }
+
+    private Map<String, Object> findNodeByName(List<Map<String, Object>> nodes, String name) {
+        return nodes.stream()
+                .filter(node -> name.equals(node.get("name")))
+                .findFirst()
+                .orElseThrow();
     }
 
     private void createChapter(String seriesName, String chapterPath, String filename) throws Exception {
