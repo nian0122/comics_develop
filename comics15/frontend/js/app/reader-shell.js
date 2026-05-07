@@ -10,6 +10,7 @@ export class ReaderShell {
         this.readerView = readerViewEl;
         this.reader = readerEl;
         this.lastScrollTop = 0;
+        this.controlsVisible = false;
         this.onOpenPrev = callbacks.onOpenPrev || (() => {});
         this.onOpenNext = callbacks.onOpenNext || (() => {});
         this.onBackToDirectory = callbacks.onBackToDirectory || (() => {});
@@ -64,10 +65,11 @@ export class ReaderShell {
         };
 
         this.readerView.onclick = (event) => {
-            if (!this.elements.readerActions.classList.contains('hidden')
-                && !event.target.closest('#readerActions')
-                && !event.target.closest('#readerMenuBtn')) {
-                this.elements.readerActions.classList.add('hidden');
+            // 点击阅读区域切换控制层显示/隐藏
+            if (!event.target.closest('#readerActions')
+                && !event.target.closest('#readerMenuBtn')
+                && !event.target.closest('#progressStatus')) {
+                this.toggleControls();
             }
         };
     }
@@ -89,11 +91,19 @@ export class ReaderShell {
         this.elements.readerActions.classList.toggle('hidden');
     }
 
+    toggleControls() {
+        this.controlsVisible = !this.controlsVisible;
+        this.elements.readerMenuBtn.classList.toggle('hidden', !this.controlsVisible);
+        this.elements.readerActions.classList.toggle('hidden', !this.controlsVisible);
+    }
+
     resetUi() {
         this.reader.innerHTML = '';
         this.elements.progressStatus.textContent = '0 / 0';
         this.lastScrollTop = 0;
-        this.elements.readerMenuBtn.classList.remove('hidden');
+        this.controlsVisible = false;
+        this.elements.readerMenuBtn.classList.add('hidden');
+        this.elements.readerActions.classList.add('hidden');
         this.updateChapterButtons();
         this.updateProgressStatus();
     }

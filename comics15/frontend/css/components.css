@@ -774,14 +774,15 @@ hr {
 
 .reader-progress-pill {
     position: fixed;
-    left: 50%;
-    bottom: 18px;
-    transform: translateX(-50%);
-    z-index: var(--z-modal);
+    right: 16px;
+    bottom: 16px;
+    z-index: var(--z-sticky);
     border: 0;
     border-radius: 999px;
     padding: 8px 16px;
-    background: transparent;
+    background: rgba(23, 26, 33, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     color: white;
     font-family: var(--font-mono);
     font-size: 13px;
@@ -800,7 +801,12 @@ hr {
     color: white;
     font-size: 26px;
     box-shadow: none;
+    transform: translateY(100%);
     transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+.reader-fab:not(.hidden) {
+    transform: translateY(0);
 }
 
 .reader-fab.hidden {
@@ -817,6 +823,12 @@ hr {
     display: grid;
     gap: 8px;
     min-width: 132px;
+    transform: translateY(100%);
+    transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+.reader-actions:not(.hidden) {
+    transform: translateY(0);
 }
 
 .reader-action-btn {

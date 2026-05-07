@@ -24,13 +24,15 @@ describe('reader UI files', () => {
         expect(main).not.toContain('hideFab()');
     });
 
-    it('progressStatus 背景透明且没有磨砂模糊效果', () => {
+    it('progressStatus 右下角固定、半透明背景加磨砂模糊', () => {
         const css = readProjectFile('css/components.css');
         const progressRule = extractCssRule(css, '.reader-progress-pill');
 
-        expect(progressRule).toContain('background: transparent;');
-        expect(progressRule).not.toContain('backdrop-filter');
-        expect(progressRule).not.toContain('-webkit-backdrop-filter');
+        expect(progressRule).toContain('right: 16px;');
+        expect(progressRule).toContain('bottom: 16px;');
+        expect(progressRule).toContain('background: rgba(23, 26, 33, 0.7);');
+        expect(progressRule).toContain('backdrop-filter: blur(10px);');
+        expect(progressRule).toContain('-webkit-backdrop-filter: blur(10px);');
     });
 
     it('目录首图容器固定尺寸并隔离布局绘制', () => {
