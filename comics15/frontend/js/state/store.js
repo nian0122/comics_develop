@@ -36,6 +36,8 @@ export const store = {
 
     imageRetry: new Map(),
 
+    levelCache: new Map(),
+
     _listeners: new Map(),
 
     subscribe(key, callback) {
@@ -148,5 +150,19 @@ export const store = {
         this.lazyLoad.nextToObserve = 0;
         this.lazyLoad.loadedCount = 0;
         this.notify('lazyLoad');
+    },
+
+    setLevelCache(path, nodes) {
+        this.levelCache.set(path, nodes);
+        this.notify('levelCache');
+    },
+
+    getLevelCache(path) {
+        return this.levelCache.get(path);
+    },
+
+    clearLevelCache() {
+        this.levelCache.clear();
+        this.notify('levelCache');
     }
 };

@@ -4,7 +4,6 @@ import { store } from '../state/store.js';
 import { storage } from '../services/storage.js';
 import { $, escapeHtml } from '../utils/dom.js';
 import {
-    getLevelNodes,
     getParentPath,
     formatChapterProgress,
     getChapterDisplayName,
@@ -13,6 +12,7 @@ import {
 import { markCoverLoading, markCoverLoaded, markCoverIdle, unloadCoverImage } from '../utils/lazy-cover.js';
 import { RequestQueue } from '../utils/request-queue.js';
 import { LAZY_LOAD_CONFIG } from '../config/constants.js';
+import { api } from '../services/api.js';
 
 export class DirectoryView {
     constructor(container, chapterMetaCache, callbacks = {}) {
@@ -25,6 +25,7 @@ export class DirectoryView {
         this.onOpenChapter = callbacks.onOpenChapter || (() => {});
         this.onRenderDirectory = callbacks.onRenderDirectory || (() => {});
         this.onRetrySeries = callbacks.onRetrySeries || (() => {});
+        this.currentLevelNodes = [];
     }
 
     renderLoading(seriesName) {
@@ -58,15 +59,83 @@ export class DirectoryView {
         }
     }
 
-    renderDirectory(path) {
+    renderDirectoryLoading(seriesName, path) {
+        const title = path ? splitChapterPath(path).at(-1) : seriesName;
+        const backText = path ? `‹ ${getParentPath(path) || seriesName}` : '‹ 系列';
+
+        this.container.innerHTML = `
+            <div class="mobile-topbar">
+                <button class="text-back-btn" data-action="back">${escapeHtml(backText)}</button>
+            </div>
+            <div class="mobile-page-header compact">
+                <p class="mobile-kicker">${escapeHtml(seriesName || '')}</p>
+                <h1>${escapeHtml(title || '目录')}</h1>
+                <p>正在加载目录...</p>
+            </div>
+        `;
+        this.bindStaticActions();
+    }
+
+    async renderDirectory(path) {
         store.setNavigation(path);
-        const nodes = getLevelNodes(store.chapters.tree, path);
+
+        // 检查缓存
+        const cached = store.getLevelCache(path);
+        if (cached) {
+            this.currentLevelNodes = cached;
+            this.renderLevelNodes(path, cached);
+            return;
+        }
+
+        // 显示加载状态
+        this.renderDirectoryLoading(store.series.current, path);
+
+        // 按需请求
+        try {
+            const levelData = await api.getLevelNodes(store.series.current, path);
+            store.setLevelCache(path, levelData.nodes);
+            this.currentLevelNodes = levelData.nodes;
+            this.renderLevelNodes(path, levelData.nodes);
+        } catch (error) {
+            console.error('加载目录失败:', error);
+            this.renderDirectoryError(path, error);
+        }
+    }
+
+    renderDirectoryError(path, error) {
+        const title = path ? splitChapterPath(path).at(-1) : store.series.current;
+        const backText = path ? `‹ ${getParentPath(path) || store.series.current}` : '‹ 系列';
+
+        this.container.innerHTML = `
+            <div class="mobile-topbar">
+                <button class="text-back-btn" data-action="back">${escapeHtml(backText)}</button>
+            </div>
+            <div class="mobile-page-header compact">
+                <p class="mobile-kicker">${escapeHtml(store.series.current || '')}</p>
+                <h1>${escapeHtml(title || '目录')}</h1>
+            </div>
+            <div class="mobile-state-card error-state">
+                <strong>加载失败</strong>
+                <span>无法加载目录内容。</span>
+                <button id="retryDirectoryBtn" class="primary-btn">重试</button>
+            </div>
+        `;
+        this.bindStaticActions();
+        const retryBtn = $('#retryDirectoryBtn');
+        if (retryBtn) {
+            retryBtn.addEventListener('click', () => this.renderDirectory(path));
+        }
+    }
+
+    renderLevelNodes(path, nodes) {
         const title = path ? splitChapterPath(path).at(-1) : store.series.current;
         const backText = path ? `‹ ${getParentPath(path) || store.series.current}` : '‹ 系列';
         const progress = storage.getSeriesProgress(store.series.current);
-        const items = nodes.map(node => node.type === 'directory'
-            ? this.renderDirectoryRow(node)
-            : this.renderChapterCard(node, progress[node.flatIndex])
+
+        const items = nodes.map(node =>
+            node.type === 'directory'
+                ? this.renderDirectoryRow(node)
+                : this.renderChapterCardV2(node, progress[node.path_id])
         ).join('');
 
         this.container.innerHTML = `
@@ -121,12 +190,27 @@ export class DirectoryView {
         });
     }
 
+    renderChapterCardV2(node, progress) {
+        const displayName = getChapterDisplayName(node);
+        const pathLabel = getParentPath(node.path_id) || store.series.current;
+        return `
+            <button class="chapter-card-v2" data-path-id="${escapeHtml(node.path_id)}">
+                <span class="chapter-cover skeleton" data-cover-path="${escapeHtml(node.path_id)}"></span>
+                <span class="chapter-card-body">
+                    <strong>${escapeHtml(displayName)}</strong>
+                    <span data-progress-path="${escapeHtml(node.path_id)}">${escapeHtml(formatChapterProgress(progress, node.total_files || 0))}</span>
+                    <small>${escapeHtml(pathLabel)}</small>
+                </span>
+            </button>
+        `;
+    }
+
     bindRows() {
         this.container.querySelectorAll('.directory-row').forEach(rowEl => {
             rowEl.addEventListener('click', () => this.onRenderDirectory(rowEl.dataset.path));
         });
-        this.container.querySelectorAll('.chapter-card').forEach(cardEl => {
-            cardEl.addEventListener('click', () => this.onOpenChapter(Number(cardEl.dataset.index), true));
+        this.container.querySelectorAll('.chapter-card-v2').forEach(cardEl => {
+            cardEl.addEventListener('click', () => this.onOpenChapter(cardEl.dataset.pathId, true));
         });
     }
 
@@ -146,7 +230,7 @@ export class DirectoryView {
         this.coverLoadQueue.clear();
         this.coverLoadToken += 1;
         const coverLoadToken = this.coverLoadToken;
-        const coverEls = this.container.querySelectorAll('[data-cover-index]');
+        const coverEls = this.container.querySelectorAll('[data-cover-path]');
         if (!('IntersectionObserver' in window)) {
             coverEls.forEach(coverEl => {
                 coverEl.dataset.coverVisible = 'true';
@@ -186,12 +270,12 @@ export class DirectoryView {
         if (['loading', 'loaded'].includes(coverEl.dataset.coverState)) return;
 
         markCoverLoading(coverEl);
-        const index = Number(coverEl.dataset.coverIndex);
-        const node = this.findChapterNodeByIndex(index);
-        const progressEl = this.container.querySelector(`[data-progress-index="${index}"]`);
+        const pathId = coverEl.dataset.coverPath;
+        const node = this.findChapterNodeByPathId(pathId);
+        const progressEl = this.container.querySelector(`[data-progress-path="${CSS.escape(pathId)}"]`);
         if (!node || !progressEl) return;
 
-        const meta = await this.chapterMetaCache.getOrFetch(index);
+        const meta = await this.chapterMetaCache.getOrFetchByPathId(pathId);
         if (coverLoadToken !== this.coverLoadToken || !coverEl.isConnected) return;
         if (coverEl.dataset.coverVisible !== 'true') {
             markCoverIdle(coverEl);
@@ -199,7 +283,7 @@ export class DirectoryView {
         }
         markCoverLoaded(coverEl);
         coverEl.classList.remove('skeleton');
-        const progress = storage.getProgress(store.series.current, index);
+        const progress = storage.getProgress(store.series.current, pathId);
         progressEl.textContent = formatChapterProgress(progress, meta.totalPages);
 
         if (meta.coverUrl) {
@@ -210,9 +294,8 @@ export class DirectoryView {
         }
     }
 
-    findChapterNodeByIndex(index) {
-        const nodes = getLevelNodes(store.chapters.tree, store.navigation.currentPath);
-        return nodes.find(node => node.type === 'chapter' && node.flatIndex === index);
+    findChapterNodeByPathId(pathId) {
+        return this.currentLevelNodes.find(node => node.type === 'chapter' && node.path_id === pathId);
     }
 
     show() {

@@ -53,7 +53,7 @@ class App {
 
         this.directoryView = new DirectoryView(this.elements.directoryView, this.chapterMetaCache, {
             onShowSeries: () => this.router.navigate(toSeriesListUrl()),
-            onOpenChapter: (index) => this.navigateToChapter(index),
+            onOpenChapter: (pathId) => this.navigateToChapterByPathId(pathId),
             onRenderDirectory: (path) => this.router.navigate(toDirectoryUrl(store.series.current, path)),
             onRetrySeries: (name) => this.selectSeries(name),
         });
@@ -117,6 +117,7 @@ class App {
     async selectSeries(name, options = {}) {
         store.setCurrentSeries(name);
         store.setNavigation('', '');
+        store.clearLevelCache();
         this.chapterMetaCache.clear();
         this.directoryView.renderLoading(name);
 
@@ -219,6 +220,12 @@ class App {
     async ensureSeriesLoaded(series) {
         if (store.series.current === series && store.chapters.flatList.length > 0) return;
         await this.selectSeries(series);
+    }
+
+    navigateToChapterByPathId(pathId) {
+        const index = store.chapters.flatList.findIndex(chapter => chapter.path_id === pathId);
+        if (index === -1) return;
+        this.navigateToChapter(index);
     }
 
     navigateToChapter(index) {

@@ -678,6 +678,27 @@ hr {
     align-items: stretch;
 }
 
+.chapter-card-v2 {
+    min-height: 124px;
+    border-radius: 22px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 14px;
+    align-items: stretch;
+    width: 100%;
+    border: 0.5px solid var(--border);
+    background: rgba(255, 255, 255, 0.76);
+    box-shadow: var(--shadow-sm);
+    color: var(--text-primary);
+    text-align: left;
+}
+
+.chapter-card-v2:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.9);
+}
+
 .chapter-cover {
     display: block;
     width: 88px;
@@ -840,6 +861,15 @@ hr {
 
     .chapter-card {
         grid-template-columns: 120px 1fr;
+    }
+
+    .chapter-card-v2 {
+        grid-template-columns: 120px 1fr;
+    }
+
+    .chapter-card-v2 .chapter-cover {
+        width: 120px;
+        height: 140px;
     }
 
     .chapter-cover {
