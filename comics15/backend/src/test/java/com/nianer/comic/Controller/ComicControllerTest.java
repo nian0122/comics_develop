@@ -168,6 +168,66 @@ class ComicControllerTest {
                 .containsEntry("cover_source", "hq");
     }
 
+
+    @Test
+    void listChapterFilesReturnsMediaMetadataWithSourceUrls() throws Exception {
+        Path hqChapter = comicsRoot.resolve("h_photograph").resolve("测试系列").resolve("第一卷").resolve("第 1 话");
+        Path lqChapter = comicsRoot.resolve("l_photograph").resolve("测试系列").resolve("第一卷").resolve("第 1 话");
+        Files.createDirectories(hqChapter);
+        Files.createDirectories(lqChapter);
+        Files.writeString(hqChapter.resolve("002.mp4"), "video");
+        Files.writeString(hqChapter.resolve("001.jpg"), "hq-image");
+        Files.writeString(lqChapter.resolve("001.webp"), "lq");
+
+        ResponseEntity<Map<String, Object>> response = controller.listChapterFiles("测试系列", "第一卷/第 1 话");
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody())
+                .containsEntry("path", "第一卷/第 1 话")
+                .containsEntry("total", 2);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> files = (List<Map<String, Object>>) response.getBody().get("files");
+        assertThat(files).hasSize(2);
+
+        Map<String, Object> imageMeta = files.getFirst();
+        assertThat(imageMeta)
+                .containsEntry("name", "001.jpg")
+                .containsEntry("baseName", "001")
+                .containsEntry("mediaType", "image")
+                .containsEntry("preferredSource", "lq")
+                .doesNotContainKey("videoUrl");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> imageHq = (Map<String, Object>) imageMeta.get("hq");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> imageLq = (Map<String, Object>) imageMeta.get("lq");
+        assertThat(imageHq)
+                .containsEntry("exists", true)
+                .containsEntry("size", 8L)
+                .containsEntry("url", "/hq_image/测试系列/第一卷/第 1 话/001.jpg");
+        assertThat(imageLq)
+                .containsEntry("exists", true)
+                .containsEntry("url", "/lq_image/测试系列/第一卷/第 1 话/001.webp");
+
+        Map<String, Object> videoMeta = files.get(1);
+        assertThat(videoMeta)
+                .containsEntry("name", "002.mp4")
+                .containsEntry("baseName", "002")
+                .containsEntry("mediaType", "video")
+                .containsEntry("preferredSource", "hq")
+                .containsEntry("videoUrl", "/video/测试系列/第一卷/第 1 话/002.mp4");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> videoHq = (Map<String, Object>) videoMeta.get("hq");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> videoLq = (Map<String, Object>) videoMeta.get("lq");
+        assertThat(videoHq)
+                .containsEntry("exists", true)
+                .containsEntry("size", 5L)
+                .containsEntry("url", "/hq_image/测试系列/第一卷/第 1 话/002.mp4");
+        assertThat(videoLq)
+                .containsEntry("exists", false)
+                .containsEntry("url", "/lq_image/测试系列/第一卷/第 1 话/002.webp");
+    }
+
     private Map<String, Object> findNodeByName(List<Map<String, Object>> nodes, String name) {
         return nodes.stream()
                 .filter(node -> name.equals(node.get("name")))

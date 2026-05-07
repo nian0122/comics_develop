@@ -135,12 +135,12 @@ public class ComicController {
         return chaptersData;
     }
 
-    @Operation(summary = "获取章节内的文件列表", description = "返回指定章节目录下所有支持的图片和视频文件名。")
-    @ApiResponse(responseCode = "200", description = "返回章节与文件名映射关系")
+    @Operation(summary = "获取章节内的文件列表", description = "返回指定章节目录下所有支持媒体文件的展示元数据。")
+    @ApiResponse(responseCode = "200", description = "返回章节路径、文件元数据数组与总数")
     @GetMapping("/api/chapter/{seriesName}")
-    public ResponseEntity<Map<String, List<String>>> listChapterFiles(
+    public ResponseEntity<Map<String, Object>> listChapterFiles(
             @PathVariable @Parameter(description = "漫画系列名称", required = true) String seriesName,
-            @RequestParam @Parameter(description = "章节路径ID（多级目录）", required = false) String chapterPath) throws IOException {
+            @RequestParam(required = false) @Parameter(description = "章节路径ID（多级目录）", required = false) String chapterPath) throws IOException {
 
         if (chapterPath == null || chapterPath.isEmpty()) {
             chapterPath = "";
@@ -151,32 +151,25 @@ public class ComicController {
         log.info("[Files] 获取文件列表 - 系列: {}, 章节路径: {}", seriesName, chapterPath);
 
         String cacheKey = "chapter_files:" + seriesName + ":" + chapterPath;
+        Path chapterPathResolved = config.getHqPath().resolve(seriesName).resolve(chapterPath);
+        if (!Files.exists(chapterPathResolved) || !Files.isDirectory(chapterPathResolved)) {
+            log.warn("[Files] 目录不存在: {}", chapterPathResolved.toAbsolutePath());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(buildChapterFilesResponse(chapterPath, Collections.emptyList()));
+        }
+
+        List<String> files;
         if (REDIS_ENABLED) {
             String cachedData = redisTemplate.opsForValue().get(cacheKey);
             if (cachedData != null) {
                 log.info("[Files] 缓存命中: {}", cacheKey);
-                List<String> files = objectMapper.readValue(cachedData, new TypeReference<List<String>>() {
+                files = objectMapper.readValue(cachedData, new TypeReference<List<String>>() {
                 });
-                return ResponseEntity.ok(Collections.singletonMap("files", files));
+                return ResponseEntity.ok(buildChapterFilesResponse(seriesName, chapterPath, chapterPathResolved, files));
             }
             log.info("[Files] 缓存未命中: {}", cacheKey);
         }
 
-        Path chapterPathResolved = config.getHqPath().resolve(seriesName).resolve(chapterPath);
-        if (!Files.exists(chapterPathResolved) || !Files.isDirectory(chapterPathResolved)) {
-            log.warn("[Files] 目录不存在: {}", chapterPathResolved.toAbsolutePath());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("files", new ArrayList<>()));
-        }
-
-        List<String> files;
-        try (Stream<Path> stream = Files.list(chapterPathResolved)) {
-            files = stream
-                    .filter(Files::isRegularFile)
-                    .map(p -> p.getFileName().toString())
-                    .filter(this::isSupportedMediaFile)
-                    .sorted(this::naturalCompare)
-                    .collect(Collectors.toList());
-        }
+        files = listSupportedMediaFiles(chapterPathResolved);
 
         log.info("[Files] 扫描到文件数: {}", files.size());
 
@@ -189,7 +182,7 @@ public class ComicController {
             );
         }
 
-        return ResponseEntity.ok(Collections.singletonMap("files", files));
+        return ResponseEntity.ok(buildChapterFilesResponse(seriesName, chapterPath, chapterPathResolved, files));
     }
 
     @Operation(summary = "按需获取层级节点", description = "返回指定系列和相对路径下的直接子节点，目录与章节混合返回。")
@@ -236,6 +229,77 @@ public class ComicController {
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    private Map<String, Object> buildChapterFilesResponse(String chapterPath, List<Map<String, Object>> filesMetadata) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("path", chapterPath);
+        response.put("files", filesMetadata);
+        response.put("total", filesMetadata.size());
+        return response;
+    }
+
+    private Map<String, Object> buildChapterFilesResponse(String seriesName, String chapterPath, Path chapterPathResolved, List<String> files) throws IOException {
+        List<Map<String, Object>> filesMetadata = new ArrayList<>();
+        for (String filename : files) {
+            filesMetadata.add(buildFileMetadata(seriesName, chapterPath, chapterPathResolved, filename));
+        }
+        return buildChapterFilesResponse(chapterPath, filesMetadata);
+    }
+
+    private Map<String, Object> buildFileMetadata(String seriesName, String chapterPath, Path chapterPathResolved, String filename) throws IOException {
+        String baseName = stripExtension(filename);
+        boolean imageFile = isImageFile(filename);
+        Path hqFile = chapterPathResolved.resolve(filename);
+        String lqFilename = baseName + ".webp";
+        Path lqFile = config.getLqPath().resolve(seriesName).resolve(chapterPath).resolve(lqFilename);
+
+        Map<String, Object> fileMeta = new HashMap<>();
+        fileMeta.put("name", filename);
+        fileMeta.put("baseName", baseName);
+        fileMeta.put("mediaType", imageFile ? "image" : "video");
+        fileMeta.put("preferredSource", Files.exists(lqFile) ? "lq" : "hq");
+        fileMeta.put("hq", buildHqInfo(seriesName, chapterPath, filename, hqFile));
+        fileMeta.put("lq", buildLqInfo(seriesName, chapterPath, lqFilename, lqFile));
+        if (!imageFile) {
+            fileMeta.put("videoUrl", buildVideoUrl(seriesName, chapterPath, filename));
+        }
+        return fileMeta;
+    }
+
+    private Map<String, Object> buildHqInfo(String seriesName, String chapterPath, String filename, Path hqFile) throws IOException {
+        Map<String, Object> hqInfo = new HashMap<>();
+        boolean exists = Files.exists(hqFile);
+        hqInfo.put("exists", exists);
+        hqInfo.put("size", exists ? Files.size(hqFile) : 0L);
+        hqInfo.put("url", buildHQUrl(seriesName, chapterPath, filename));
+        return hqInfo;
+    }
+
+    private Map<String, Object> buildLqInfo(String seriesName, String chapterPath, String filename, Path lqFile) {
+        Map<String, Object> lqInfo = new HashMap<>();
+        lqInfo.put("exists", Files.exists(lqFile));
+        lqInfo.put("url", buildLQUrl(seriesName, chapterPath, filename));
+        return lqInfo;
+    }
+
+    private String buildHQUrl(String series, String path, String filename) {
+        return "/hq_image/" + encodePath(series, path, filename);
+    }
+
+    private String buildLQUrl(String series, String path, String filename) {
+        return "/lq_image/" + encodePath(series, path, filename);
+    }
+
+    private String buildVideoUrl(String series, String path, String filename) {
+        return "/video/" + encodePath(series, path, filename);
+    }
+
+    private String encodePath(String series, String path, String filename) {
+        String fullPath = path == null || path.isEmpty()
+                ? series + "/" + filename
+                : series + "/" + path + "/" + filename;
+        return fullPath.replace("\\", "/");
     }
 
     private Map<String, Object> buildLevelResponse(String decodedPath, List<Map<String, Object>> nodes) {
