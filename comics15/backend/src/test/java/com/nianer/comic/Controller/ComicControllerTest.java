@@ -5,9 +5,11 @@ import com.nianer.comic.Config.ComicConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import com.nianer.comic.Service.ComicCacheService;
+import com.nianer.comic.Service.ComicCatalogService;
+import com.nianer.comic.Service.ComicMediaService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.file.Files;
@@ -30,11 +32,7 @@ class ComicControllerTest {
     @BeforeEach
     void setUp() throws Exception {
         RedisValidator.REDIS_ENABLED = false;
-        controller = new ComicController();
         comicConfig = mock(ComicConfig.class);
-        ReflectionTestUtils.setField(controller, "config", comicConfig);
-        ReflectionTestUtils.setField(controller, "redisTemplate", mock(StringRedisTemplate.class));
-        ReflectionTestUtils.setField(controller, "objectMapper", mock(ObjectMapper.class));
 
         Path hqPath = comicsRoot.resolve("h_photograph");
         Path lqPath = comicsRoot.resolve("l_photograph");
@@ -42,6 +40,11 @@ class ComicControllerTest {
         Files.createDirectories(lqPath);
         when(comicConfig.getHqPath()).thenReturn(hqPath);
         when(comicConfig.getLqPath()).thenReturn(lqPath);
+
+        ComicCacheService cacheService = new ComicCacheService(mock(StringRedisTemplate.class), new ObjectMapper(), comicConfig);
+        ComicMediaService mediaService = new ComicMediaService(comicConfig);
+        ComicCatalogService catalogService = new ComicCatalogService(comicConfig, cacheService, mediaService);
+        controller = new ComicController(catalogService);
     }
 
     @Test
@@ -226,6 +229,30 @@ class ComicControllerTest {
         assertThat(videoLq)
                 .containsEntry("exists", false)
                 .containsEntry("url", "/lq_image/测试系列/第一卷/第 1 话/002.webp");
+    }
+
+    @Test
+    void listLevelNodesReturnsBadRequestForPathTraversalAttempt() throws Exception {
+        ResponseEntity<Map<String, Object>> response = controller.listLevelNodes("测试系列", "..");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).containsEntry("path", "..");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> nodes = (List<Map<String, Object>>) response.getBody().get("nodes");
+        assertThat(nodes).isEmpty();
+    }
+
+    @Test
+    void listChapterFilesReturnsNotFoundWhenChapterDirectoryMissing() throws Exception {
+        ResponseEntity<Map<String, Object>> response = controller.listChapterFiles("测试系列", "缺失章节");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
+        assertThat(response.getBody())
+                .containsEntry("path", "缺失章节")
+                .containsEntry("total", 0);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> files = (List<Map<String, Object>>) response.getBody().get("files");
+        assertThat(files).isEmpty();
     }
 
     private Map<String, Object> findNodeByName(List<Map<String, Object>> nodes, String name) {

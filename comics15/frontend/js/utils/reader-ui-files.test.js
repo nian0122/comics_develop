@@ -30,9 +30,9 @@ describe('reader UI files', () => {
 
         expect(progressRule).toContain('right: 16px;');
         expect(progressRule).toContain('bottom: 16px;');
-        expect(progressRule).toContain('background: rgba(23, 26, 33, 0.7);');
-        expect(progressRule).toContain('backdrop-filter: blur(10px);');
-        expect(progressRule).toContain('-webkit-backdrop-filter: blur(10px);');
+        expect(progressRule).toContain('background: rgba(15, 17, 21, 0.42);');
+        expect(progressRule).toContain('backdrop-filter: blur(8px);');
+        expect(progressRule).toContain('-webkit-backdrop-filter: blur(8px);');
     });
 
     it('目录首图容器固定尺寸并隔离布局绘制', () => {

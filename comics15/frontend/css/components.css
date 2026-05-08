@@ -780,10 +780,10 @@ hr {
     border: 0;
     border-radius: 999px;
     padding: 8px 16px;
-    background: rgba(23, 26, 33, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: white;
+    background: rgba(15, 17, 21, 0.42);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: rgba(241, 243, 245, 0.62);
     font-family: var(--font-mono);
     font-size: 13px;
 }
@@ -797,8 +797,8 @@ hr {
     height: 54px;
     border-radius: 999px;
     border: 0;
-    background: transparent;
-    color: white;
+    background: rgba(15, 17, 21, 0.28);
+    color: rgba(241, 243, 245, 0.58);
     font-size: 26px;
     box-shadow: none;
     transform: translateY(100%);
@@ -835,8 +835,8 @@ hr {
     border: 0;
     border-radius: 16px;
     padding: 12px 14px;
-    background: rgba(255, 255, 255, 0.94);
-    color: #111827;
+    background: rgba(15, 17, 21, 0.54);
+    color: rgba(241, 243, 245, 0.76);
     font-weight: 700;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
@@ -846,8 +846,8 @@ hr {
 }
 
 .reader-action-primary {
-    background: var(--accent);
-    color: white;
+    background: rgba(142, 164, 255, 0.58);
+    color: rgba(255, 255, 255, 0.82);
 }
 
 .mobile-state-card {

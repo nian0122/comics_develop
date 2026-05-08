@@ -8,6 +8,7 @@ const hqSubDir = process.env.HQ_SUB_DIR || 'h_photograph';
 const lqSubDir = process.env.LQ_SUB_DIR || 'l_photograph';
 const backendTarget = 'http://localhost:500';
 const frontendRoot = fileURLToPath(new URL('.', import.meta.url));
+const devServerPort = Number.parseInt(process.env.VITE_DEV_PORT || '5173', 10);
 
 function decodeUrlPath(url) {
     return decodeURIComponent((url || '').split('?')[0]);
@@ -69,7 +70,8 @@ export default defineConfig({
     },
 
     server: {
-        port: 3000,
+        host: '127.0.0.1',
+        port: devServerPort,
         fs: {
             allow: [frontendRoot, comicsRoot]
         },
