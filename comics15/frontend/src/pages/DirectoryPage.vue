@@ -52,6 +52,7 @@
               :chapter="node"
               :progress="progressData[node.path_id]"
               :seriesName="seriesName"
+              :cover="coverData[node.path_id]"
               @open="handleChapterOpen"
             />
           </template>
@@ -63,12 +64,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onBeforeUnmount, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useChapterStore } from '../stores/chapter-store.js';
 import { storage } from '../../js/services/storage.js';
 import { toDirectoryUrl, toReaderUrl, toSeriesListUrl } from '../router/index.js';
 import { splitChapterPath, getParentPath } from '../../js/utils/chapter-tree.js';
+import { ChapterMetaCache } from '../../js/app/chapter-meta-cache.js';
+import { RequestQueue } from '../../js/utils/request-queue.js';
+import { LAZY_LOAD_CONFIG } from '../../js/config/constants.js';
 import ChapterCard from '../components/ChapterCard.vue';
 
 const route = useRoute();
@@ -79,6 +83,12 @@ const seriesName = computed(() => route.params.series || '');
 const currentPath = computed(() => route.params.path || '');
 const levelNodes = ref([]);
 const progressData = ref({});
+const coverData = ref({});
+
+const coverObserver = ref(null);
+const coverLoadQueue = ref(null);
+const coverLoadToken = ref(0);
+const chapterMetaCache = ref(null);
 
 const pageTitle = computed(() => {
   if (!currentPath.value) return seriesName.value;
@@ -97,6 +107,55 @@ async function loadData() {
   await chapterStore.loadChapters(seriesName.value);
   const nodes = await chapterStore.loadLevelNodes(seriesName.value, currentPath.value);
   levelNodes.value = nodes || [];
+
+  coverData.value = {};
+  coverLoadToken.value += 1;
+  const currentToken = coverLoadToken.value;
+
+  await nextTick();
+  setupCoverObserver(currentToken);
+}
+
+function setupCoverObserver(currentToken) {
+  if (!globalThis.IntersectionObserver) return;
+
+  if (coverObserver.value) {
+    coverObserver.value.disconnect();
+  }
+
+  if (!coverLoadQueue.value) {
+    coverLoadQueue.value = new RequestQueue(LAZY_LOAD_CONFIG.COVER_MAX_CONCURRENT);
+  }
+
+  if (!chapterMetaCache.value) {
+    chapterMetaCache.value = new ChapterMetaCache();
+  }
+
+  coverObserver.value = new globalThis.IntersectionObserver(async (entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        const coverEl = entry.target;
+        const pathId = coverEl.dataset.coverPath;
+        if (!pathId) continue;
+
+        await coverLoadQueue.value.add(async () => {
+          if (currentToken !== coverLoadToken.value) return;
+
+          try {
+            const meta = await chapterMetaCache.value.getOrFetchByPathId(pathId);
+            if (currentToken === coverLoadToken.value && meta.coverUrl) {
+              coverData.value[pathId] = meta.coverUrl;
+            }
+          } catch (err) {
+            console.error(`封面加载失败: ${pathId}`, err);
+          }
+        });
+      }
+    }
+  }, { rootMargin: LAZY_LOAD_CONFIG.COVER_ROOT_MARGIN });
+
+  const coverEls = document.querySelectorAll('.chapter-cover[data-cover-path]');
+  coverEls.forEach(el => coverObserver.value.observe(el));
 }
 
 function handleBack() {
@@ -127,5 +186,16 @@ onMounted(() => {
 
 watch([seriesName, currentPath], () => {
   loadData();
+});
+
+onBeforeUnmount(() => {
+  if (coverObserver.value) {
+    coverObserver.value.disconnect();
+    coverObserver.value = null;
+  }
+  if (coverLoadQueue.value) {
+    coverLoadQueue.value.clear();
+    coverLoadQueue.value = null;
+  }
 });
 </script>

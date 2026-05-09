@@ -245,4 +245,63 @@ describe('ChapterCard', () => {
             expect(title.text()).toBe('第十话');
         });
     });
+
+    describe('封面渲染', () => {
+        it('当 cover prop 有值时渲染 img 元素', () => {
+            const chapter = { path_id: '卷/话', name: '话' };
+            const coverUrl = '/lq_image/series/chapter/cover.webp';
+
+            wrapper = mount(ChapterCard, {
+                props: {
+                    chapter,
+                    progress: null,
+                    seriesName: 'Series',
+                    cover: coverUrl
+                }
+            });
+
+            const coverContainer = wrapper.find('.chapter-cover');
+            expect(coverContainer.exists()).toBe(true);
+            expect(coverContainer.classes()).not.toContain('skeleton');
+
+            const img = coverContainer.find('img');
+            expect(img.exists()).toBe(true);
+            expect(img.attributes('src')).toBe(coverUrl);
+        });
+
+        it('当 cover prop 为空时渲染 skeleton 占位', () => {
+            const chapter = { path_id: '卷/话', name: '话' };
+
+            wrapper = mount(ChapterCard, {
+                props: {
+                    chapter,
+                    progress: null,
+                    seriesName: 'Series',
+                    cover: ''
+                }
+            });
+
+            const coverContainer = wrapper.find('.chapter-cover');
+            expect(coverContainer.exists()).toBe(true);
+            expect(coverContainer.classes()).toContain('skeleton');
+            expect(coverContainer.find('img').exists()).toBe(false);
+        });
+
+        it('当无 cover prop 时渲染 skeleton 占位（默认值）', () => {
+            const chapter = { path_id: '卷/话', name: '话' };
+
+            wrapper = mount(ChapterCard, {
+                props: {
+                    chapter,
+                    progress: null,
+                    seriesName: 'Series'
+                }
+            });
+
+            const coverContainer = wrapper.find('.chapter-cover');
+            expect(coverContainer.exists()).toBe(true);
+            expect(coverContainer.classes()).toContain('skeleton');
+            expect(coverContainer.find('img').exists()).toBe(false);
+        });
+    });
 });

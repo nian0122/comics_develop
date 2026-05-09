@@ -35,9 +35,30 @@ vi.mock('../../js/services/storage.js', () => ({
     }
 }));
 
+vi.mock('../../js/app/chapter-meta-cache.js', () => ({
+    ChapterMetaCache: vi.fn()
+}));
+
+vi.mock('../../js/utils/request-queue.js', () => ({
+    RequestQueue: vi.fn()
+}));
+
+vi.mock('../../js/config/constants.js', () => ({
+    LAZY_LOAD_CONFIG: {
+        ROOT_MARGIN: '1500px',
+        COVER_ROOT_MARGIN: '80px 0px',
+        INITIAL_BATCH: 10,
+        BATCH_SIZE: 10,
+        COVER_MAX_CONCURRENT: 3,
+    }
+}));
+
 import { useChapterStore } from '../stores/chapter-store.js';
 import { storage } from '../../js/services/storage.js';
 import { toDirectoryUrl, toReaderUrl } from '../router/index.js';
+import { ChapterMetaCache } from '../../js/app/chapter-meta-cache.js';
+import { RequestQueue } from '../../js/utils/request-queue.js';
+import { LAZY_LOAD_CONFIG } from '../../js/config/constants.js';
 
 function flushPromises() {
     return new Promise(resolve => setTimeout(resolve, 0));
@@ -224,6 +245,124 @@ describe('DirectoryPage', () => {
             const errorCard = wrapper.find('.mobile-state-card.error-state');
             expect(errorCard.exists()).toBe(true);
             expect(errorCard.text()).toContain('加载失败');
+        });
+    });
+
+    describe('封面懒加载', () => {
+        let mockChapterMetaCache;
+        let mockRequestQueue;
+        let mockObserver;
+        let intersectionObserverMock;
+
+        beforeEach(() => {
+            mockChapterMetaCache = {
+                getOrFetchByPathId: vi.fn().mockResolvedValue({
+                    coverUrl: '/lq_image/series/chapter/cover.webp'
+                })
+            };
+            ChapterMetaCache.mockReturnValue(mockChapterMetaCache);
+
+            mockRequestQueue = {
+                add: vi.fn().mockImplementation(async (fn) => await fn()),
+                clear: vi.fn()
+            };
+            RequestQueue.mockReturnValue(mockRequestQueue);
+
+            mockObserver = {
+                observe: vi.fn(),
+                disconnect: vi.fn()
+            };
+
+            intersectionObserverMock = vi.fn().mockImplementation((callback) => {
+                mockObserver.callback = callback;
+                return mockObserver;
+            });
+            vi.stubGlobal('IntersectionObserver', intersectionObserverMock);
+        });
+
+        afterEach(() => {
+            vi.unstubAllGlobals();
+            vi.restoreAllMocks();
+        });
+
+it('IntersectionObserver 触发时调用 chapterMetaCache.getOrFetchByPathId', async () => {
+            const pathId = '第一卷/第1话';
+            mockStore.loadLevelNodes.mockResolvedValue([
+                { type: 'chapter', path_id: pathId, name: '第1话', total_files: 24 }
+            ]);
+
+            wrapper = mount(DirectoryPage);
+            await flushPromises();
+            await nextTick();
+
+            const card = wrapper.find('.chapter-card-v2');
+            const coverEl = wrapper.find('.chapter-cover').element;
+
+            mockObserver.callback([{ target: coverEl, isIntersecting: true }]);
+            await flushPromises();
+            await nextTick();
+
+            expect(mockChapterMetaCache.getOrFetchByPathId).toHaveBeenCalledWith(pathId);
+        });
+
+        it('获取封面后更新 ChapterCard cover prop', async () => {
+            const coverUrl = '/lq_image/test/cover.webp';
+            mockChapterMetaCache.getOrFetchByPathId.mockResolvedValue({ coverUrl });
+            mockStore.loadLevelNodes.mockResolvedValue([
+                { type: 'chapter', path_id: '卷/话', name: '话' }
+            ]);
+
+            wrapper = mount(DirectoryPage);
+            await flushPromises();
+            await nextTick();
+
+            const coverEl = wrapper.find('.chapter-cover').element;
+            mockObserver.callback([{ target: coverEl, isIntersecting: true }]);
+            await flushPromises();
+            await nextTick();
+
+            const card = wrapper.findComponent({ name: 'ChapterCard' });
+            expect(card.props('cover')).toBe(coverUrl);
+        });
+
+        it('使用 token guard 防止 stale fetch 更新', async () => {
+            mockChapterMetaCache.getOrFetchByPathId.mockImplementation(async () => {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                return { coverUrl: '/lq_image/cover.webp' };
+            });
+            mockStore.loadLevelNodes.mockResolvedValue([
+                { type: 'chapter', path_id: '卷/话', name: '话' }
+            ]);
+
+            wrapper = mount(DirectoryPage);
+            await flushPromises();
+            await nextTick();
+
+            const coverEl = wrapper.find('.chapter-cover').element;
+            mockObserver.callback([{ target: coverEl, isIntersecting: true }]);
+            await flushPromises();
+
+            wrapper.unmount();
+            wrapper = null;
+            await new Promise(resolve => setTimeout(resolve, 150));
+
+            expect(mockChapterMetaCache.getOrFetchByPathId).toHaveBeenCalled();
+        });
+
+        it('onBeforeUnmount disconnect observer 和 clear queue', async () => {
+            mockStore.loadLevelNodes.mockResolvedValue([
+                { type: 'chapter', path_id: '卷/话', name: '话' }
+            ]);
+
+            wrapper = mount(DirectoryPage);
+            await flushPromises();
+            await nextTick();
+
+            wrapper.unmount();
+            wrapper = null;
+
+            expect(mockObserver.disconnect).toHaveBeenCalled();
+            expect(mockRequestQueue.clear).toHaveBeenCalled();
         });
     });
 });

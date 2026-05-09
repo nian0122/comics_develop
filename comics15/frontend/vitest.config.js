@@ -6,7 +6,7 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'jsdom',
-        include: ['js/**/*.test.js', 'js/**/*.spec.js', 'src/**/*.test.js', 'src/**/*.spec.js', 'src/**/*.vue'],
+        include: ['js/**/*.test.js', 'js/**/*.spec.js', 'src/**/*.test.js', 'src/**/*.spec.js'],
         exclude: ['node_modules', 'dist', 'coverage'],
         coverage: {
             provider: 'v8',

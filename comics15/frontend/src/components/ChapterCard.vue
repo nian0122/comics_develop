@@ -4,7 +4,13 @@
     :data-path-id="chapter.path_id"
     @click="$emit('open', chapter.path_id)"
   >
-    <span class="chapter-cover skeleton" :data-cover-path="chapter.path_id"></span>
+    <span
+      class="chapter-cover"
+      :class="{ skeleton: !cover }"
+      :data-cover-path="chapter.path_id"
+    >
+      <img v-if="cover" :src="cover" alt="封面" />
+    </span>
     <span class="chapter-card-body">
       <strong>{{ displayName }}</strong>
       <span :data-progress-path="chapter.path_id">{{ progressText }}</span>
@@ -33,6 +39,10 @@ const props = defineProps({
     seriesName: {
         type: String,
         required: true
+    },
+    cover: {
+        type: String,
+        default: ''
     }
 });
 

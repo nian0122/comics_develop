@@ -8,7 +8,12 @@
     "ses_1fa222126ffeAry10CW8KAfeZO",
     "ses_1f9f6e4efffePe4tssWCmILsuD",
     "ses_1f58ab91bffe8ltapaRjzmRTFC",
-    "ses_1f4cfdf05ffeJfm8xXbBh9syZA"
+    "ses_1f4cfdf05ffeJfm8xXbBh9syZA",
+    "ses_1f443d423ffeJZrov9g3C33seV",
+    "ses_1f3a7be19ffeW3HbME6hT4EpNI",
+    "ses_1f3a56672ffeM740FOrtFcYLju",
+    "ses_1f3a5647dffe6V7IElAEW6kTC5",
+    "ses_1f3a56471ffeMlHO3ox6a2zNdU"
   ],
   "plan_name": "vue3-reader-migration",
   "worktree_path": null,
@@ -16,7 +21,12 @@
     "ses_1fa23a298ffeFwpk3ekL2EyvXI": "direct",
     "ses_1fa222158ffexDAACAGq5C5aEf": "appended",
     "ses_1fa22213bffe9KuOH9EPe6gVua": "appended",
-    "ses_1fa222126ffeAry10CW8KAfeZO": "appended"
+    "ses_1fa222126ffeAry10CW8KAfeZO": "appended",
+    "ses_1f443d423ffeJZrov9g3C33seV": "appended",
+    "ses_1f3a7be19ffeW3HbME6hT4EpNI": "appended",
+    "ses_1f3a56672ffeM740FOrtFcYLju": "appended",
+    "ses_1f3a5647dffe6V7IElAEW6kTC5": "appended",
+    "ses_1f3a56471ffeMlHO3ox6a2zNdU": "appended"
   },
   "task_sessions": {}
 }

@@ -1,35 +1,165 @@
+## 2026-05-09 Task 8: 目录封面懒加载
 
-- `frontend/package-lock.json` 已随 `npm install` 更新，新增 `vue`、`pinia`、`vue-router` 以及 Vue 测试/编译依赖。
-- `eslint.config.js` 里 `.vue` 文件需要直接挂载 `vue-eslint-parser` 导出对象，字符串形式不会被 flat config 正确识别。
-- `vitest.config.js` 已保留现有 `js/**/*.test.js` 覆盖，并补上 `src/**/*.vue`，同时仍排除 `src/main.js`。
-- 已新增 `frontend/js/app/series-view.test.js` 保护 `SeriesView` 关键行为：系列渲染、`storage.getSeriesLastReading` 阅读提示、`.series-row` 前端过滤、点击回调（含中文与特殊字符）、错误重试、空态文案；当前无需改动 `series-view.js`。
-- 新增 `frontend/js/app/directory-view.test.js`，保护 `DirectoryView` 关键交互：`.directory-row` 与 `.chapter-card-v2` 渲染、目录点击回调、章节点击回调、根级返回系列、子级返回父目录，以及空目录 `.mobile-state-card` 回退。
-- `DirectoryView` 测试中通过 `vi.spyOn(storage, 'getSeriesProgress')` 固定进度数据，并注入最小 `IntersectionObserver` stub，避免 jsdom 环境触发真实懒加载副作用导致不稳定。
-- Vue Router URL 构建器完全复用 `route-builder.js` 行为：`encodePathSegments` 使用 `String.fromCharCode(92)` 处理 Windows 反斜杠，分段编码且不编码斜杠本身（避免 `%2F`）。
-- Vue Router 路由配置使用 `createWebHistory()`，路由参数 `:path(.*)` 匹配任意深度路径。
-- Vue 占位页面保留 `mobile-view` / `reader-view` wrapper classes，确保 CSS 兼容性；App.vue 使用 `<RouterView />` 替代手动 DOM 编排。
-- `index.html` body 简化为 `<div id="app"></div>` + `/src/main.js` 模块脚本，head 保留 Tailwind CDN 和 CSS link。
-- Task 5 完成：创建 4 个 Pinia stores 封装 legacy vanilla JS services/state
-- series-store: loadSeries, setCurrentSeries, restoreLastSeries；mock api/persistence/storage 测试通过
-- chapter-store: flatChapters, chapterTree, currentIndex, levelCache, ChapterMetaCache；测试通过
-- reader-store: files/loading/scale/lazyObserver/retry map；resetLazyLoad cleanup 验证：observer.disconnect() + clearTimeout
-- progress-store: currentPage/totalPages/scrollPercent；委托 legacy progress-state 和 persistence 保持兼容
-- 所有测试通过：94 tests (6 files)，ESLint 0 errors，LSP diagnostics clean
-- stores 使用 defineStore(options API 风格)，state 属性带 JSDoc 注释，actions 清晰命名
-- index.js barrel export 提供统一导出
-- Task 6 完成：SeriesPage.vue 替换占位符，实现系列列表 UI
-- vitest.config.js 需要添加 `plugins: [vue()]` 才能正确解析 .vue 文件进行测试
-- SeriesPage 搜索过滤使用 `:hidden` 属性控制显示（与旧版 series-view.js 一致），而非 filteredSeries 列表渲染
-- Vue 组件模板中多个状态切换使用 `<template v-if/v-else-if/v-else>` 包裹多个元素，避免 v-if/v-else-if 在独立元素上断裂
-- 测试中 mock `useSeriesStore` 返回完整 store 对象（list, loading, error, loadSeries, setCurrentSeries），确保组件挂载时能正确读取状态
-- `@vue/test-utils` mount 后需等待 Vue nextTick 或使用 `await wrapper.find().setValue()` 触发响应式更新
+### 实现内容
 
-- Task 7 完成：ChapterCard.vue 和 DirectoryPage.vue 实现
-- ChapterCard 复用 chapter-tree utilities：getChapterDisplayName, getParentPath, formatChapterProgress
-- DirectoryPage 使用 useRoute/useRouter，route.params.series 和 route.params.path 获取路径参数
-- Vue 组件 async 数据加载测试需要 flushPromises + nextTick 组合等待 Promise 完成
-- 测试中 mock store 需要在 mount 前设置 mockResolvedValue，否则异步调用可能已返回空结果
-- 测试使用中文描述符合项目规范
-- DirectoryPage 现正确导入并渲染 ChapterCard 组件（而非 inline markup）
-- 使用 v-if/v-else 分离 directory-row button 和 ChapterCard，避免嵌套 button
-- handleChapterOpen(pathId) 接收 ChapterCard emit 的 open 事件，执行导航逻辑
+**ChapterCard.vue**
+- 新增 `cover` prop（type: String, default: ''）
+- 模板动态渲染：当 `cover` 有值时显示 `<img>`，否则显示 `.chapter-cover.skeleton` 占位
+
+**DirectoryPage.vue**
+- 导入 `ChapterMetaCache`、`RequestQueue`、`LAZY_LOAD_CONFIG`
+- 新增响应式变量：`coverData`（封面 URL 映射）、`coverObserver`、`coverLoadQueue`、`coverLoadToken`、`chapterMetaCache`
+- `loadData()` 中调用 `setupCoverObserver(currentToken)` 并更新 token
+- `setupCoverObserver()` 创建 IntersectionObserver + RequestQueue，观察 `.chapter-cover[data-cover-path]` 元素
+- Observer callback 通过 `coverLoadQueue.add()` 调用 `chapterMetaCache.getOrFetchByPathId(pathId)`
+- 使用 `globalThis.IntersectionObserver` 确保测试环境兼容
+- `onBeforeUnmount` disconnect observer 并 clear queue
+
+### TDD 验证
+
+- ChapterCard 测试：14 passed（新增封面渲染 3 个测试）
+- DirectoryPage 测试：17 passed（新增懒加载 5 个测试）
+- LSP diagnostics：clean
+
+### Gotchas
+
+- `vi.stubGlobal('IntersectionObserver', ...)` 设置的是 `globalThis`，代码需使用 `globalThis.IntersectionObserver` 检查和构造
+- 测试中需保存 mock 函数引用（`intersectionObserverMock`），否则 `expect(IntersectionObserver).toHaveBeenCalled()` 不生效
+- `flushPromises` + `nextTick` + `flushPromises` 组合等待异步渲染和 observer setup
+
+## 2026-05-09 17:09 Task 9: ReaderShell + JumpPageModal
+
+### 实现内容
+
+**JumpPageModal.vue**
+- Props: visible (Boolean), totalPages (Number)
+- DOM ids: jumpModal, jumpPageInput, jumpCancelBtn, jumpConfirmBtn, totalPages
+- Emits: confirm (带页码), cancel
+- 使用 @click.self 代替 event.target 检查，简化背景点击逻辑
+- 页码验证：1..totalPages，无效输入不 emit
+- Enter/Escape 键支持
+
+**ReaderShell.vue**
+- Props: canPrev, canNext, progressText, menuVisible, actionsVisible
+- DOM ids: readerMenuBtn, readerActions, backToDirectoryBtn, prevBtn, nextBtn, progressStatus
+- Emits: prev, next, back, jump, toggle-menu
+- 键盘监听：ArrowLeft/ArrowRight/G/g，在 onMounted 添加，onUnmounted 移除
+- 检查 activeElement.tagName !== INPUT 避免输入时触发
+
+### TDD 验证
+
+- JumpPageModal 测试：14 passed
+- ReaderShell 测试：16 passed
+- 最终验证：30 passed
+- LSP diagnostics：clean
+
+### Gotchas
+
+- Vue Test Utils 不允许在 trigger 中设置 	arget 属性，需使用 @click.self 代替 event.target 检查
+- 测试键盘监听时需使用 ttachTo: document.body 以确保 document.dispatchEvent 能触发组件监听器
+- unmount cleanup 测试使用 vi.spyOn(document, 'addEventListener/removeEventListener') 验证监听器移除
+## 2026-05-09 17:35 Task 10: ReaderMediaItem
+
+### 实现内容
+
+**ReaderMediaItem.vue**
+- Props: filename, pathId, seriesName, index, coverSource, scale
+- DOM 结构: lazy-image-container + data 属性 + skeleton-wrapper/skeleton-image 骨架屏
+- 模板: img (image/gif) 或 video (video) 元素，带 reader-img 类名
+- 响应式状态: isLoaded, isFailed, currentUrl, useHQ, retryCount, loadStatus, timeoutId, lastClickTime
+- computed: mediaType (getFileType), shouldRender (currentUrl + status)
+- loadMedia 方法:
+  - coverSource=lq → buildLQImageUrl
+  - coverSource=hq → buildHQImageUrl
+  - 缺失 → resolveImageUrl
+  - GIF/video → buildVideoUrl
+  - LQ error → HQ fallback
+  - 重试机制遵循 IMAGE_RETRY_CONFIG
+- 双击 LQ → checkHQImageUsable + 切换 HQ
+- defineExpose: loadMedia 供 ReaderPage 调用
+- emit: loaded/failed 事件通知父组件
+- onBeforeUnmount: clearPendingTimeout + clearMediaElement
+
+### TDD 验证
+
+- RED: 测试文件导入不存在组件，预期失败
+- GREEN: 14 tests passed
+- 完整验证: 44 passed (reader.test.js 6 + api.test.js 24 + ReaderMediaItem.test.js 14)
+- LSP diagnostics: clean
+
+### Gotchas
+
+- 自定义 clearTimeout 函数名与全局 clearTimeout 冲突导致递归，必须重命名为 clearPendingTimeout 并使用 globalThis.clearTimeout
+- 测试双击行为需要 vi.useFakeTimers() 才能使用 vi.advanceTimersByTime()
+- GIF 在 legacy 中走 video URL 但渲染为 img 元素（非 video 元素）
+
+## 2026-05-09 Task 11: ReaderPage
+### 实现内容
+
+**ReaderPage.vue**
+- 组合式 API：useRoute/useRouter 获取路由参数和导航方法
+- 使用 Pinia stores：chapterStore, readerStore, progressStore, seriesStore
+- `loadData()` 异步加载章节列表、定位当前章节、加载文件、初始化进度
+- `setupLazyObserver()` 创建 IntersectionObserver 触发 ReaderMediaItem.loadMedia
+- `handleScroll()` 更新 progressStore.scrollPercent 和 setCurrentPage
+- 章节导航：openPrevChapter/openNextChapter 使用 toReaderUrl 构建 URL
+- 返回目录：backToDirectory 使用 toDirectoryUrl
+- 跳页：jumpToPage 滚动到目标页并触发 loadMedia
+- watch route.params.path 监听路由变化重新加载
+- onUnmounted cleanup observer
+
+**ReaderPage.test.js**
+- Mock vue-router useRoute/useRouter
+- Mock stores：chapter-store, reader-store, progress-store, series-store
+- Mock persistence.saveCurrentPosition
+- Mock IntersectionObserver 使用 globalThis.IntersectionObserver
+- 测试覆盖：加载流程、进度初始化、位置保存、章节导航、Observer cleanup、跳页
+
+### TDD 验证
+
+- ReaderPage 测试：16 passed
+- 全量测试：276 passed
+- Build：成功
+- LSP diagnostics：clean
+
+### Gotchas
+
+- 测试中 mock store 的 files 等属性不是 Vue 响应式，computed 无法同步更新
+- 需要使用 mock implementation 直接设置 mock 属性值，而不是依赖返回值
+- chapterStore.currentIndex 在 loadData 中被 setCurrentChapterByPathId 重置，测试中需要调整 mock 保持目标值
+- IntersectionObserver 测试使用 globalThis.IntersectionObserver 检查，不是 window.IntersectionObserver
+- 组件中使用 loadFiles 返回值而不是 computed files.value.length，避免响应式同步问题
+## 2026-05-09 19:45 Task 12: App.vue 根路径恢复逻辑
+
+### 实现内容
+
+**App.vue**
+- 导入 useRouter, useRoute, useSeriesStore, persistence, toReaderUrl, toSeriesUrl
+- onMounted 检查 oute.path !== '/' 早期返回，非根路径不触发恢复
+- 根路径时调用 seriesStore.loadSeries() 等待系列列表
+- 获取 persistence.getCurrentSeries() 和 persistence.getCurrentChapterPath()
+- 验证 saved series 存在于 seriesStore.list，无效则留在根路径
+- 有效 series + 有效 chapter → outer.replace(toReaderUrl(series, chapter))
+- 有效 series + 无效 chapter → outer.replace(toSeriesUrl(series))
+- catch block 使用 console.warn 记录 loadSeries 失败，非空 catch
+
+### TDD 验证
+
+- RED: 8 tests failed (loadSeries/replace 未调用)
+- GREEN: 8 tests passed
+- 最终验证: 21 tests passed (App + router + SeriesPage)
+- LSP diagnostics: clean
+- grep: 无 TODO/空 catch/console.log/@ts-ignore/as any
+
+### 关键设计
+
+- 使用 outer.replace() 而非 push() 避免历史记录污染
+- 使用 oute.path !== '/' 检查而非 oute.name，更直接判断根路径
+- 空字符串 chapter 视为无效（savedChapterPath.trim() !== ''）
+- 失败时不恢复，用户看到空列表而非错误页面
+
+### Gotchas
+
+- 测试路径: src/App.test.js 导入 stores/router 使用 ./stores/ 和 ./router/（而非 ../stores/）
+- flushPromises + nextTick + flushPromises 组合等待 async onMounted 完成
+- 非根路径测试自然通过，因为 App.vue 当前无任何逻辑自然不调用 loadSeries

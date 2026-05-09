@@ -68,29 +68,29 @@
 
 ## Task 8: 目录封面懒加载
 **Files:** modify ChapterCard.vue, DirectoryPage.vue and tests.
-- [ ] ChapterCard 加 cover prop，测试 img 和 无预览。
-- [ ] DirectoryPage 加 IntersectionObserver + RequestQueue(LAZY_LOAD_CONFIG.COVER_MAX_CONCURRENT) + token；调用 chapterMetaCache.getOrFetchByPathId(pathId)。
-- [ ] onBeforeUnmount disconnect observer 并 clear queue。
-- [ ] 验证：npx vitest run src/components/ChapterCard.test.js src/pages/DirectoryPage.test.js。
+- [x] ChapterCard 加 cover prop，测试 img 和 无预览。
+- [x] DirectoryPage 加 IntersectionObserver + RequestQueue(LAZY_LOAD_CONFIG.COVER_MAX_CONCURRENT) + token；调用 chapterMetaCache.getOrFetchByPathId(pathId)。
+- [x] onBeforeUnmount disconnect observer 并 clear queue。
+- [x] 验证：npx vitest run src/components/ChapterCard.test.js src/pages/DirectoryPage.test.js。
 
 ## Task 9: ReaderShell + JumpPageModal
 **Files:** create src/components/JumpPageModal.vue, ReaderShell.vue and tests.
-- [ ] Modal 测试/实现：保留 jumpModal, jumpPageInput, jumpCancelBtn, jumpConfirmBtn, totalPages；confirm emits page number。
-- [ ] Shell 测试/实现：保留 readerMenuBtn, readerActions, prevBtn, nextBtn, backToDirectoryBtn, progressStatus；emit prev/next/back/jump；keydown ArrowLeft/ArrowRight/G 并 unmount cleanup。
-- [ ] 验证：npx vitest run src/components/JumpPageModal.test.js src/components/ReaderShell.test.js。
+- [x] Modal 测试/实现：保留 jumpModal, jumpPageInput, jumpCancelBtn, jumpConfirmBtn, totalPages；confirm emits page number。
+- [x] Shell 测试/实现：保留 readerMenuBtn, readerActions, prevBtn, nextBtn, backToDirectoryBtn, progressStatus；emit prev/next/back/jump；keydown ArrowLeft/ArrowRight/G 并 unmount cleanup。
+- [x] 验证：npx vitest run src/components/JumpPageModal.test.js src/components/ReaderShell.test.js。
 
 ## Task 10: ReaderMediaItem
 **Files:** create src/components/ReaderMediaItem.vue and test.
-- [ ] 测试：coverSource=lq/hq 走对应 URL；缺失走 resolveImageUrl；gif/video 走 buildVideoUrl；双击 LQ 检查并切 HQ。
-- [ ] 实现：lazy-image-container、骨架屏、img/video、defineExpose loadMedia、IMAGE_RETRY_CONFIG、LQ error fallback HQ、最终失败 emit failed、成功 emit loaded 并 increment loaded count。
-- [ ] 验证：npx vitest run src/components/ReaderMediaItem.test.js js/components/reader.test.js js/services/api.test.js。
+- [x] 测试：coverSource=lq/hq 走对应 URL；缺失走 resolveImageUrl；gif/video 走 buildVideoUrl；双击 LQ 检查并切 HQ。
+- [x] 实现：lazy-image-container、骨架屏、img/video、defineExpose loadMedia、IMAGE_RETRY_CONFIG、LQ error fallback HQ、最终失败 emit failed、成功 emit loaded 并 increment loaded count。
+- [x] 验证：npx vitest run src/components/ReaderMediaItem.test.js js/components/reader.test.js js/services/api.test.js。
 
 ## Task 11: ReaderPage
 **Files:** src/pages/ReaderPage.vue, ReaderPage.test.js.
-- [ ] 测试：route series/path 加载章节文件，渲染媒体项，初始化进度，next/back 使用兼容 URL。
-- [ ] 实现：确保章节列表已加载；定位 chapter index；set return path；load files；progressStore.init/restore；persistence.saveCurrentPosition；observer 触发 media load；预加载下一章；jumpToPage；滚动计算当前页。
-- [ ] route change/unmount 清理 lazy observer。
-- [ ] 验证：npx vitest run src/pages/ReaderPage.test.js src/components/ReaderMediaItem.test.js src/components/ReaderShell.test.js。
+- [x] 测试：route series/path 加载章节文件，渲染媒体项，初始化进度，next/back 使用兼容 URL。
+- [x] 实现：确保章节列表已加载；定位 chapter index；set return path；load files；progressStore.init/restore；persistence.saveCurrentPosition；observer 触发 media load；预加载下一章；jumpToPage；滚动计算当前页。
+- [x] route change/unmount 清理 lazy observer。
+- [x] 验证：npx vitest run src/pages/ReaderPage.test.js src/components/ReaderMediaItem.test.js src/components/ReaderShell.test.js。
 
 ## Task 12: 根路由恢复
 **Files:** src/App.vue, src/App.test.js.
