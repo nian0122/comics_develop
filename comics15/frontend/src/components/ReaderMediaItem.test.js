@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import ReaderMediaItem from './ReaderMediaItem.vue';
 
@@ -65,7 +65,6 @@ vi.mock('../../js/config/constants.js', () => ({
 }));
 
 import { api } from '../../js/services/api.js';
-import { getFileType, useVideoPath } from '../../js/utils/file-type.js';
 
 describe('ReaderMediaItem', () => {
     let wrapper;

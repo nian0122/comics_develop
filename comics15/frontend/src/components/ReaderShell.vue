@@ -15,7 +15,7 @@
 <script setup>
 import { onMounted, onUnmounted } from 'vue';
 
-const props = defineProps({
+defineProps({
     canPrev: {
         type: Boolean,
         default: false

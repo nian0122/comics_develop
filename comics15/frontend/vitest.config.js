@@ -15,7 +15,6 @@ export default defineConfig({
             exclude: [
                 'js/**/*.test.js',
                 'js/**/*.spec.js',
-                'js/main.js',
                 'js/tools-main.js',
                 'js/**/index.js',
                 'src/main.js'

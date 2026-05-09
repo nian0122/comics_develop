@@ -94,9 +94,9 @@
 
 ## Task 12: 根路由恢复
 **Files:** src/App.vue, src/App.test.js.
-- [ ] 测试：/ 时 load series，若 saved series/chapter 有效，router.replace(toReaderUrl(...))；只有 series 则 replace toSeriesUrl。
-- [ ] 实现 App.vue onMounted 恢复逻辑，无效保存则留在 /。
-- [ ] 验证：npx vitest run src/App.test.js src/router/index.test.js src/pages/SeriesPage.test.js。
+- [x] 测试：/ 时 load series，若 saved series/chapter 有效，router.replace(toReaderUrl(...))；只有 series 则 replace toSeriesUrl。
+- [x] 实现 App.vue onMounted 恢复逻辑，无效保存则留在 /。
+- [x] 验证：npx vitest run src/App.test.js src/router/index.test.js src/pages/SeriesPage.test.js。
 
 ## Task 13: 完整验证
 - [ ] npm test：全部旧/新 Vitest 通过。

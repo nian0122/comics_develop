@@ -163,3 +163,5 @@
 - 测试路径: src/App.test.js 导入 stores/router 使用 ./stores/ 和 ./router/（而非 ../stores/）
 - flushPromises + nextTick + flushPromises 组合等待 async onMounted 完成
 - 非根路径测试自然通过，因为 App.vue 当前无任何逻辑自然不调用 loadSeries
+[2026-05-09 21:09:25] Task 13 验证记录：在 frontend 目录执行 npm test（vitest run）通过；测试套件全部通过（输出含预期 stderr 日志：根路径恢复失败提示、ReaderPage 媒体加载失败提示），未修改产品/测试代码。
+[2026-05-09 21:12:47] Task 13 补充统计：Vitest JSON 报告显示 numTotalTestSuites=187，numPassedTestSuites=187，numTotalTests=374，numPassedTests=374，failed=0，npm test 退出状态成功。

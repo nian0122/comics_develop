@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
-import { nextTick, ref } from 'vue';
+import { nextTick } from 'vue';
 import App from './App.vue';
 
 // Mock router
@@ -48,11 +48,11 @@ vi.mock('../js/services/persistence.js', () => ({
     }
 }));
 
-import { useRouter, useRoute } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { useSeriesStore } from './stores/series-store.js';
 import { useChapterStore } from './stores/chapter-store.js';
 import { persistence } from '../js/services/persistence.js';
-import { toReaderUrl, toSeriesUrl, toSeriesListUrl } from './router/index.js';
+import { toReaderUrl, toSeriesUrl } from './router/index.js';
 
 describe('App.vue 根路径恢复逻辑', () => {
     let mockSeriesStore;

@@ -58,8 +58,6 @@ import { storage } from '../../js/services/storage.js';
 import { toDirectoryUrl, toReaderUrl } from '../router/index.js';
 import { ChapterMetaCache } from '../../js/app/chapter-meta-cache.js';
 import { RequestQueue } from '../../js/utils/request-queue.js';
-import { LAZY_LOAD_CONFIG } from '../../js/config/constants.js';
-
 function flushPromises() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }
@@ -295,7 +293,6 @@ it('IntersectionObserver 触发时调用 chapterMetaCache.getOrFetchByPathId', a
             await flushPromises();
             await nextTick();
 
-            const card = wrapper.find('.chapter-card-v2');
             const coverEl = wrapper.find('.chapter-cover').element;
 
             mockObserver.callback([{ target: coverEl, isIntersecting: true }]);

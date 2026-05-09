@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
-import { nextTick, ref } from 'vue';
+import { nextTick } from 'vue';
 import ReaderPage from './ReaderPage.vue';
 
 const mockPush = vi.fn();
@@ -67,7 +67,7 @@ import { useProgressStore } from '../stores/progress-store.js';
 import { useSeriesStore } from '../stores/series-store.js';
 import { persistence } from '../../js/services/persistence.js';
 import { api } from '../../js/services/api.js';
-import { toReaderUrl, toDirectoryUrl } from '../router/index.js';
+import { toDirectoryUrl } from '../router/index.js';
 import { useRoute } from 'vue-router';
 
 function createMockIntersectionObserver() {
@@ -112,7 +112,7 @@ describe('ReaderPage', () => {
             flatList: [],
             currentIndex: -1,
             loading: false,
-            loadChapters: vi.fn().mockImplementation(async (series) => {
+            loadChapters: vi.fn().mockImplementation(async (_series) => {
                 mockChapterStore.flatList = [
                     { path_id: 'chapter1', path: 'chapter1', name: '第1章' },
                     { path_id: 'chapter2', path: 'chapter2', name: '第2章' },
@@ -135,7 +135,7 @@ describe('ReaderPage', () => {
             isLoading: false,
             scale: 100,
             lazyObserver: null,
-            loadFiles: vi.fn().mockImplementation(async (series, path) => {
+            loadFiles: vi.fn().mockImplementation(async (_series, _path) => {
                 mockReaderStore.files = [
                     { filename: '001.jpg', path_id: 'chapter1' },
                     { filename: '002.jpg', path_id: 'chapter1' },
@@ -324,7 +324,7 @@ describe('ReaderPage', () => {
                 { path_id: 'chapter1', path: 'chapter1', name: '第1章' },
                 { path_id: 'chapter2', path: 'chapter2', name: '第2章' }
             ];
-            mockChapterStore.setCurrentChapterByPathId = vi.fn((pathId) => {
+            mockChapterStore.setCurrentChapterByPathId = vi.fn((_pathId) => {
                 mockChapterStore.currentIndex = 1;
             });
             mockChapterStore.getCurrentChapter = vi.fn(() => mockChapterStore.flatList[1]);
@@ -354,7 +354,7 @@ describe('ReaderPage', () => {
                 { path_id: 'chapter1', path: 'chapter1', name: '第1章' },
                 { path_id: 'chapter2', path: 'chapter2', name: '第2章' }
             ];
-            mockChapterStore.setCurrentChapterByPathId = vi.fn((pathId) => {
+            mockChapterStore.setCurrentChapterByPathId = vi.fn((_pathId) => {
                 mockChapterStore.currentIndex = 0;
             });
             mockChapterStore.getCurrentChapter = vi.fn(() => mockChapterStore.flatList[0]);

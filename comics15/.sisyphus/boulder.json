@@ -13,7 +13,8 @@
     "ses_1f3a7be19ffeW3HbME6hT4EpNI",
     "ses_1f3a56672ffeM740FOrtFcYLju",
     "ses_1f3a5647dffe6V7IElAEW6kTC5",
-    "ses_1f3a56471ffeMlHO3ox6a2zNdU"
+    "ses_1f3a56471ffeMlHO3ox6a2zNdU",
+    "ses_1f32b0e04ffePInKQ8IwOND1cx"
   ],
   "plan_name": "vue3-reader-migration",
   "worktree_path": null,
@@ -26,7 +27,8 @@
     "ses_1f3a7be19ffeW3HbME6hT4EpNI": "appended",
     "ses_1f3a56672ffeM740FOrtFcYLju": "appended",
     "ses_1f3a5647dffe6V7IElAEW6kTC5": "appended",
-    "ses_1f3a56471ffeMlHO3ox6a2zNdU": "appended"
+    "ses_1f3a56471ffeMlHO3ox6a2zNdU": "appended",
+    "ses_1f32b0e04ffePInKQ8IwOND1cx": "appended"
   },
   "task_sessions": {}
 }
