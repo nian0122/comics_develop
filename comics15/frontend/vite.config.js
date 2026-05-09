@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
 
 const comicsRoot = process.env.COMICS_ROOT_DIR || 'F:/games/comics';
 const hqSubDir = process.env.HQ_SUB_DIR || 'h_photograph';
@@ -54,7 +55,7 @@ function comicStaticPlugin() {
 export default defineConfig({
     root: '.',
     base: '/',
-    plugins: [comicStaticPlugin()],
+    plugins: [vue(), comicStaticPlugin()],
 
     build: {
         outDir: 'dist',

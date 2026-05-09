@@ -1,5 +1,7 @@
 import globals from 'globals';
 import pluginJs from '@eslint/js';
+import pluginVue from 'eslint-plugin-vue';
+import vueParser from 'vue-eslint-parser';
 
 export default [
     {
@@ -11,6 +13,13 @@ export default [
         }
     },
     pluginJs.configs.recommended,
+    ...pluginVue.configs['flat/essential'],
+    {
+        files: ['**/*.vue'],
+        languageOptions: {
+            parser: vueParser
+        }
+    },
     {
         rules: {
             'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],

@@ -1,0 +1,35 @@
+
+- `frontend/package-lock.json` 已随 `npm install` 更新，新增 `vue`、`pinia`、`vue-router` 以及 Vue 测试/编译依赖。
+- `eslint.config.js` 里 `.vue` 文件需要直接挂载 `vue-eslint-parser` 导出对象，字符串形式不会被 flat config 正确识别。
+- `vitest.config.js` 已保留现有 `js/**/*.test.js` 覆盖，并补上 `src/**/*.vue`，同时仍排除 `src/main.js`。
+- 已新增 `frontend/js/app/series-view.test.js` 保护 `SeriesView` 关键行为：系列渲染、`storage.getSeriesLastReading` 阅读提示、`.series-row` 前端过滤、点击回调（含中文与特殊字符）、错误重试、空态文案；当前无需改动 `series-view.js`。
+- 新增 `frontend/js/app/directory-view.test.js`，保护 `DirectoryView` 关键交互：`.directory-row` 与 `.chapter-card-v2` 渲染、目录点击回调、章节点击回调、根级返回系列、子级返回父目录，以及空目录 `.mobile-state-card` 回退。
+- `DirectoryView` 测试中通过 `vi.spyOn(storage, 'getSeriesProgress')` 固定进度数据，并注入最小 `IntersectionObserver` stub，避免 jsdom 环境触发真实懒加载副作用导致不稳定。
+- Vue Router URL 构建器完全复用 `route-builder.js` 行为：`encodePathSegments` 使用 `String.fromCharCode(92)` 处理 Windows 反斜杠，分段编码且不编码斜杠本身（避免 `%2F`）。
+- Vue Router 路由配置使用 `createWebHistory()`，路由参数 `:path(.*)` 匹配任意深度路径。
+- Vue 占位页面保留 `mobile-view` / `reader-view` wrapper classes，确保 CSS 兼容性；App.vue 使用 `<RouterView />` 替代手动 DOM 编排。
+- `index.html` body 简化为 `<div id="app"></div>` + `/src/main.js` 模块脚本，head 保留 Tailwind CDN 和 CSS link。
+- Task 5 完成：创建 4 个 Pinia stores 封装 legacy vanilla JS services/state
+- series-store: loadSeries, setCurrentSeries, restoreLastSeries；mock api/persistence/storage 测试通过
+- chapter-store: flatChapters, chapterTree, currentIndex, levelCache, ChapterMetaCache；测试通过
+- reader-store: files/loading/scale/lazyObserver/retry map；resetLazyLoad cleanup 验证：observer.disconnect() + clearTimeout
+- progress-store: currentPage/totalPages/scrollPercent；委托 legacy progress-state 和 persistence 保持兼容
+- 所有测试通过：94 tests (6 files)，ESLint 0 errors，LSP diagnostics clean
+- stores 使用 defineStore(options API 风格)，state 属性带 JSDoc 注释，actions 清晰命名
+- index.js barrel export 提供统一导出
+- Task 6 完成：SeriesPage.vue 替换占位符，实现系列列表 UI
+- vitest.config.js 需要添加 `plugins: [vue()]` 才能正确解析 .vue 文件进行测试
+- SeriesPage 搜索过滤使用 `:hidden` 属性控制显示（与旧版 series-view.js 一致），而非 filteredSeries 列表渲染
+- Vue 组件模板中多个状态切换使用 `<template v-if/v-else-if/v-else>` 包裹多个元素，避免 v-if/v-else-if 在独立元素上断裂
+- 测试中 mock `useSeriesStore` 返回完整 store 对象（list, loading, error, loadSeries, setCurrentSeries），确保组件挂载时能正确读取状态
+- `@vue/test-utils` mount 后需等待 Vue nextTick 或使用 `await wrapper.find().setValue()` 触发响应式更新
+
+- Task 7 完成：ChapterCard.vue 和 DirectoryPage.vue 实现
+- ChapterCard 复用 chapter-tree utilities：getChapterDisplayName, getParentPath, formatChapterProgress
+- DirectoryPage 使用 useRoute/useRouter，route.params.series 和 route.params.path 获取路径参数
+- Vue 组件 async 数据加载测试需要 flushPromises + nextTick 组合等待 Promise 完成
+- 测试中 mock store 需要在 mount 前设置 mockResolvedValue，否则异步调用可能已返回空结果
+- 测试使用中文描述符合项目规范
+- DirectoryPage 现正确导入并渲染 ChapterCard 组件（而非 inline markup）
+- 使用 v-if/v-else 分离 directory-row button 和 ChapterCard，避免嵌套 button
+- handleChapterOpen(pathId) 接收 ChapterCard emit 的 open 事件，执行导航逻辑
