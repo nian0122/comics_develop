@@ -8,7 +8,7 @@
 import { onMounted } from 'vue';
 import { RouterView, useRouter, useRoute } from 'vue-router';
 import { useSeriesStore } from './stores/series-store.js';
-import { persistence } from '../js/services/persistence.js';
+import { persistence } from './services/persistence.js';
 import { toReaderUrl, toSeriesUrl } from './router/index.js';
 
 const router = useRouter();

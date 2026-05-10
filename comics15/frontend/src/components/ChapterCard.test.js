@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import ChapterCard from './ChapterCard.vue';
 
 // Mock chapter-tree utilities
-vi.mock('../../js/utils/chapter-tree.js', () => ({
+vi.mock('../utils/chapter-tree.js', () => ({
     getChapterDisplayName: vi.fn((node) => {
         if (!node) return '未命名章节';
         const parts = (node.path_id || '').split('/').filter(Boolean);
@@ -23,7 +23,7 @@ vi.mock('../../js/utils/chapter-tree.js', () => ({
     })
 }));
 
-import { getChapterDisplayName, getParentPath, formatChapterProgress } from '../../js/utils/chapter-tree.js';
+import { getChapterDisplayName, getParentPath, formatChapterProgress } from '../utils/chapter-tree.js';
 
 describe('ChapterCard', () => {
     let wrapper;

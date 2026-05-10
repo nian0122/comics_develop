@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia';
-import { api } from '../../js/services/api.js';
-import { catalogApi } from '../../js/services/catalog-api.js';
-import { buildChapterTree } from '../../js/utils/chapter-tree.js';
-import { ChapterMetaCache } from '../../js/app/chapter-meta-cache.js';
+import { catalogApi } from '../services/catalog-api.js';
+import { buildChapterTree } from '../utils/chapter-tree.js';
+import { ChapterMetaCache } from '../services/chapter-meta-cache.js';
 
 export const useChapterStore = defineStore('chapters', {
     state: () => ({
@@ -27,9 +26,11 @@ export const useChapterStore = defineStore('chapters', {
             this.loading = true;
             this.error = null;
             this.metaCache.clear();
+            this.levelCache.clear();
             try {
-                const data = await api.getChapters(seriesName);
-                this.flatList = data.chapters || [];
+                const allChapters = [];
+                await this.collectAllChapters(seriesName, '', allChapters);
+                this.flatList = allChapters;
                 this.tree = buildChapterTree(this.flatList);
                 return { flatList: this.flatList, tree: this.tree };
             } catch (e) {
@@ -37,6 +38,18 @@ export const useChapterStore = defineStore('chapters', {
                 throw e;
             } finally {
                 this.loading = false;
+            }
+        },
+
+        async collectAllChapters(seriesName, path, allChapters) {
+            const nodes = await this.loadLevelNodes(seriesName, path);
+            for (const node of nodes) {
+                if (node.type === 'chapter') {
+                    allChapters.push(node);
+                } else if (node.type === 'directory') {
+                    const childPath = path ? `${path}/${node.name}` : node.name;
+                    await this.collectAllChapters(seriesName, childPath, allChapters);
+                }
             }
         },
 

@@ -55,6 +55,7 @@ go build -o clean_files.exe .
 - `application.yml` 中 exe 名必须和本目录构建产物一致：`clean_files.exe` 是特殊名。
 - `ToolExecutor.parseProgress()` 通过中文输出关键词解析：`处理`, `跳过`, `失败数量`。
 - 改工具输出格式时，同步改 `ToolExecutor` 的进度解析。
+- 工具参数契约同时被 `ToolController` 元数据、前端 `tools-api`/工具页表单、各工具 `readme.md` 约束。
 
 ## TESTS
 - 当前没有 Go `_test.go` 文件。

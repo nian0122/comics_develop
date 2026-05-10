@@ -3,27 +3,27 @@ import { setActivePinia, createPinia } from 'pinia';
 import { useSeriesStore } from './series-store.js';
 
 // Mock 服务模块
-vi.mock('../../js/services/api.js', () => ({
+vi.mock('../services/api.js', () => ({
     api: {
         getSeries: vi.fn()
     }
 }));
 
-vi.mock('../../js/services/storage.js', () => ({
+vi.mock('../services/storage.js', () => ({
     storage: {
         setCurrentSeries: vi.fn()
     }
 }));
 
-vi.mock('../../js/services/persistence.js', () => ({
+vi.mock('../services/persistence.js', () => ({
     persistence: {
         getCurrentSeries: vi.fn()
     }
 }));
 
-import { api } from '../../js/services/api.js';
-import { storage } from '../../js/services/storage.js';
-import { persistence } from '../../js/services/persistence.js';
+import { api } from '../services/api.js';
+import { storage } from '../services/storage.js';
+import { persistence } from '../services/persistence.js';
 
 describe('series-store', () => {
     beforeEach(() => {

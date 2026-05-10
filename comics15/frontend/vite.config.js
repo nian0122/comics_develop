@@ -64,8 +64,7 @@ export default defineConfig({
         minify: 'esbuild',
         rollupOptions: {
             input: {
-                main: './index.html',
-                tools: './tools.html'
+                main: './index.html'
             }
         }
     },

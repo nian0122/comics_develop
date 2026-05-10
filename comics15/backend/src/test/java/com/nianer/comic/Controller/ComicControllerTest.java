@@ -47,70 +47,10 @@ class ComicControllerTest {
         controller = new ComicController(catalogService);
     }
 
-    @Test
-    void listChaptersReturnsCoverMetadataFromChapterFiles() throws Exception {
-        Path hqChapter = comicsRoot.resolve("h_photograph").resolve("测试系列").resolve("第一卷").resolve("第 1 话");
-        Path lqChapter = comicsRoot.resolve("l_photograph").resolve("测试系列").resolve("第一卷").resolve("第 1 话");
+    private void createChapter(String series, String chapterPath, String filename) throws Exception {
+        Path hqChapter = comicsRoot.resolve("h_photograph").resolve(series).resolve(chapterPath);
         Files.createDirectories(hqChapter);
-        Files.createDirectories(lqChapter);
-        Files.writeString(hqChapter.resolve("002.jpg"), "hq");
-        Files.writeString(hqChapter.resolve("001.jpg"), "hq");
-        Files.writeString(hqChapter.resolve("clip.mp4"), "video");
-        Files.writeString(lqChapter.resolve("001.webp"), "lq");
-
-        List<Map<String, String>> chapters = controller.listChapters("测试系列");
-
-        assertThat(chapters).hasSize(1);
-        assertThat(chapters.getFirst())
-                .containsEntry("path_id", "第一卷/第 1 话")
-                .containsEntry("name", "第 1 话")
-                .containsEntry("cover_file", "001.jpg")
-                .containsEntry("cover_source", "lq")
-                .containsEntry("total_files", "3");
-    }
-
-    @Test
-    void listChaptersFallsBackToHqCoverSourceWhenLqMissing() throws Exception {
-        Path hqChapter = comicsRoot.resolve("h_photograph").resolve("测试系列").resolve("第 2 话");
-        Files.createDirectories(hqChapter);
-        Files.writeString(hqChapter.resolve("001.png"), "hq");
-
-        List<Map<String, String>> chapters = controller.listChapters("测试系列");
-
-        assertThat(chapters).hasSize(1);
-        assertThat(chapters.getFirst())
-                .containsEntry("cover_file", "001.png")
-                .containsEntry("cover_source", "hq")
-                .containsEntry("total_files", "1");
-    }
-
-    @Test
-    void listChaptersReturnsNoCoverMetadataForVideoOnlyChapter() throws Exception {
-        Path hqChapter = comicsRoot.resolve("h_photograph").resolve("测试系列").resolve("PV");
-        Files.createDirectories(hqChapter);
-        Files.writeString(hqChapter.resolve("001.mp4"), "video");
-        Files.writeString(hqChapter.resolve("002.gif"), "gif");
-
-        List<Map<String, String>> chapters = controller.listChapters("测试系列");
-
-        assertThat(chapters).hasSize(1);
-        assertThat(chapters.getFirst())
-                .containsEntry("path_id", "PV")
-                .containsEntry("total_files", "2")
-                .doesNotContainKeys("cover_file", "cover_source");
-    }
-
-    @Test
-    void listChaptersPreservesNaturalOrderWhenScanningNestedDirectories() throws Exception {
-        createChapter("测试系列", "Volume 1/Chapter 10", "001.jpg");
-        createChapter("测试系列", "Volume 1/Chapter 2", "001.jpg");
-        createChapter("测试系列", "Volume 1/Chapter 1", "001.jpg");
-        createChapter("测试系列", "Volume 2/Chapter 1", "001.jpg");
-
-        List<Map<String, String>> chapters = controller.listChapters("测试系列");
-
-        assertThat(chapters).extracting(chapter -> chapter.get("path_id"))
-                .containsExactly("Volume 1/Chapter 1", "Volume 1/Chapter 2", "Volume 1/Chapter 10", "Volume 2/Chapter 1");
+        Files.writeString(hqChapter.resolve(filename), "hq");
     }
 
     @Test

@@ -25,7 +25,7 @@ import {
     getChapterDisplayName,
     getParentPath,
     formatChapterProgress
-} from '../../js/utils/chapter-tree.js';
+} from '../utils/chapter-tree.js';
 
 const props = defineProps({
     chapter: {

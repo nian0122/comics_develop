@@ -64,7 +64,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSeriesStore } from '../stores/series-store.js';
-import { storage } from '../../js/services/storage.js';
+import { storage } from '../services/storage.js';
 import { toSeriesUrl } from '../router/index.js';
 
 const router = useRouter();
@@ -99,5 +99,7 @@ function handleRetry() {
 
 onMounted(() => {
   seriesStore.loadSeries();
+  console.log('Store List:', seriesStore.list);
+  console.log('Loading State:', seriesStore.loading);
 });
 </script>

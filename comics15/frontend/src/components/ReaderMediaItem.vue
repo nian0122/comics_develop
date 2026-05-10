@@ -53,9 +53,9 @@
 
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue';
-import { api } from '../../js/services/api.js';
-import { getFileType, useVideoPath } from '../../js/utils/file-type.js';
-import { IMAGE_RETRY_CONFIG, DOUBLE_CLICK_THRESHOLD } from '../../js/config/constants.js';
+import { api } from '../services/api.js';
+import { getFileType, useVideoPath } from '../utils/file-type.js';
+import { IMAGE_RETRY_CONFIG, DOUBLE_CLICK_THRESHOLD } from '../config/constants.js';
 
 const props = defineProps({
     filename: {

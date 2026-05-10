@@ -2,13 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useReaderStore } from './reader-store.js';
 
-vi.mock('../../js/services/api.js', () => ({
+vi.mock('../services/api.js', () => ({
     api: {
         getChapterFiles: vi.fn()
     }
 }));
 
-vi.mock('../../js/config/constants.js', () => ({
+vi.mock('../config/constants.js', () => ({
     LAZY_LOAD_CONFIG: {
         ROOT_MARGIN: '1500px',
         INITIAL_BATCH: 10,
@@ -20,7 +20,7 @@ vi.mock('../../js/config/constants.js', () => ({
     }
 }));
 
-import { api } from '../../js/services/api.js';
+import { api } from '../services/api.js';
 
 describe('reader-store', () => {
     beforeEach(() => {

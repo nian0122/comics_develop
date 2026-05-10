@@ -29,21 +29,21 @@ vi.mock('../stores/chapter-store.js', () => ({
     useChapterStore: vi.fn()
 }));
 
-vi.mock('../../js/services/storage.js', () => ({
+vi.mock('../services/storage.js', () => ({
     storage: {
         getSeriesProgress: vi.fn()
     }
 }));
 
-vi.mock('../../js/app/chapter-meta-cache.js', () => ({
+vi.mock('../services/chapter-meta-cache.js', () => ({
     ChapterMetaCache: vi.fn()
 }));
 
-vi.mock('../../js/utils/request-queue.js', () => ({
+vi.mock('../utils/request-queue.js', () => ({
     RequestQueue: vi.fn()
 }));
 
-vi.mock('../../js/config/constants.js', () => ({
+vi.mock('../config/constants.js', () => ({
     LAZY_LOAD_CONFIG: {
         ROOT_MARGIN: '1500px',
         COVER_ROOT_MARGIN: '80px 0px',
@@ -54,10 +54,10 @@ vi.mock('../../js/config/constants.js', () => ({
 }));
 
 import { useChapterStore } from '../stores/chapter-store.js';
-import { storage } from '../../js/services/storage.js';
+import { storage } from '../services/storage.js';
 import { toDirectoryUrl, toReaderUrl } from '../router/index.js';
-import { ChapterMetaCache } from '../../js/app/chapter-meta-cache.js';
-import { RequestQueue } from '../../js/utils/request-queue.js';
+import { ChapterMetaCache } from '../services/chapter-meta-cache.js';
+import { RequestQueue } from '../utils/request-queue.js';
 function flushPromises() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }

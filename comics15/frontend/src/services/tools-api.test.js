@@ -92,11 +92,4 @@ describe('toolsApi', () => {
             message: '获取系列列表失败'
         });
     });
-
-    it('should reuse comic api for encoded chapter lookup', async () => {
-        const getChaptersSpy = vi.spyOn(api, 'getChapters').mockResolvedValue(['第 1 话']);
-
-        await expect(toolsApi.getChapters('测试系列')).resolves.toEqual(['第 1 话']);
-        expect(getChaptersSpy).toHaveBeenCalledWith('测试系列');
-    });
 });

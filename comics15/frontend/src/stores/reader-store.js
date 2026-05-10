@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
-import { api } from '../../js/services/api.js';
-import { LAZY_LOAD_CONFIG, IMAGE_RETRY_CONFIG } from '../../js/config/constants.js';
+import { api } from '../services/api.js';
+import { LAZY_LOAD_CONFIG, IMAGE_RETRY_CONFIG } from '../config/constants.js';
 
 export const useReaderStore = defineStore('reader', {
     state: () => ({

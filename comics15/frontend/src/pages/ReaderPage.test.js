@@ -40,19 +40,19 @@ vi.mock('../stores/series-store.js', () => ({
     useSeriesStore: vi.fn()
 }));
 
-vi.mock('../../js/services/persistence.js', () => ({
+vi.mock('../services/persistence.js', () => ({
     persistence: {
         saveCurrentPosition: vi.fn()
     }
 }));
 
-vi.mock('../../js/services/api.js', () => ({
+vi.mock('../services/api.js', () => ({
     api: {
         getChapterFiles: vi.fn()
     }
 }));
 
-vi.mock('../../js/config/constants.js', () => ({
+vi.mock('../config/constants.js', () => ({
     LAZY_LOAD_CONFIG: {
         ROOT_MARGIN: '1500px',
         COVER_ROOT_MARGIN: '80px 0px',
@@ -65,8 +65,8 @@ import { useChapterStore } from '../stores/chapter-store.js';
 import { useReaderStore } from '../stores/reader-store.js';
 import { useProgressStore } from '../stores/progress-store.js';
 import { useSeriesStore } from '../stores/series-store.js';
-import { persistence } from '../../js/services/persistence.js';
-import { api } from '../../js/services/api.js';
+import { persistence } from '../services/persistence.js';
+import { api } from '../services/api.js';
 import { toDirectoryUrl } from '../router/index.js';
 import { useRoute } from 'vue-router';
 

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChapterMetaCache } from './chapter-meta-cache.js';
-import { store } from '../state/store.js';
+import { store } from '../stores/store.js';
 import { getChapterCoverMeta } from '../utils/chapter-cover-meta.js';
 
-vi.mock('../state/store.js', () => ({
+vi.mock('../stores/store.js', () => ({
     store: {
         chapters: {
             flatList: [],

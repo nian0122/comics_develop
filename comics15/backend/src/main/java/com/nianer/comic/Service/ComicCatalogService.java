@@ -14,10 +14,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -62,28 +58,6 @@ public class ComicCatalogService {
 
         cacheService.put(cacheKey, series);
         return series;
-    }
-
-    public List<Map<String, String>> listChapters(String seriesName) throws IOException {
-        log.info("[Chapters] 请求获取系列章节: {}", seriesName);
-        String cacheKey = "chapters_list:" + seriesName;
-        Optional<List<Map<String, String>>> cached = cacheService.get(cacheKey, new TypeReference<List<Map<String, String>>>() {
-        }, "[Chapters]");
-        if (cached.isPresent()) {
-            return cached.get();
-        }
-
-        Path seriesPath = config.getHqPath().resolve(seriesName);
-        if (!Files.exists(seriesPath)) {
-            log.warn("[Chapters] 路径不存在: {}", seriesPath.toAbsolutePath());
-            return Collections.emptyList();
-        }
-
-        List<Map<String, String>> chaptersData = findChaptersRecursive(seriesPath, "", seriesName);
-        log.info("[Chapters] 递归扫描完成: {}, 找到章节数: {}", seriesName, chaptersData.size());
-
-        cacheService.put(cacheKey, chaptersData);
-        return chaptersData;
     }
 
     public ChapterFilesResult getChapterFiles(String seriesName, String chapterPath) throws IOException {
@@ -154,54 +128,6 @@ public class ComicCatalogService {
             }
         }
         return nodes;
-    }
-
-    private List<Map<String, String>> findChaptersRecursive(Path root, String currentRel, String seriesName) throws IOException {
-        Path fullPath = root.resolve(currentRel);
-        List<String> mediaFiles = mediaService.listSupportedMediaFiles(fullPath);
-
-        if (!mediaFiles.isEmpty()) {
-            return List.of(mediaService.buildChapterData(seriesName, currentRel, mediaFiles));
-        }
-
-        List<Path> subDirs = mediaService.listSortedSubDirectories(fullPath);
-        if (subDirs.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        try (ExecutorService scanExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
-            List<CompletableFuture<List<Map<String, String>>>> futures = subDirs.stream()
-                    .map(dir -> CompletableFuture.supplyAsync(() -> scanSubDirectory(root, currentRel, dir, seriesName), scanExecutor))
-                    .collect(Collectors.toList());
-
-            List<Map<String, String>> result = new ArrayList<>();
-            for (CompletableFuture<List<Map<String, String>>> future : futures) {
-                result.addAll(joinScanResult(future));
-            }
-            return result;
-        }
-    }
-
-    private List<Map<String, String>> scanSubDirectory(Path root, String currentRel, Path dir, String seriesName) {
-        try {
-            String childRel = currentRel.isEmpty()
-                    ? dir.getFileName().toString()
-                    : currentRel + "/" + dir.getFileName().toString();
-            return findChaptersRecursive(root, childRel, seriesName);
-        } catch (IOException e) {
-            throw new CompletionException(e);
-        }
-    }
-
-    private List<Map<String, String>> joinScanResult(CompletableFuture<List<Map<String, String>>> future) throws IOException {
-        try {
-            return future.join();
-        } catch (CompletionException e) {
-            if (e.getCause() instanceof IOException ioException) {
-                throw ioException;
-            }
-            throw e;
-        }
     }
 
     public record ChapterFilesResult(HttpStatus status, Map<String, Object> body) {

@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import ReaderMediaItem from './ReaderMediaItem.vue';
 
 // Mock api service
-vi.mock('../../js/services/api.js', () => ({
+vi.mock('../services/api.js', () => ({
     api: {
         buildLQImageUrl: vi.fn((seriesName, filename, pathId) => {
             const dotIndex = filename.lastIndexOf('.');
@@ -34,7 +34,7 @@ vi.mock('../../js/services/api.js', () => ({
 }));
 
 // Mock file-type utilities
-vi.mock('../../js/utils/file-type.js', () => ({
+vi.mock('../utils/file-type.js', () => ({
     getFileType: vi.fn((filename) => {
         const lower = filename.toLowerCase();
         if (lower.endsWith('.mp4') || lower.endsWith('.mov')) return 'video';
@@ -54,7 +54,7 @@ vi.mock('../../js/utils/file-type.js', () => ({
 }));
 
 // Mock constants
-vi.mock('../../js/config/constants.js', () => ({
+vi.mock('../config/constants.js', () => ({
     IMAGE_RETRY_CONFIG: {
         MAX_RETRIES: 3,
         INITIAL_DELAY: 1000,
@@ -64,7 +64,7 @@ vi.mock('../../js/config/constants.js', () => ({
     DOUBLE_CLICK_THRESHOLD: 300
 }));
 
-import { api } from '../../js/services/api.js';
+import { api } from '../services/api.js';
 
 describe('ReaderMediaItem', () => {
     let wrapper;

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
-import { progressState } from '../../js/state/progress-state.js';
-import { persistence } from '../../js/services/persistence.js';
+import { progressState } from './progress-state.js';
+import { persistence } from '../services/persistence.js';
 
 export const useProgressStore = defineStore('progress', {
     state: () => ({

@@ -41,7 +41,7 @@ vi.mock('./stores/chapter-store.js', () => ({
 }));
 
 // Mock persistence
-vi.mock('../js/services/persistence.js', () => ({
+vi.mock('./services/persistence.js', () => ({
     persistence: {
         getCurrentSeries: vi.fn(),
         getCurrentChapterPath: vi.fn()
@@ -51,7 +51,7 @@ vi.mock('../js/services/persistence.js', () => ({
 import { useRoute } from 'vue-router';
 import { useSeriesStore } from './stores/series-store.js';
 import { useChapterStore } from './stores/chapter-store.js';
-import { persistence } from '../js/services/persistence.js';
+import { persistence } from './services/persistence.js';
 import { toReaderUrl, toSeriesUrl } from './router/index.js';
 
 describe('App.vue 根路径恢复逻辑', () => {

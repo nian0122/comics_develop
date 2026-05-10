@@ -67,12 +67,12 @@
 import { ref, computed, onMounted, watch, onBeforeUnmount, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useChapterStore } from '../stores/chapter-store.js';
-import { storage } from '../../js/services/storage.js';
+import { storage } from '../services/storage.js';
 import { toDirectoryUrl, toReaderUrl, toSeriesListUrl } from '../router/index.js';
-import { splitChapterPath, getParentPath } from '../../js/utils/chapter-tree.js';
-import { ChapterMetaCache } from '../../js/app/chapter-meta-cache.js';
-import { RequestQueue } from '../../js/utils/request-queue.js';
-import { LAZY_LOAD_CONFIG } from '../../js/config/constants.js';
+import { splitChapterPath, getParentPath } from '../utils/chapter-tree.js';
+import { ChapterMetaCache } from '../services/chapter-meta-cache.js';
+import { RequestQueue } from '../utils/request-queue.js';
+import { LAZY_LOAD_CONFIG } from '../config/constants.js';
 import ChapterCard from '../components/ChapterCard.vue';
 
 const route = useRoute();

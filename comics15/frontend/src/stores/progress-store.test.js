@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useProgressStore } from './progress-store.js';
 
-vi.mock('../../js/services/persistence.js', () => ({
+vi.mock('../services/persistence.js', () => ({
     persistence: {
         saveProgress: vi.fn(),
         getProgress: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock('../../js/services/persistence.js', () => ({
     }
 }));
 
-vi.mock('../../js/state/progress-state.js', () => ({
+vi.mock('./progress-state.js', () => ({
     progressState: {
         init: vi.fn(),
         setCurrentPage: vi.fn(),
@@ -20,8 +20,8 @@ vi.mock('../../js/state/progress-state.js', () => ({
     }
 }));
 
-import { persistence } from '../../js/services/persistence.js';
-import { progressState } from '../../js/state/progress-state.js';
+import { persistence } from '../services/persistence.js';
+import { progressState } from './progress-state.js';
 
 describe('progress-store', () => {
     beforeEach(() => {

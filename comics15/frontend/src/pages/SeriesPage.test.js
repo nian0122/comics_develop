@@ -25,14 +25,14 @@ vi.mock('../stores/series-store.js', () => ({
 }));
 
 // Mock storage service
-vi.mock('../../js/services/storage.js', () => ({
+vi.mock('../services/storage.js', () => ({
     storage: {
         getSeriesLastReading: vi.fn()
     }
 }));
 
 import { useSeriesStore } from '../stores/series-store.js';
-import { storage } from '../../js/services/storage.js';
+import { storage } from '../services/storage.js';
 import { toSeriesUrl } from '../router/index.js';
 
 describe('SeriesPage', () => {

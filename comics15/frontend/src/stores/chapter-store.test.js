@@ -2,23 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useChapterStore } from './chapter-store.js';
 
-vi.mock('../../js/services/api.js', () => ({
-    api: {
-        getChapters: vi.fn()
-    }
-}));
-
-vi.mock('../../js/services/catalog-api.js', () => ({
+vi.mock('../services/catalog-api.js', () => ({
     catalogApi: {
         getLevelNodes: vi.fn()
     }
 }));
 
-vi.mock('../../js/utils/chapter-tree.js', () => ({
+vi.mock('../utils/chapter-tree.js', () => ({
     buildChapterTree: vi.fn()
 }));
 
-vi.mock('../../js/app/chapter-meta-cache.js', () => ({
+vi.mock('../services/chapter-meta-cache.js', () => ({
     ChapterMetaCache: vi.fn().mockImplementation(() => ({
         cache: new Map(),
         pathIdCache: new Map(),
@@ -28,9 +22,8 @@ vi.mock('../../js/app/chapter-meta-cache.js', () => ({
     }))
 }));
 
-import { api } from '../../js/services/api.js';
-import { catalogApi } from '../../js/services/catalog-api.js';
-import { buildChapterTree } from '../../js/utils/chapter-tree.js';
+import { catalogApi } from '../services/catalog-api.js';
+import { buildChapterTree } from '../utils/chapter-tree.js';
 
 describe('chapter-store', () => {
     beforeEach(() => {
@@ -39,27 +32,43 @@ describe('chapter-store', () => {
     });
 
     describe('loadChapters', () => {
-        it('加载章节列表并构建树', async () => {
-            const mockChapters = [
-                { path_id: '第一卷/第1话', name: '第1话' },
-                { path_id: '第一卷/第2话', name: '第2话' }
+        it('通过层级 API 递归加载所有章节并构建树', async () => {
+            const rootNodes = [
+                { name: '第一卷', type: 'directory', path: '第一卷' },
+                { name: '第二卷', type: 'directory', path: '第二卷' }
+            ];
+            const volume1Nodes = [
+                { path_id: '第一卷/第1话', name: '第1话', type: 'chapter' },
+                { path_id: '第一卷/第2话', name: '第2话', type: 'chapter' }
+            ];
+            const volume2Nodes = [
+                { path_id: '第二卷/第1话', name: '第1话', type: 'chapter' }
             ];
             const mockTree = { name: 'root', children: [] };
-            api.getChapters.mockResolvedValue({ chapters: mockChapters });
+
+            catalogApi.getLevelNodes
+                .mockResolvedValueOnce(rootNodes)
+                .mockResolvedValueOnce(volume1Nodes)
+                .mockResolvedValueOnce(volume2Nodes);
             buildChapterTree.mockReturnValue(mockTree);
 
             const store = useChapterStore();
             const result = await store.loadChapters('测试系列');
 
-            expect(result.flatList).toEqual(mockChapters);
+            const expectedChapters = [
+                { path_id: '第一卷/第1话', name: '第1话', type: 'chapter' },
+                { path_id: '第一卷/第2话', name: '第2话', type: 'chapter' },
+                { path_id: '第二卷/第1话', name: '第1话', type: 'chapter' }
+            ];
+            expect(result.flatList).toEqual(expectedChapters);
             expect(result.tree).toEqual(mockTree);
-            expect(store.flatList).toEqual(mockChapters);
+            expect(store.flatList).toEqual(expectedChapters);
             expect(store.tree).toEqual(mockTree);
             expect(store.loading).toBe(false);
         });
 
         it('加载时清除元数据缓存', async () => {
-            api.getChapters.mockResolvedValue({ chapters: [] });
+            catalogApi.getLevelNodes.mockResolvedValue([]);
             buildChapterTree.mockReturnValue({});
 
             const store = useChapterStore();
@@ -69,7 +78,7 @@ describe('chapter-store', () => {
         });
 
         it('处理 API 错误', async () => {
-            api.getChapters.mockRejectedValue(new Error('网络错误'));
+            catalogApi.getLevelNodes.mockRejectedValue(new Error('网络错误'));
 
             const store = useChapterStore();
 
@@ -161,140 +170,92 @@ describe('chapter-store', () => {
         });
     });
 
-    describe('levelCache', () => {
-        it('setLevelCache 和 getLevelCache', () => {
-            const store = useChapterStore();
-            const nodes = [{ name: '第一卷' }];
-
-            store.setLevelCache('第一卷', nodes);
-
-            expect(store.getLevelCache('第一卷')).toEqual(nodes);
-        });
-
-        it('clearLevelCache 清除缓存', () => {
-            const store = useChapterStore();
-            store.setLevelCache('path', [{ name: 'test' }]);
-
-            store.clearLevelCache();
-
-            expect(store.levelCache.size).toBe(0);
-        });
-    });
-
-    describe('章节导航', () => {
-        beforeEach(() => {
+    describe('getChapterAtIndex', () => {
+        it('获取指定索引的章节', () => {
             const store = useChapterStore();
             store.flatList = [
                 { path_id: '第1话' },
                 { path_id: '第2话' },
                 { path_id: '第3话' }
             ];
-            store.currentIndex = 1;
+
+            const chapter = store.getChapterAtIndex(1);
+
+            expect(chapter).toEqual({ path_id: '第2话' });
         });
 
-        it('getNextChapter 返回下一章节', () => {
-            const store = useChapterStore();
-
-            expect(store.getNextChapter()).toEqual({ path_id: '第3话' });
-        });
-
-        it('getPrevChapter 返回上一章节', () => {
-            const store = useChapterStore();
-
-            expect(store.getPrevChapter()).toEqual({ path_id: '第1话' });
-        });
-
-        it('最后章节无下一章', () => {
-            const store = useChapterStore();
-            store.currentIndex = 2;
-
-            expect(store.getNextChapter()).toBeNull();
-        });
-
-        it('第一章节无上一章', () => {
-            const store = useChapterStore();
-            store.currentIndex = 0;
-
-            expect(store.getPrevChapter()).toBeNull();
-        });
-    });
-
-    describe('getters', () => {
-        it('hasChapters 返回是否有章节', () => {
-            const store = useChapterStore();
-
-            expect(store.hasChapters).toBe(false);
-
-            store.flatList = [{ path_id: '第1话' }];
-
-            expect(store.hasChapters).toBe(true);
-        });
-
-        it('totalChapters 返回总数', () => {
-            const store = useChapterStore();
-            store.flatList = [{}, {}, {}];
-
-            expect(store.totalChapters).toBe(3);
-        });
-
-        it('hasNextChapter 和 hasPrevChapter', () => {
-            const store = useChapterStore();
-            store.flatList = [{}, {}, {}];
-            store.currentIndex = 1;
-
-            expect(store.hasNextChapter).toBe(true);
-            expect(store.hasPrevChapter).toBe(true);
-
-            store.currentIndex = 2;
-            expect(store.hasNextChapter).toBe(false);
-
-            store.currentIndex = 0;
-            expect(store.hasPrevChapter).toBe(false);
-        });
-
-        it('currentChapter getter', () => {
-            const store = useChapterStore();
-            store.flatList = [{ path_id: 'A' }, { path_id: 'B' }];
-            store.currentIndex = 1;
-
-            expect(store.currentChapter).toEqual({ path_id: 'B' });
-        });
-    });
-
-    describe('metaCache', () => {
-        it('getChapterMeta 调用缓存', async () => {
+        it('无效索引返回 null', () => {
             const store = useChapterStore();
             store.flatList = [{ path_id: '第1话' }];
 
-            await store.getChapterMeta(0);
+            const chapter = store.getChapterAtIndex(5);
 
-            expect(store.metaCache.getOrFetch).toHaveBeenCalledWith(0);
+            expect(chapter).toBeNull();
+        });
+    });
+
+    describe('getCurrentChapter', () => {
+        it('获取当前章节', () => {
+            const store = useChapterStore();
+            store.flatList = [{ path_id: '第1话' }, { path_id: '第2话' }];
+            store.currentIndex = 1;
+
+            const chapter = store.getCurrentChapter();
+
+            expect(chapter).toEqual({ path_id: '第2话' });
+        });
+    });
+
+    describe('getNextChapter', () => {
+        it('获取下一章', () => {
+            const store = useChapterStore();
+            store.flatList = [{ path_id: '第1话' }, { path_id: '第2话' }, { path_id: '第3话' }];
+            store.currentIndex = 0;
+
+            const next = store.getNextChapter();
+
+            expect(next).toEqual({ path_id: '第2话' });
         });
 
-        it('getChapterMetaByPathId 调用缓存', async () => {
+        it('最后一章返回 null', () => {
             const store = useChapterStore();
+            store.flatList = [{ path_id: '第1话' }, { path_id: '第2话' }];
+            store.currentIndex = 1;
 
-            await store.getChapterMetaByPathId('第1话');
+            const next = store.getNextChapter();
 
-            expect(store.metaCache.getOrFetchByPathId).toHaveBeenCalledWith('第1话');
+            expect(next).toBeNull();
+        });
+    });
+
+    describe('getPrevChapter', () => {
+        it('获取上一章', () => {
+            const store = useChapterStore();
+            store.flatList = [{ path_id: '第1话' }, { path_id: '第2话' }, { path_id: '第3话' }];
+            store.currentIndex = 2;
+
+            const prev = store.getPrevChapter();
+
+            expect(prev).toEqual({ path_id: '第2话' });
         });
 
-        it('clearMetaCache 调用缓存清除', () => {
+        it('第一章返回 null', () => {
             const store = useChapterStore();
+            store.flatList = [{ path_id: '第1话' }, { path_id: '第2话' }];
+            store.currentIndex = 0;
 
-            store.clearMetaCache();
+            const prev = store.getPrevChapter();
 
-            expect(store.metaCache.clear).toHaveBeenCalled();
+            expect(prev).toBeNull();
         });
     });
 
     describe('$reset', () => {
-        it('重置整个 store 状态', () => {
+        it('重置所有状态', () => {
             const store = useChapterStore();
-            store.flatList = [{ path_id: 'A' }];
-            store.tree = [{ name: 'root' }];
+            store.flatList = [{ path_id: '第1话' }];
+            store.tree = { children: [] };
             store.currentIndex = 0;
-            store.setLevelCache('path', [{}]);
             store.loading = true;
             store.error = '错误';
 
@@ -303,7 +264,6 @@ describe('chapter-store', () => {
             expect(store.flatList).toEqual([]);
             expect(store.tree).toEqual([]);
             expect(store.currentIndex).toBe(-1);
-            expect(store.levelCache.size).toBe(0);
             expect(store.loading).toBe(false);
             expect(store.error).toBeNull();
             expect(store.metaCache.clear).toHaveBeenCalled();

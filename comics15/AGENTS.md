@@ -1,21 +1,20 @@
 # PROJECT KNOWLEDGE BASE - Comic Reader
 
-**Generated:** 2026-05-08
-**Commit:** f02f0a5
+**Generated:** 2026-05-10
+**Commit:** 11da6b3
 **Branch:** 不做ios适配
 **语言**: 始终使用中文对话、注释、提交信息。
 
 ## OVERVIEW
-本地漫画阅读器：Spring Boot 4.0.2 + Java 21 后端，Vue3/Vite 主阅读器 + Vanilla 工具页前端，Nginx 静态媒体服务，Redis 缓存优先并可文件系统降级。
+本地漫画阅读器：Spring Boot 4.0.2 + Java 21 后端，Vue3/Vite 单页前端，Nginx 静态媒体服务，Redis 缓存优先并可文件系统降级。
 项目另含 3 个独立 Go CLI 工具，由后端工具 API 异步调度。
 
 ## STRUCTURE
 ```text
 comics15/
 ├── backend/                 # Spring Boot API、Service 拆分、Redis 降级、工具执行
-├── frontend/                # 双入口 Vite 前端：Vue3 阅读器 + Vanilla 工具页
-├── frontend/src/            # Vue3 主阅读器：pages/components/stores/router
-├── frontend/js/             # 工具页入口与 Vue3 复用的共享服务/工具模块
+├── frontend/                # Vite + Vue3：阅读器与工具管理页同属 SPA
+├── frontend/src/            # pages/components/stores/services/router/utils
 ├── tools/                   # 独立 Go CLI：图片优化/叶目录查找/清空文件
 ├── docs/                    # 架构、移动端设计、启动说明；只作设计参考
 ├── nginx.conf               # API 反代 + HQ/LQ/video 静态媒体 alias
@@ -28,15 +27,15 @@ comics15/
 | 漫画目录/章节/文件 API | `backend/.../Controller/ComicController.java` | Controller 只编排；业务在 Service |
 | 目录扫描业务 | `backend/.../Service/ComicCatalogService.java` | 系列、章节树、层级节点；虚拟线程池扫描 |
 | Redis 缓存读写 | `backend/.../Service/ComicCacheService.java` | `series_list`, `chapters_list:{series}`, `chapter_files:{series}:{chapter}` |
-| 媒体文件处理 | `backend/.../Service/ComicMediaService.java` | 支持文件过滤、自然排序、HQ/LQ/video URL 构建 |
-| 外部工具 API | `backend/.../Controller/ToolController.java` | `/api/tools`，异步执行、状态轮询、取消、清理 |
+| 媒体文件处理 | `backend/.../Service/ComicMediaService.java` | 文件过滤、自然排序、HQ/LQ/video URL 构建 |
+| 外部工具 API | `backend/.../Controller/ToolController.java` | `/api/tools`，执行、状态轮询、取消、清理 |
 | 工具进程调度 | `backend/.../Service/ToolExecutor.java` | `ProcessBuilder` 调用 `tools/*/*.exe`，解析中文日志 |
-| 主阅读器入口 | `frontend/index.html` + `frontend/src/main.js` | Vue3 + Pinia + Vue Router |
-| 页面级视图 | `frontend/src/pages/` | `SeriesPage`, `DirectoryPage`, `ReaderPage` |
-| Vue 组件 | `frontend/src/components/` | `ChapterCard`, `ReaderShell`, `ReaderMediaItem`, `JumpPageModal` |
+| 前端入口 | `frontend/index.html` + `frontend/src/main.js` | Vue3 + Pinia + Vue Router |
+| 页面级视图 | `frontend/src/pages/` | `SeriesPage`, `DirectoryPage`, `ReaderPage`, `ToolsPage` |
+| Vue 组件 | `frontend/src/components/` | 阅读器组件 + `components/tools/` 工具页组件 |
 | 路由/URL 构建 | `frontend/src/router/index.js` | `/series/{series}/dir|read/{path}`；中文路径分段编码 |
-| 媒体 URL 构建 | `frontend/js/services/media-url.js` + `api.js` | 中文路径必须编码；LQ 缺失 204 回退 HQ |
-| 工具页入口 | `frontend/tools.html` + `frontend/js/tools-main.js` | 工具表单、执行记录、1 秒轮询 |
+| 媒体 URL 构建 | `frontend/src/services/media-url.js` + `api.js` | LQ 缺失 204 回退 HQ；GIF/video 走 `/video/` |
+| 工具页状态/API | `frontend/src/stores/tools-store.js` + `frontend/src/services/tools-api.js` | 工具列表、执行记录、轮询 |
 | Go 工具说明 | `tools/*/readme.md` | UI/后端参数契约；每个工具独立 go.mod |
 
 ## CODE MAP
@@ -53,6 +52,7 @@ comics15/
 | `SeriesPage` | Vue page | `frontend/src/pages/SeriesPage.vue` | 系列列表、搜索过滤、错误展示 |
 | `DirectoryPage` | Vue page | `frontend/src/pages/DirectoryPage.vue` | 章节树、封面懒加载、目录渲染 |
 | `ReaderShell` | Vue component | `frontend/src/components/ReaderShell.vue` | 阅读器控制壳、跳页、进度、章节导航 |
+| `ToolsPage` | Vue page | `frontend/src/pages/ToolsPage.vue` | 工具管理页编排 |
 | `router` | Vue Router module | `frontend/src/router/index.js` | Vue Router、URL 构建、中文路径分段编码 |
 
 ## COMMANDS
@@ -67,13 +67,13 @@ comics15/
 # Frontend: from frontend/
 npm run dev              # 默认 5173；VITE_DEV_PORT 可覆盖
 npm run build
-npm run preview
+npm run preview          # preview 4173
 npm test
 npm run test:watch
 npm run test:coverage
 npm run lint
 npm run lint:fix
-vitest run js/utils/dom.test.js
+vitest run src/utils/dom.test.js
 
 # Docker: from repo root
 docker compose up --build
@@ -100,7 +100,7 @@ docker compose logs -f
 | `docs/superpowers/specs/*` | 详细设计稿 | 大重构前参考；必须对照实际代码验证 |
 
 ## CONVENTIONS
-- 子目录有本地知识库：先读 `backend/AGENTS.md`、`frontend/AGENTS.md`、`tools/AGENTS.md`；前端旧 `frontend/js/app` 和 `frontend/js/router` 主阅读器知识库已随 Vue3 迁移清理删除。
+- 子目录有本地知识库：先读 `backend/AGENTS.md`、`frontend/AGENTS.md`、`tools/AGENTS.md`。
 - README 仍含旧信息：`comics13`、`backend/comic/`、`docker-compose.dev.yml`、`docker-compose.prod.yml`、`LICENSE`；实际仓库不同。
 - Tailwind 通过 CDN 引入；没有本地 `tailwind.config.js`。
 - 测试文件：后端在 `backend/src/test/...`；前端 `*.test.js` 与源文件同目录；Go 工具暂无 `_test.go`。
@@ -115,7 +115,7 @@ docker compose logs -f
 - Nginx 静态漫画路径用 `alias`，不要改成 `rewrite + root`。
 
 ## NOTES
-- 非标准端口：后端 500，Vite dev 默认 5173（可 `VITE_DEV_PORT` 覆盖），Vite preview 4173，Docker 前端 5000:80，Redis 6379。
+- 非标准端口：后端 500，Vite dev 默认 5173，Vite preview 4173，Docker 前端 5000:80，Redis 6379。
 - 漫画目录默认本机 `F:\games\comics`，容器内 `/comics`，只读挂载。
 - 文件组织：`h_photograph/{series}/{chapter}` 为 HQ，`l_photograph/{series}/{chapter}` 为 LQ WebP。
 - 支持媒体：图片 `.jpg/.jpeg/.png/.webp`，视频/GIF `.mp4/.mov/.gif`；GIF 走 `/video/`。

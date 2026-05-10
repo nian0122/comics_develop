@@ -1,9 +1,9 @@
 // 系列状态管理 - 封装系列加载和当前系列选择逻辑
 
 import { defineStore } from 'pinia';
-import { api } from '../../js/services/api.js';
-import { storage } from '../../js/services/storage.js';
-import { persistence } from '../../js/services/persistence.js';
+import { api } from '../services/api.js';
+import { storage } from '../services/storage.js';
+import { persistence } from '../services/persistence.js';
 
 /**
  * 系列状态管理 store
@@ -27,17 +27,22 @@ export const useSeriesStore = defineStore('series', {
          * 调用 api.getSeries() 获取数据
          */
         async loadSeries() {
+            console.log('1. 开始加载，loading 设为 true');
             this.loading = true;
             this.error = null;
             try {
+                console.log('2. 正在请求 API...');
                 const data = await api.getSeries();
+                console.log('3. API 响应成功:', data);
                 this.list = data.series || [];
+                console.log('4. 列表赋值完毕，长度:', this.list.length);
                 return this.list;
             } catch (e) {
                 this.error = e.message || '获取系列失败';
                 throw e;
             } finally {
                 this.loading = false;
+                console.log('5. 流程结束，loading 设为 false');
             }
         },
 

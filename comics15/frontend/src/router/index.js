@@ -51,6 +51,11 @@ export const routes = [
         path: '/series/:series/read/:path(.*)',
         name: 'reader',
         component: () => import('../pages/ReaderPage.vue')
+    },
+    {
+        path: '/tools',
+        name: 'tools',
+        component: () => import('../pages/ToolsPage.vue')
     }
 ];
 

@@ -35,12 +35,6 @@ export const api = {
         return res.json();
     },
 
-    async getChapters(seriesName) {
-        const res = await fetch(`/api/chapters/${encodeURIComponent(seriesName)}`);
-        if (!res.ok) throw new ApiError('获取章节失败', res.status);
-        return res.json();
-    },
-
     async getChapterFiles(seriesName, chapterPath, page = 1, perPage = MAX_IMAGES_TO_FETCH) {
         const url = `/api/chapter/${encodeURIComponent(seriesName)}?chapterPath=${encodeURIComponent(chapterPath)}&page=${page}&per_page=${perPage}`;
         const res = await fetch(url);

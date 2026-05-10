@@ -1,6 +1,6 @@
 // 章节元数据缓存模块
 
-import { store } from '../state/store.js';
+import { store } from '../stores/store.js';
 import { getChapterCoverMeta } from '../utils/chapter-cover-meta.js';
 
 export class ChapterMetaCache {
