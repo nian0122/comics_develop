@@ -2,37 +2,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import ReaderMediaItem from './ReaderMediaItem.vue';
 
-// Mock api service
-vi.mock('../services/api.js', () => ({
-    api: {
-        buildLQImageUrl: vi.fn((seriesName, filename, pathId) => {
-            const dotIndex = filename.lastIndexOf('.');
-            const baseName = dotIndex > -1 ? filename.substring(0, dotIndex) : filename;
-            const encodedSeries = encodeURIComponent(seriesName);
-            const encodedPath = encodeURIComponent(pathId);
-            const encodedFilename = encodeURIComponent(`${baseName}.webp`);
-            return `/lq_image/${encodedSeries}/${encodedPath}/${encodedFilename}`;
-        }),
-        buildHQImageUrl: vi.fn((seriesName, filename, pathId) => {
-            const encodedSeries = encodeURIComponent(seriesName);
-            const encodedPath = encodeURIComponent(pathId);
-            const encodedFilename = encodeURIComponent(filename);
-            return `/hq_image/${encodedSeries}/${encodedPath}/${encodedFilename}`;
-        }),
-        buildVideoUrl: vi.fn((seriesName, filename, pathId) => {
-            const encodedSeries = encodeURIComponent(seriesName);
-            const encodedPath = encodeURIComponent(pathId);
-            const encodedFilename = encodeURIComponent(filename);
-            return `/video/${encodedSeries}/${encodedPath}/${encodedFilename}`;
-        }),
-        resolveImageUrl: vi.fn(async (seriesName, filename, pathId) => ({
-            url: `/hq_image/${encodeURIComponent(seriesName)}/${encodeURIComponent(pathId)}/${encodeURIComponent(filename)}`,
-            source: 'hq'
-        })),
-        checkHQImageUsable: vi.fn(async (hqUrl) => hqUrl.includes('/hq_image/'))
-    }
-}));
-
 // Mock file-type utilities
 vi.mock('../utils/file-type.js', () => ({
     getFileType: vi.fn((filename) => {
@@ -45,12 +14,7 @@ vi.mock('../utils/file-type.js', () => ({
     useVideoPath: vi.fn((filename) => {
         const lower = filename.toLowerCase();
         return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.gif');
-    }),
-    isVideoFile: vi.fn((filename) => {
-        const lower = filename.toLowerCase();
-        return lower.endsWith('.mp4') || lower.endsWith('.mov');
-    }),
-    isGifFile: vi.fn((filename) => filename.toLowerCase().endsWith('.gif'))
+    })
 }));
 
 // Mock constants
@@ -64,8 +28,6 @@ vi.mock('../config/constants.js', () => ({
     DOUBLE_CLICK_THRESHOLD: 300
 }));
 
-import { api } from '../services/api.js';
-
 describe('ReaderMediaItem', () => {
     let wrapper;
 
@@ -76,15 +38,33 @@ describe('ReaderMediaItem', () => {
         vi.clearAllMocks();
     });
 
+    // 测试用的文件对象（模拟后端返回的结构）
+    const createMockFile = (overrides = {}) => ({
+        name: '001.jpg',
+        baseName: '001',
+        mediaType: 'image',
+        preferredSource: 'lq',
+        hq: {
+            exists: true,
+            size: 1234567,
+            url: '/hq_image/Series/chapter/001.jpg'
+        },
+        lq: {
+            exists: true,
+            url: '/lq_image/Series/chapter/001.webp'
+        },
+        path_id: 'chapter',
+        ...overrides
+    });
+
     describe('DOM 结构', () => {
         it('渲染 lazy-image-container 容器和 data 属性', async () => {
+            const mockFile = createMockFile();
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter/path',
-                    seriesName: 'Series',
+                    file: mockFile,
                     index: 0,
-                    coverSource: 'lq'
+                    seriesName: 'Series'
                 }
             });
 
@@ -92,7 +72,7 @@ describe('ReaderMediaItem', () => {
             expect(container.exists()).toBe(true);
             expect(container.attributes('data-index')).toBe('0');
             expect(container.attributes('data-filename')).toBe('001.jpg');
-            expect(container.attributes('data-path-id')).toBe('chapter/path');
+            expect(container.attributes('data-path-id')).toBe('chapter');
             expect(container.attributes('data-series-name')).toBe('Series');
             expect(container.attributes('data-cover-source')).toBe('lq');
         });
@@ -100,10 +80,9 @@ describe('ReaderMediaItem', () => {
         it('渲染 skeleton-wrapper 和 skeleton-image 骨架屏占位', async () => {
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: 'Series',
-                    index: 0
+                    file: createMockFile(),
+                    index: 0,
+                    seriesName: 'Series'
                 }
             });
 
@@ -112,124 +91,135 @@ describe('ReaderMediaItem', () => {
         });
     });
 
-    describe('URL 构建 - coverSource 策略', () => {
-        it('coverSource=lq 时使用 buildLQImageUrl，不调用 resolveImageUrl', async () => {
-            vi.clearAllMocks();
-
+    describe('URL 选择 - preferredSource 策略', () => {
+        it('preferredSource=lq 时使用 file.lq.url', async () => {
+            const mockFile = createMockFile({ preferredSource: 'lq' });
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: '测试系列',
+                    file: mockFile,
                     index: 0,
-                    coverSource: 'lq'
+                    seriesName: 'Series'
                 }
             });
 
             await wrapper.vm.loadMedia();
             await flushPromises();
 
-            expect(api.buildLQImageUrl).toHaveBeenCalledWith('测试系列', '001.jpg', 'chapter');
-            expect(api.resolveImageUrl).not.toHaveBeenCalled();
+            const img = wrapper.find('.reader-img');
+            expect(img.attributes('src')).toBe('/lq_image/Series/chapter/001.webp');
         });
 
-        it('coverSource=hq 时使用 buildHQImageUrl，不调用 resolveImageUrl', async () => {
-            vi.clearAllMocks();
-
+        it('preferredSource=hq 时使用 file.hq.url', async () => {
+            const mockFile = createMockFile({ preferredSource: 'hq' });
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: '001.png',
-                    pathId: '第2话',
-                    seriesName: 'Series',
+                    file: mockFile,
                     index: 0,
-                    coverSource: 'hq'
+                    seriesName: 'Series'
                 }
             });
 
             await wrapper.vm.loadMedia();
             await flushPromises();
 
-            expect(api.buildHQImageUrl).toHaveBeenCalledWith('Series', '001.png', '第2话');
-            expect(api.resolveImageUrl).not.toHaveBeenCalled();
+            const img = wrapper.find('.reader-img');
+            expect(img.attributes('src')).toBe('/hq_image/Series/chapter/001.jpg');
         });
 
-        it('缺少 coverSource 时调用 resolveImageUrl 进行逐图解析', async () => {
-            vi.clearAllMocks();
-
+        it('forceHQ=true 时强制使用 file.hq.url', async () => {
+            const mockFile = createMockFile({ preferredSource: 'lq' });
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: 'Series',
-                    index: 0
+                    file: mockFile,
+                    index: 0,
+                    seriesName: 'Series'
+                }
+            });
+
+            await wrapper.vm.loadMedia(true); // forceHQ = true
+            await flushPromises();
+
+            const img = wrapper.find('.reader-img');
+            expect(img.attributes('src')).toBe('/hq_image/Series/chapter/001.jpg');
+        });
+
+        it('LQ URL 不存在时回退到 HQ URL', async () => {
+            const mockFile = createMockFile({ 
+                preferredSource: 'lq',
+                lq: { exists: false, url: '' }
+            });
+            wrapper = mount(ReaderMediaItem, {
+                props: {
+                    file: mockFile,
+                    index: 0,
+                    seriesName: 'Series'
                 }
             });
 
             await wrapper.vm.loadMedia();
             await flushPromises();
 
-            expect(api.resolveImageUrl).toHaveBeenCalledWith('Series', '001.jpg', 'chapter');
+            const img = wrapper.find('.reader-img');
+            expect(img.attributes('src')).toBe('/hq_image/Series/chapter/001.jpg');
         });
     });
 
-    describe('GIF/视频处理', () => {
-        it('视频文件使用 buildVideoUrl 并渲染 video 元素', async () => {
-            vi.clearAllMocks();
-
+    describe('视频文件处理', () => {
+        it('视频类型使用 file.videoUrl', async () => {
+            const mockFile = createMockFile({
+                name: 'video.mp4',
+                mediaType: 'video',
+                videoUrl: '/video/Series/chapter/video.mp4',
+                hq: { exists: true, size: 9876543, url: '/hq_image/Series/chapter/video.mp4' }
+            });
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: 'clip.mp4',
-                    pathId: 'PV',
-                    seriesName: 'Series',
+                    file: mockFile,
                     index: 0,
-                    coverSource: 'lq'
+                    seriesName: 'Series'
                 }
             });
 
             await wrapper.vm.loadMedia();
             await flushPromises();
 
-            expect(api.buildVideoUrl).toHaveBeenCalledWith('Series', 'clip.mp4', 'PV');
-            expect(api.buildLQImageUrl).not.toHaveBeenCalled();
-
-            const video = wrapper.find('video.reader-img');
+            const video = wrapper.find('video');
             expect(video.exists()).toBe(true);
-            expect(video.attributes('controls')).toBeDefined();
+            expect(video.attributes('src')).toBe('/video/Series/chapter/video.mp4');
         });
 
-        it('GIF 文件使用 buildVideoUrl 并渲染 img 元素（legacy behavior）', async () => {
-            vi.clearAllMocks();
-
+        it('GIF 类型使用 file.videoUrl', async () => {
+            const mockFile = createMockFile({
+                name: 'animation.gif',
+                mediaType: 'video',
+                videoUrl: '/video/Series/chapter/animation.gif',
+                hq: { exists: true, size: 123456, url: '/hq_image/Series/chapter/animation.gif' }
+            });
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: 'animation.gif',
-                    pathId: 'PV',
-                    seriesName: 'Series',
+                    file: mockFile,
                     index: 0,
-                    coverSource: 'lq'
+                    seriesName: 'Series'
                 }
             });
 
             await wrapper.vm.loadMedia();
             await flushPromises();
 
-            expect(api.buildVideoUrl).toHaveBeenCalledWith('Series', 'animation.gif', 'PV');
-            expect(api.buildLQImageUrl).not.toHaveBeenCalled();
-
-            const img = wrapper.find('img.reader-img');
+            // GIF 应该渲染为 img 标签（根据 getFileType 返回 'gif'）
+            const img = wrapper.find('.reader-img');
             expect(img.exists()).toBe(true);
         });
     });
 
-    describe('加载成功/失败事件', () => {
-        it('图片加载成功时 emit loaded 事件', async () => {
+    describe('事件处理', () => {
+        it('加载成功后触发 loaded 事件', async () => {
+            const mockFile = createMockFile();
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: 'Series',
+                    file: mockFile,
                     index: 0,
-                    coverSource: 'hq'
+                    seriesName: 'Series'
                 }
             });
 
@@ -237,194 +227,99 @@ describe('ReaderMediaItem', () => {
             await flushPromises();
 
             // 模拟图片加载成功
-            const img = wrapper.find('img.reader-img');
-            if (img.exists()) {
-                await img.trigger('load');
-            }
+            const img = wrapper.find('.reader-img');
+            await img.trigger('load');
 
             expect(wrapper.emitted('loaded')).toBeTruthy();
+            expect(wrapper.emitted('loaded')[0]).toEqual([{ index: 0, filename: '001.jpg' }]);
         });
 
-        it('最终加载失败时 emit failed 事件', async () => {
-            vi.useFakeTimers();
-            api.checkHQImageUsable.mockResolvedValue(false);
-
+        it('LQ 加载失败时回退到 HQ', async () => {
+            const mockFile = createMockFile({ preferredSource: 'lq' });
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: 'Series',
+                    file: mockFile,
                     index: 0,
-                    coverSource: 'lq'
+                    seriesName: 'Series'
                 }
             });
 
             await wrapper.vm.loadMedia();
             await flushPromises();
 
-            // 模拟 LQ 图片加载失败（触发 HQ fallback）
-            const img = wrapper.find('img.reader-img');
-            if (img.exists()) {
-                await img.trigger('error');
-                vi.advanceTimersByTime(500);
-                await flushPromises();
-            }
+            // 初始应该是 LQ
+            let img = wrapper.find('.reader-img');
+            expect(img.attributes('src')).toBe('/lq_image/Series/chapter/001.webp');
 
-            // 模拟多次重试后最终失败
-            vi.advanceTimersByTime(10000);
+            // 模拟加载失败
+            await img.trigger('error');
             await flushPromises();
 
-            vi.useRealTimers();
-
-            // 验证失败事件（取决于重试配置）
-            const failedEvents = wrapper.emitted('failed');
-            if (failedEvents) {
-                expect(failedEvents.length).toBeGreaterThanOrEqual(0);
-            }
+            // 应该切换到 HQ
+            img = wrapper.find('.reader-img');
+            expect(img.attributes('src')).toBe('/hq_image/Series/chapter/001.jpg');
         });
     });
 
-    describe('LQ fallback HQ', () => {
-        it('LQ 图片 error 时尝试 HQ URL fallback', async () => {
-            vi.clearAllMocks();
-            api.buildHQImageUrl.mockReturnValue('/hq_image/Series/chapter/001.jpg');
-
+    describe('scale 属性', () => {
+        it('应用 scale 到图片宽度', async () => {
+            const mockFile = createMockFile();
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: 'Series',
+                    file: mockFile,
                     index: 0,
-                    coverSource: 'lq'
+                    seriesName: 'Series',
+                    scale: 75
                 }
             });
 
             await wrapper.vm.loadMedia();
             await flushPromises();
 
-            // 确认首先使用了 LQ URL
-            expect(api.buildLQImageUrl).toHaveBeenCalled();
-
-            // 模拟 LQ 图片加载失败
-            const img = wrapper.find('img.reader-img');
-            if (img.exists()) {
-                await img.trigger('error');
-                await flushPromises();
-
-                // 应该尝试 HQ URL
-                expect(api.buildHQImageUrl).toHaveBeenCalled();
-            }
+            const img = wrapper.find('.reader-img');
+            expect(img.attributes('style')).toContain('width: 75%');
         });
     });
 
-    describe('双击 LQ 切换 HQ', () => {
-        it('双击 LQ 图片检查 HQ 可用性并切换', async () => {
-            vi.useFakeTimers();
-            vi.clearAllMocks();
-            api.checkHQImageUsable.mockResolvedValue(true);
-            api.buildHQImageUrl.mockReturnValue('/hq_image/Series/chapter/001.jpg');
-
+    describe('边界情况', () => {
+        it('文件对象缺少 URL 时标记为失败', async () => {
+            const mockFile = {
+                name: 'broken.jpg',
+                mediaType: 'image',
+                preferredSource: 'lq',
+                hq: { exists: false, url: '' },
+                lq: { exists: false, url: '' }
+            };
+            
             wrapper = mount(ReaderMediaItem, {
                 props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: 'Series',
+                    file: mockFile,
                     index: 0,
-                    coverSource: 'lq'
-                },
-                attachTo: document.body
-            });
-
-            await wrapper.vm.loadMedia();
-            await flushPromises();
-
-            const img = wrapper.find('img.reader-img');
-            if (img.exists()) {
-                await img.trigger('click');
-                vi.advanceTimersByTime(50);
-                await flushPromises();
-
-                await img.trigger('click');
-                vi.advanceTimersByTime(50);
-                await flushPromises();
-
-                expect(api.checkHQImageUsable).toHaveBeenCalled();
-            }
-
-            vi.useRealTimers();
-            wrapper.unmount();
-        });
-    });
-
-    describe('loadMedia defineExpose', () => {
-        it('defineExpose loadMedia 方法供外部调用', async () => {
-            wrapper = mount(ReaderMediaItem, {
-                props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: 'Series',
-                    index: 0
-                }
-            });
-
-            expect(wrapper.vm.loadMedia).toBeDefined();
-            expect(typeof wrapper.vm.loadMedia).toBe('function');
-        });
-
-        it('loadMedia 多次调用不重复 emit loaded（幂等性）', async () => {
-            wrapper = mount(ReaderMediaItem, {
-                props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: 'Series',
-                    index: 0,
-                    coverSource: 'hq'
-                }
-            });
-
-            // 第一次加载
-            await wrapper.vm.loadMedia();
-            await flushPromises();
-
-            const img = wrapper.find('img.reader-img');
-            if (img.exists()) {
-                await img.trigger('load');
-            }
-
-            // 第二次调用（已加载状态）
-            await wrapper.vm.loadMedia();
-            await flushPromises();
-
-            // 验证 loaded 事件只触发一次
-            const loadedEvents = wrapper.emitted('loaded');
-            if (loadedEvents) {
-                expect(loadedEvents.length).toBe(1);
-            }
-        });
-    });
-
-    describe('loaded class 状态', () => {
-        it('加载成功后容器添加 loaded class', async () => {
-            wrapper = mount(ReaderMediaItem, {
-                props: {
-                    filename: '001.jpg',
-                    pathId: 'chapter',
-                    seriesName: 'Series',
-                    index: 0,
-                    coverSource: 'hq'
+                    seriesName: 'Series'
                 }
             });
 
             await wrapper.vm.loadMedia();
             await flushPromises();
 
-            const img = wrapper.find('img.reader-img');
-            if (img.exists()) {
-                await img.trigger('load');
-            }
+            expect(wrapper.emitted('failed')).toBeTruthy();
+        });
 
-            const container = wrapper.find('.lazy-image-container');
-            expect(container.classes()).toContain('loaded');
+        it('不支持的文件类型不渲染', async () => {
+            const mockFile = createMockFile({ name: 'document.pdf', mediaType: null });
+            wrapper = mount(ReaderMediaItem, {
+                props: {
+                    file: mockFile,
+                    index: 0,
+                    seriesName: 'Series'
+                }
+            });
+
+            await wrapper.vm.loadMedia();
+            await flushPromises();
+
+            expect(wrapper.find('.reader-img').exists()).toBe(false);
+            expect(wrapper.find('video').exists()).toBe(false);
         });
     });
 });

@@ -62,13 +62,5 @@ export const toolsApi = {
         } catch (error) {
             throw new ToolsApiError('获取系列列表失败', error.status);
         }
-    },
-
-    async getChapters(seriesName) {
-        try {
-            return await api.getChapters(seriesName);
-        } catch (error) {
-            throw new ToolsApiError('获取章节列表失败', error.status);
-        }
     }
 };

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { catalogApi } from '../services/catalog-api.js';
+import { api } from '../services/index.js';
 import { buildChapterTree } from '../utils/chapter-tree.js';
 import { ChapterMetaCache } from '../services/chapter-meta-cache.js';
 
@@ -58,7 +58,7 @@ export const useChapterStore = defineStore('chapters', {
             if (cached) {
                 return cached;
             }
-            const nodes = await catalogApi.getLevelNodes(seriesName, path);
+            const nodes = await api.getLevelNodes(seriesName, path);
             this.levelCache.set(path, nodes);
             return nodes;
         },

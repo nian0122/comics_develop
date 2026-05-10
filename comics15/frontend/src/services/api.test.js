@@ -183,9 +183,8 @@ describe('api', () => {
             const result = await api.getLevelNodes('海贼王');
 
             expect(fetch).toHaveBeenCalledWith('/api/levels/%E6%B5%B7%E8%B4%BC%E7%8E%8B');
-            expect(result).toEqual(mockResponse);
-            expect(result.path).toBe('');
-            expect(result.nodes).toHaveLength(1);
+            expect(result).toEqual([{ type: 'directory', name: '第一卷' }]);
+            expect(result).toHaveLength(1);
         });
 
         it('should fetch level nodes for specific path', async () => {
@@ -201,8 +200,7 @@ describe('api', () => {
             const result = await api.getLevelNodes('海贼王', '第一卷');
 
             expect(fetch).toHaveBeenCalledWith('/api/levels/%E6%B5%B7%E8%B4%BC%E7%8E%8B?path=%E7%AC%AC%E4%B8%80%E5%8D%B7');
-            expect(result).toEqual(mockResponse);
-            expect(result.path).toBe('第一卷');
+            expect(result).toEqual([{ type: 'chapter', name: '第 001 话' }]);
         });
 
         it('should throw ApiError on failure', async () => {

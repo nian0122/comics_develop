@@ -16,6 +16,7 @@ const route = useRoute();
 const seriesStore = useSeriesStore();
 
 onMounted(async () => {
+    // 只有在根路径才尝试从历史记录恢复到最后阅读位置
     if (route.path !== '/') {
         return;
     }
@@ -43,7 +44,6 @@ onMounted(async () => {
             router.replace(toSeriesUrl(savedSeries));
         }
     } catch (e) {
-        // loadSeries 失败时不触发恢复，留在根路径
         console.warn('根路径恢复加载系列失败:', e.message || e);
     }
 });

@@ -3,10 +3,10 @@
     class="lazy-image-container"
     :class="{ loaded: isLoaded, failed: isFailed }"
     :data-index="index"
-    :data-filename="filename"
-    :data-path-id="pathId"
+    :data-filename="file?.name"
+    :data-path-id="file?.path_id"
     :data-series-name="seriesName"
-    :data-cover-source="coverSource || undefined"
+    :data-cover-source="file?.preferredSource || file?.cover_source || undefined"
     :data-loaded="isLoaded ? 'true' : 'false'"
   >
     <div class="skeleton-wrapper">
@@ -16,7 +16,7 @@
       v-if="mediaType === 'image' && shouldRender"
       class="reader-img"
       :src="currentUrl"
-      :alt="filename"
+      :alt="file?.name"
       loading="lazy"
       decoding="async"
       :style="{ width: `${scale}%` }"
@@ -28,7 +28,7 @@
       v-if="mediaType === 'gif' && shouldRender"
       class="reader-img"
       :src="currentUrl"
-      :alt="filename"
+      :alt="file?.name"
       loading="lazy"
       decoding="async"
       :style="{ width: `${scale}%` }"
@@ -53,30 +53,21 @@
 
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue';
-import { api } from '../services/api.js';
-import { getFileType, useVideoPath } from '../utils/file-type.js';
+import { getFileType } from '../utils/file-type.js';
 import { IMAGE_RETRY_CONFIG, DOUBLE_CLICK_THRESHOLD } from '../config/constants.js';
 
 const props = defineProps({
-    filename: {
-        type: String,
-        required: true
-    },
-    pathId: {
-        type: String,
-        required: true
-    },
-    seriesName: {
-        type: String,
+    file: {
+        type: Object,
         required: true
     },
     index: {
         type: Number,
         required: true
     },
-    coverSource: {
+    seriesName: {
         type: String,
-        default: ''
+        required: true
     },
     scale: {
         type: Number,
@@ -96,8 +87,7 @@ const timeoutId = ref(null);
 const lastClickTime = ref(0);
 
 const mediaType = computed(() => {
-    const type = getFileType(props.filename);
-    return type;
+    return props.file?.mediaType || getFileType(props.file?.name);
 });
 
 const shouldRender = computed(() => {
@@ -124,7 +114,7 @@ async function loadMedia(forceHQ = false) {
         return;
     }
 
-    const type = getFileType(props.filename);
+    const type = mediaType.value;
     if (!type) {
         return;
     }
@@ -132,23 +122,33 @@ async function loadMedia(forceHQ = false) {
     clearPendingTimeout();
     loadStatus.value = 'loading';
 
-    const isVideoPath = useVideoPath(props.filename);
     let url;
     let shouldUseHQ = forceHQ;
 
-    if (isVideoPath) {
-        url = api.buildVideoUrl(props.seriesName, props.filename, props.pathId);
+    if (type === 'video' || type === 'gif') {
+        // 使用后端返回的 videoUrl
+        url = props.file?.videoUrl;
     } else {
-        if (forceHQ || props.coverSource === 'hq') {
+        // 图片类型
+        const preferredSource = props.file?.preferredSource;
+        
+        if (forceHQ) {
             shouldUseHQ = true;
-            url = api.buildHQImageUrl(props.seriesName, props.filename, props.pathId);
-        } else if (props.coverSource === 'lq') {
-            url = api.buildLQImageUrl(props.seriesName, props.filename, props.pathId);
+            url = props.file?.hq?.url;
+        } else if (preferredSource === 'hq') {
+            shouldUseHQ = true;
+            url = props.file?.hq?.url;
         } else {
-            const imageSource = await api.resolveImageUrl(props.seriesName, props.filename, props.pathId);
-            shouldUseHQ = imageSource.source === 'hq';
-            url = imageSource.url;
+            // 默认使用 LQ，如果不存在则回退到 HQ
+            url = props.file?.lq?.url || props.file?.hq?.url;
         }
+    }
+
+    if (!url) {
+        loadStatus.value = 'failed';
+        isFailed.value = true;
+        emit('failed', { index: props.index, filename: props.file?.name });
+        return;
     }
 
     useHQ.value = shouldUseHQ;
@@ -168,14 +168,14 @@ function handleLoad() {
     isLoaded.value = true;
     isFailed.value = false;
 
-    emit('loaded', { index: props.index, filename: props.filename });
+    emit('loaded', { index: props.index, filename: props.file?.name });
 }
 
 function handleError() {
-    if (!useHQ.value) {
+    if (!useHQ.value && props.file?.hq?.url) {
         loadStatus.value = 'loading';
         useHQ.value = true;
-        currentUrl.value = api.buildHQImageUrl(props.seriesName, props.filename, props.pathId);
+        currentUrl.value = props.file.hq.url;
         return;
     }
     handleFinalError();
@@ -200,7 +200,7 @@ function handleFinalError() {
         clearPendingTimeout();
         loadStatus.value = 'failed';
         isFailed.value = true;
-        emit('failed', { index: props.index, filename: props.filename });
+        emit('failed', { index: props.index, filename: props.file?.name });
     } else {
         loadStatus.value = 'retrying';
         const delay = Math.min(
@@ -219,23 +219,16 @@ async function handleClick(event) {
     const currentTime = Date.now();
 
     if (currentTime - lastClickTime.value < DOUBLE_CLICK_THRESHOLD) {
-        if (!currentUrl.value.includes('/lq_image/')) {
+        if (useHQ.value || !props.file?.hq?.url) {
             lastClickTime.value = 0;
             return;
         }
 
         event.preventDefault();
-        const hqUrl = api.buildHQImageUrl(props.seriesName, props.filename, props.pathId);
-
-        try {
-            const isUsable = await api.checkHQImageUsable(hqUrl);
-            if (isUsable) {
-                useHQ.value = true;
-                currentUrl.value = hqUrl;
-            }
-        } catch {
-            // HQ 可用性检查失败时保持当前 LQ 图片，无需用户感知的错误提示
-        }
+        
+        // 切换到 HQ 版本
+        useHQ.value = true;
+        currentUrl.value = props.file.hq.url;
 
         lastClickTime.value = 0;
     } else {

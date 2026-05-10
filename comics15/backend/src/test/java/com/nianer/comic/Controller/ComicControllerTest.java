@@ -77,18 +77,17 @@ class ComicControllerTest {
                 .containsEntry("type", "directory")
                 .containsEntry("path", "第一卷")
                 .containsEntry("has_children", true)
-                .doesNotContainKeys("cover_file", "cover_source");
+                .doesNotContainKeys("cover_url");
         assertThat(chapter2Node)
                 .containsEntry("type", "chapter")
                 .containsEntry("path_id", "第 2 话")
                 .containsEntry("total_files", 1)
-                .containsEntry("cover_file", "001.jpg")
-                .containsEntry("cover_source", "lq");
+                .containsEntry("cover_url", "/lq_image/%E6%B5%8B%E8%AF%95%E7%B3%BB%E5%88%97/%E7%AC%AC%202%20%E8%AF%9D/001.webp");
         assertThat(chapter10Node)
                 .containsEntry("type", "chapter")
                 .containsEntry("path_id", "第 10 话")
                 .containsEntry("total_files", 1)
-                .containsEntry("cover_source", "hq");
+                .containsEntry("cover_url", "/hq_image/%E6%B5%8B%E8%AF%95%E7%B3%BB%E5%88%97/%E7%AC%AC%2010%20%E8%AF%9D/001.jpg");
     }
 
     @Test
@@ -107,8 +106,7 @@ class ComicControllerTest {
                 .containsEntry("name", "第 1 话")
                 .containsEntry("path_id", "第一卷/第 1 话")
                 .containsEntry("total_files", 1)
-                .containsEntry("cover_file", "001.png")
-                .containsEntry("cover_source", "hq");
+                .containsEntry("cover_url", "/hq_image/%E6%B5%8B%E8%AF%95%E7%B3%BB%E5%88%97/%E7%AC%AC%E4%B8%80%E5%8D%B7/%E7%AC%AC%201%20%E8%AF%9D/001.png");
     }
 
     @Test
@@ -127,8 +125,7 @@ class ComicControllerTest {
                 .containsEntry("name", "视频章节")
                 .containsEntry("path_id", "第一卷/视频章节")
                 .containsEntry("total_files", 2)
-                .containsEntry("cover_file", "002.jpg")
-                .containsEntry("cover_source", "hq");
+                .containsEntry("cover_url", "/hq_image/%E6%B5%8B%E8%AF%95%E7%B3%BB%E5%88%97/%E7%AC%AC%E4%B8%80%E5%8D%B7/%E8%A7%86%E9%A2%91%E7%AB%A0%E8%8A%82/002.jpg");
     }
 
 

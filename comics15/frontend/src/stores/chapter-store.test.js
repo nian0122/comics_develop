@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useChapterStore } from './chapter-store.js';
 
-vi.mock('../services/catalog-api.js', () => ({
-    catalogApi: {
+vi.mock('../services/api.js', () => ({
+    api: {
         getLevelNodes: vi.fn()
     }
 }));
@@ -22,7 +22,7 @@ vi.mock('../services/chapter-meta-cache.js', () => ({
     }))
 }));
 
-import { catalogApi } from '../services/catalog-api.js';
+import { api } from '../services/api.js';
 import { buildChapterTree } from '../utils/chapter-tree.js';
 
 describe('chapter-store', () => {
@@ -46,7 +46,7 @@ describe('chapter-store', () => {
             ];
             const mockTree = { name: 'root', children: [] };
 
-            catalogApi.getLevelNodes
+            api.getLevelNodes
                 .mockResolvedValueOnce(rootNodes)
                 .mockResolvedValueOnce(volume1Nodes)
                 .mockResolvedValueOnce(volume2Nodes);
@@ -68,7 +68,7 @@ describe('chapter-store', () => {
         });
 
         it('加载时清除元数据缓存', async () => {
-            catalogApi.getLevelNodes.mockResolvedValue([]);
+            api.getLevelNodes.mockResolvedValue([]);
             buildChapterTree.mockReturnValue({});
 
             const store = useChapterStore();
@@ -78,7 +78,7 @@ describe('chapter-store', () => {
         });
 
         it('处理 API 错误', async () => {
-            catalogApi.getLevelNodes.mockRejectedValue(new Error('网络错误'));
+            api.getLevelNodes.mockRejectedValue(new Error('网络错误'));
 
             const store = useChapterStore();
 
@@ -91,7 +91,7 @@ describe('chapter-store', () => {
     describe('loadLevelNodes', () => {
         it('加载层级节点并缓存', async () => {
             const mockNodes = [{ name: '第一卷', type: 'directory' }];
-            catalogApi.getLevelNodes.mockResolvedValue(mockNodes);
+            api.getLevelNodes.mockResolvedValue(mockNodes);
 
             const store = useChapterStore();
             const result = await store.loadLevelNodes('测试系列', '');
@@ -102,14 +102,14 @@ describe('chapter-store', () => {
 
         it('使用缓存避免重复请求', async () => {
             const mockNodes = [{ name: '第一卷', type: 'directory' }];
-            catalogApi.getLevelNodes.mockResolvedValue(mockNodes);
+            api.getLevelNodes.mockResolvedValue(mockNodes);
 
             const store = useChapterStore();
             store.setLevelCache('', mockNodes);
 
             const result = await store.loadLevelNodes('测试系列', '');
 
-            expect(catalogApi.getLevelNodes).not.toHaveBeenCalled();
+            expect(api.getLevelNodes).not.toHaveBeenCalled();
             expect(result).toEqual(mockNodes);
         });
 

@@ -15,13 +15,11 @@
     <div id="reader" @scroll="handleScroll">
       <ReaderMediaItem
         v-for="(file, index) in files"
-        :key="file.filename"
+        :key="file.name"
         :ref="(el) => setMediaItemRef(el, index)"
-        :filename="file.filename"
-        :path-id="file.path_id"
+        :file="file"
         :series-name="seriesName"
         :index="index"
-        :cover-source="file.cover_source || ''"
         :scale="scale"
         @loaded="handleMediaLoaded"
         @failed="handleMediaFailed"
@@ -44,7 +42,7 @@ import { useReaderStore } from '../stores/reader-store.js';
 import { useProgressStore } from '../stores/progress-store.js';
 import { useSeriesStore } from '../stores/series-store.js';
 import { persistence } from '../services/persistence.js';
-import { toReaderUrl, toDirectoryUrl } from '../router/index.js';
+import { toReaderUrl } from '../router/index.js';
 import { LAZY_LOAD_CONFIG } from '../config/constants.js';
 import ReaderShell from '../components/ReaderShell.vue';
 import ReaderMediaItem from '../components/ReaderMediaItem.vue';
@@ -123,8 +121,8 @@ async function loadData() {
 
         const loadedFiles = await readerStore.loadFiles(seriesName.value, chapterPath.value);
 
+        // init 已经包含了 restoreFromStorage 逻辑，不需要重复调用
         progressStore.init(loadedFiles.length, seriesName.value, currentIndex);
-        progressStore.restoreFromStorage(seriesName.value, currentIndex);
 
         persistence.saveCurrentPosition(seriesName.value, returnPath);
 
@@ -247,8 +245,8 @@ function openNextChapter() {
 }
 
 function backToDirectory() {
-    const url = toDirectoryUrl(seriesName.value, '');
-    router.push(url);
+    // 使用 back() 返回上一页，保持浏览器历史自然
+    router.back();
 }
 
 function showJumpModal() {

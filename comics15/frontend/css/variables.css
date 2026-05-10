@@ -33,7 +33,7 @@
     --font-mono: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, 'Cascadia Mono', monospace;
 
     /* 向后兼容 - 旧变量名映射到新暗色主题 */
-    --text-primary: #ffffff;
+    --text-primary: #000000;
     --text-secondary: #c9d1d9;
     --text-tertiary: #8b949e;
     --text-quaternary: #6e7781;
@@ -46,7 +46,7 @@
     --bg-primary: rgba(23, 26, 33, 0.95);
     --bg-secondary: rgba(32, 36, 45, 0.90);
     --bg-tertiary: rgba(32, 36, 45, 0.75);
-    --bg-body: #0f1115;
+    --bg-body: #ffffff;
 
     --bg-sidebar: rgba(23, 26, 33, 0.95);
     --bg-elevated: rgba(32, 36, 45, 0.98);

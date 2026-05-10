@@ -134,8 +134,7 @@ public class ComicMediaService {
 
         Optional<String> coverFile = mediaFiles.stream().filter(this::isImageFile).findFirst();
         if (coverFile.isPresent()) {
-            chapterData.put("cover_file", coverFile.get());
-            chapterData.put("cover_source", resolveCoverSource(seriesName, normalizedPath, coverFile.get()));
+            chapterData.put("cover_url", buildCoverUrl(seriesName, normalizedPath, coverFile.get()));
         }
         return chapterData;
     }
@@ -178,8 +177,7 @@ public class ComicMediaService {
         // 封面只选择章节内第一张图片；视频/GIF 章节没有图片时不会生成封面字段。
         Optional<String> coverFile = preview.firstImageFile();
         if (coverFile.isPresent()) {
-            node.put("cover_file", coverFile.get());
-            node.put("cover_source", resolveCoverSource(seriesName, normalizedPath, coverFile.get()));
+            node.put("cover_url", buildCoverUrl(seriesName, normalizedPath, coverFile.get()));
         }
         return node;
     }
@@ -313,6 +311,24 @@ public class ComicMediaService {
     private boolean hasChildDirectories(Path directory) throws IOException {
         try (Stream<Path> stream = Files.list(directory)) {
             return stream.anyMatch(Files::isDirectory);
+        }
+    }
+
+    /**
+     * 构建章节封面 URL，优先使用 LQ，不存在则回退 HQ。
+     *
+     * @param seriesName 漫画系列名称
+     * @param chapterPath 系列内章节相对路径
+     * @param coverFile HQ 封面文件名
+     * @return LQ 存在时返回 LQ URL，否则返回 HQ URL
+     */
+    private String buildCoverUrl(String seriesName, String chapterPath, String coverFile) {
+        String baseName = stripExtension(coverFile);
+        Path lqCoverPath = config.getLqPath().resolve(seriesName).resolve(chapterPath).resolve(baseName + ".webp");
+        if (Files.exists(lqCoverPath)) {
+            return buildLQUrl(seriesName, chapterPath, baseName + ".webp");
+        } else {
+            return buildHQUrl(seriesName, chapterPath, coverFile);
         }
     }
 

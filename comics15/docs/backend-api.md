@@ -178,8 +178,7 @@ GET /api/levels/{seriesName}?path={path}
       "name": "第02话",
       "path_id": "合集/卷1/第02话",
       "total_files": 36,
-      "cover_file": "001.jpg",
-      "cover_source": "lq"
+      "cover_url": "/lq_image/系列A/合集/卷1/第02话/001.webp"
     }
   ]
 }
@@ -197,8 +196,7 @@ GET /api/levels/{seriesName}?path={path}
 | `nodes[].has_children` | boolean | 目录节点是否包含直接子目录，仅 `directory` 返回。 |
 | `nodes[].path_id` | string | 章节节点路径，仅 `chapter` 返回。 |
 | `nodes[].total_files` | number | 章节内受支持媒体文件数量，仅 `chapter` 返回。 |
-| `nodes[].cover_file` | string | 自然排序后的第一张图片文件名；纯视频/GIF 章节可能没有该字段。 |
-| `nodes[].cover_source` | string | `lq` 或 `hq`；LQ 同名 WebP 存在时为 `lq`。 |
+| `nodes[].cover_url` | string | 章节封面 URL；LQ 存在时返回 LQ URL，否则返回 HQ URL；纯视频/GIF 章节可能没有该字段。 |
 
 #### 错误响应
 
