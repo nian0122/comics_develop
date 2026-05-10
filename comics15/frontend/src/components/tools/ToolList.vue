@@ -20,15 +20,15 @@
     <div v-else class="space-y-1">
       <button
         v-for="tool in tools"
-        :key="tool.id"
+        :key="tool.name"
         class="tool-item w-full text-left px-3 py-2 rounded-lg transition-colors border"
         :class="{
-          'bg-blue-500/20 border-blue-500/50': selectedTool?.id === tool.id,
-          'hover:bg-white/5 border-transparent': selectedTool?.id !== tool.id
+          'bg-blue-500/20 border-blue-500/50': selectedTool?.name === tool.name,
+          'hover:bg-white/5 border-transparent': selectedTool?.name !== tool.name
         }"
         @click="selectTool(tool)"
       >
-        <div class="font-medium text-sm">{{ tool.name }}</div>
+        <div class="font-medium text-sm">{{ tool.displayName || tool.name }}</div>
         <div class="text-xs text-gray-400 mt-0.5">{{ tool.description }}</div>
       </button>
     </div>

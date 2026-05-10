@@ -45,6 +45,19 @@ describe('series-store', () => {
             expect(store.error).toBeNull();
         });
 
+        it('兼容后端直接返回系列数组', async () => {
+            const mockData = ['系列A', '系列B', '系列C', '系列D'];
+            api.getSeries.mockResolvedValue(mockData);
+
+            const store = useSeriesStore();
+            const result = await store.loadSeries();
+
+            expect(result).toEqual(mockData);
+            expect(store.list).toEqual(mockData);
+            expect(store.loading).toBe(false);
+            expect(store.error).toBeNull();
+        });
+
         it('处理 API 错误', async () => {
             api.getSeries.mockRejectedValue(new Error('网络错误'));
 

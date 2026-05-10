@@ -98,7 +98,7 @@ async function loadData() {
 
     try {
         if (!seriesStore.current || seriesStore.current !== seriesName.value) {
-            seriesStore.setCurrent(seriesName.value);
+            seriesStore.setCurrentSeries(seriesName.value);
         }
 
         if (chapterStore.flatList.length === 0 || seriesStore.current !== seriesName.value) {

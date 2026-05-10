@@ -112,6 +112,7 @@ describe('chapter-store', () => {
             expect(catalogApi.getLevelNodes).not.toHaveBeenCalled();
             expect(result).toEqual(mockNodes);
         });
+
     });
 
     describe('setCurrentChapterIndex', () => {

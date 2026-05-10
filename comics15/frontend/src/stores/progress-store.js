@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia';
-import { progressState } from './progress-state.js';
 import { persistence } from '../services/persistence.js';
 
 export const useProgressStore = defineStore('progress', {
@@ -20,7 +19,7 @@ export const useProgressStore = defineStore('progress', {
             this.lastReadTime = Date.now();
 
             if (series && chapterIndex >= 0) {
-                const saved = progressState.restoreFromStorage(series, chapterIndex);
+                const saved = this.restoreFromStorage(series, chapterIndex);
                 if (saved) {
                     this.currentPage = saved.page || 1;
                     this.scrollPercent = saved.scrollPercent || 0;
@@ -73,20 +72,6 @@ export const useProgressStore = defineStore('progress', {
             this.currentPage = 1;
             this.scrollPercent = 0;
             this.lastReadTime = 0;
-        },
-
-        syncToLegacyState(series, chapterIndex) {
-            progressState.init(this.totalPages);
-            progressState.setCurrentPage(this.currentPage);
-            progressState.updateScrollPercent(this.scrollPercent);
-
-            if (series && chapterIndex >= 0) {
-                persistence.saveProgress(series, chapterIndex, {
-                    page: this.currentPage,
-                    scrollPercent: this.scrollPercent,
-                    timestamp: this.lastReadTime
-                });
-            }
         },
 
         $reset() {

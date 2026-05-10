@@ -111,6 +111,26 @@ class ComicControllerTest {
                 .containsEntry("cover_source", "hq");
     }
 
+    @Test
+    void listLevelNodesUsesChapterPreviewWithoutFullMediaList() throws Exception {
+        createChapter("测试系列", "第一卷/视频章节", "001.mp4");
+        createChapter("测试系列", "第一卷/视频章节", "002.jpg");
+
+        ResponseEntity<Map<String, Object>> response = controller.listLevelNodes("测试系列", "第一卷");
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> nodes = (List<Map<String, Object>>) response.getBody().get("nodes");
+        assertThat(nodes).hasSize(1);
+        assertThat(nodes.getFirst())
+                .containsEntry("type", "chapter")
+                .containsEntry("name", "视频章节")
+                .containsEntry("path_id", "第一卷/视频章节")
+                .containsEntry("total_files", 2)
+                .containsEntry("cover_file", "002.jpg")
+                .containsEntry("cover_source", "hq");
+    }
+
 
     @Test
     void listChapterFilesReturnsMediaMetadataWithSourceUrls() throws Exception {
@@ -202,9 +222,4 @@ class ComicControllerTest {
                 .orElseThrow();
     }
 
-    private void createChapter(String seriesName, String chapterPath, String filename) throws Exception {
-        Path chapter = comicsRoot.resolve("h_photograph").resolve(seriesName).resolve(chapterPath);
-        Files.createDirectories(chapter);
-        Files.writeString(chapter.resolve(filename), "hq");
-    }
 }

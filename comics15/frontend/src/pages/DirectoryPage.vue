@@ -104,7 +104,6 @@ const backText = computed(() => {
 
 async function loadData() {
   progressData.value = storage.getSeriesProgress(seriesName.value);
-  await chapterStore.loadChapters(seriesName.value);
   const nodes = await chapterStore.loadLevelNodes(seriesName.value, currentPath.value);
   levelNodes.value = nodes || [];
 
@@ -142,7 +141,8 @@ function setupCoverObserver(currentToken) {
           if (currentToken !== coverLoadToken.value) return;
 
           try {
-            const meta = await chapterMetaCache.value.getOrFetchByPathId(pathId);
+            const chapter = chapterStore.flatList.find(ch => ch.path_id === pathId);
+            const meta = await chapterMetaCache.value.getOrFetchByPathId(pathId, chapter, seriesName.value);
             if (currentToken === coverLoadToken.value && meta.coverUrl) {
               coverData.value[pathId] = meta.coverUrl;
             }

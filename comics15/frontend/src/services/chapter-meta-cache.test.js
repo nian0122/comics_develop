@@ -1,18 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChapterMetaCache } from './chapter-meta-cache.js';
-import { store } from '../stores/store.js';
 import { getChapterCoverMeta } from '../utils/chapter-cover-meta.js';
-
-vi.mock('../stores/store.js', () => ({
-    store: {
-        chapters: {
-            flatList: [],
-        },
-        series: {
-            current: 'TestSeries',
-        },
-    },
-}));
 
 vi.mock('../utils/chapter-cover-meta.js', () => ({
     getChapterCoverMeta: vi.fn((chapter, seriesName) => ({
@@ -28,8 +16,6 @@ describe('ChapterMetaCache', () => {
 
     beforeEach(() => {
         cache = new ChapterMetaCache();
-        store.chapters.flatList = [];
-        store.series.current = 'TestSeries';
         vi.clearAllMocks();
     });
 
@@ -59,22 +45,21 @@ describe('ChapterMetaCache', () => {
         const cachedMeta = { totalPages: 20, files: ['a.jpg'], coverUrl: '', coverSource: '' };
         cache.set(5, cachedMeta);
 
-        const result = await cache.getOrFetch(5);
+        const chapter = { path_id: 'test', cover_file: 'test.jpg' };
+        const result = await cache.getOrFetch(5, chapter, 'TestSeries');
         expect(result).toEqual(cachedMeta);
         expect(getChapterCoverMeta).not.toHaveBeenCalled();
     });
 
-    it('should fetch chapter metadata from current store state and cache it', async () => {
+    it('should fetch chapter metadata and cache it', async () => {
         const chapter = {
             path_id: '第一卷/第 1 话',
             cover_file: '001.jpg',
             cover_source: 'hq',
             total_files: 12,
         };
-        store.chapters.flatList = [chapter];
-        store.series.current = '测试系列';
 
-        const result = await cache.getOrFetch(0);
+        const result = await cache.getOrFetch(0, chapter, '测试系列');
 
         expect(getChapterCoverMeta).toHaveBeenCalledWith(chapter, '测试系列');
         expect(result).toEqual({
@@ -86,8 +71,45 @@ describe('ChapterMetaCache', () => {
         expect(cache.get(0)).toEqual(result);
     });
 
-    it('should return fallback metadata for missing chapter index', async () => {
-        const result = await cache.getOrFetch(99);
+    it('should return fallback metadata for missing chapter', async () => {
+        const result = await cache.getOrFetch(99, null, 'TestSeries');
+
+        expect(result).toEqual({ totalPages: 0, files: [], coverUrl: '', coverSource: '' });
+        expect(getChapterCoverMeta).not.toHaveBeenCalled();
+    });
+
+    it('should fetch by pathId and cache it', async () => {
+        const chapter = {
+            path_id: '第一卷/第 2 话',
+            cover_file: '002.jpg',
+            cover_source: 'lq',
+            total_files: 15,
+        };
+
+        const result = await cache.getOrFetchByPathId('第一卷/第 2 话', chapter, '测试系列');
+
+        expect(getChapterCoverMeta).toHaveBeenCalledWith(chapter, '测试系列');
+        expect(result).toEqual({
+            totalPages: 15,
+            files: [],
+            coverUrl: 'http://example.com/测试系列/002.jpg',
+            coverSource: 'lq',
+        });
+        expect(cache.pathIdCache.get('第一卷/第 2 话')).toEqual(result);
+    });
+
+    it('should return cached value by pathId without fetching', async () => {
+        const cachedMeta = { totalPages: 20, files: [], coverUrl: 'cached', coverSource: 'hq' };
+        cache.pathIdCache.set('test-path', cachedMeta);
+
+        const chapter = { path_id: 'test-path', cover_file: 'new.jpg' };
+        const result = await cache.getOrFetchByPathId('test-path', chapter, 'TestSeries');
+        expect(result).toEqual(cachedMeta);
+        expect(getChapterCoverMeta).not.toHaveBeenCalled();
+    });
+
+    it('should return fallback metadata for missing chapter by pathId', async () => {
+        const result = await cache.getOrFetchByPathId('missing-path', null, 'TestSeries');
 
         expect(result).toEqual({ totalPages: 0, files: [], coverUrl: '', coverSource: '' });
         expect(getChapterCoverMeta).not.toHaveBeenCalled();

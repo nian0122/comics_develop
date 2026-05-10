@@ -10,18 +10,7 @@ vi.mock('../services/persistence.js', () => ({
     }
 }));
 
-vi.mock('./progress-state.js', () => ({
-    progressState: {
-        init: vi.fn(),
-        setCurrentPage: vi.fn(),
-        updateScrollPercent: vi.fn(),
-        restoreFromStorage: vi.fn(),
-        saveToStorage: vi.fn()
-    }
-}));
-
 import { persistence } from '../services/persistence.js';
-import { progressState } from './progress-state.js';
 
 describe('progress-store', () => {
     beforeEach(() => {
@@ -48,7 +37,7 @@ describe('progress-store', () => {
         });
 
         it('从存储恢复进度', () => {
-            progressState.restoreFromStorage.mockReturnValue({
+            persistence.getProgress.mockReturnValue({
                 page: 5,
                 scrollPercent: 30,
                 timestamp: 1000
@@ -63,7 +52,7 @@ describe('progress-store', () => {
         });
 
         it('无存储数据时使用默认值', () => {
-            progressState.restoreFromStorage.mockReturnValue(null);
+            persistence.getProgress.mockReturnValue(null);
 
             const store = useProgressStore();
             store.init(10, '测试系列', 2);
@@ -212,21 +201,6 @@ describe('progress-store', () => {
             expect(persistence.clearProgress).toHaveBeenCalledWith('系列', 2);
             expect(store.currentPage).toBe(1);
             expect(store.scrollPercent).toBe(0);
-        });
-    });
-
-    describe('syncToLegacyState', () => {
-        it('同步到 legacy progressState', () => {
-            const store = useProgressStore();
-            store.totalPages = 10;
-            store.currentPage = 5;
-            store.scrollPercent = 30;
-
-            store.syncToLegacyState('系列', 2);
-
-            expect(progressState.init).toHaveBeenCalledWith(10);
-            expect(progressState.setCurrentPage).toHaveBeenCalledWith(5);
-            expect(progressState.updateScrollPercent).toHaveBeenCalledWith(30);
         });
     });
 

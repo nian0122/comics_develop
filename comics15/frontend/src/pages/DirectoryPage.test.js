@@ -155,12 +155,12 @@ describe('DirectoryPage', () => {
     });
 
     describe('加载行为', () => {
-        it('onMounted 时调用 loadChapters 和 loadLevelNodes', async () => {
+        it('onMounted 时只按需调用当前层级节点，不触发全量章节递归', async () => {
             wrapper = mount(DirectoryPage);
             await flushPromises();
             await nextTick();
 
-            expect(mockStore.loadChapters).toHaveBeenCalledWith('test-series');
+            expect(mockStore.loadChapters).not.toHaveBeenCalled();
             expect(mockStore.loadLevelNodes).toHaveBeenCalledWith('test-series', '');
         });
     });

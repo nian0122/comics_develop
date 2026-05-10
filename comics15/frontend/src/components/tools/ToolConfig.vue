@@ -1,18 +1,18 @@
 <template>
   <div v-if="selectedTool" class="tool-config">
-    <h2 class="text-lg font-semibold mb-2">{{ selectedTool.name }}</h2>
+    <h2 class="text-lg font-semibold mb-2">{{ selectedTool.displayName || selectedTool.name }}</h2>
     <p class="text-gray-400 text-sm mb-4">{{ selectedTool.description }}</p>
 
     <div v-if="selectedTool.params && selectedTool.params.length > 0" class="space-y-3">
-      <div v-for="param in selectedTool.params" :key="param.name" class="param-field">
+      <div v-for="param in selectedTool.params" :key="param.key" class="param-field">
         <label class="block text-sm font-medium mb-1">
-          {{ param.label || param.name }}
+          {{ param.label || param.key }}
           <span v-if="param.required" class="text-red-400">*</span>
         </label>
 
         <select
-          v-if="param.type === 'series'"
-          v-model="formData[param.name]"
+          v-if="param.key === 'series'"
+          v-model="formData[param.key]"
           class="w-full glass-input px-3 py-2 rounded-lg text-sm"
         >
           <option value="">请选择系列</option>
@@ -21,30 +21,29 @@
           </option>
         </select>
 
+        <select
+          v-else-if="param.type === 'select'"
+          v-model="formData[param.key]"
+          class="w-full glass-input px-3 py-2 rounded-lg text-sm"
+        >
+          <option value="">请选择</option>
+          <option value="true">是</option>
+          <option value="false">否</option>
+        </select>
+
         <input
-          v-else-if="param.type === 'string'"
-          v-model="formData[param.name]"
+          v-else-if="param.type === 'text'"
+          v-model="formData[param.key]"
           type="text"
-          :placeholder="param.placeholder"
           class="w-full glass-input px-3 py-2 rounded-lg text-sm"
         />
 
         <input
           v-else-if="param.type === 'number'"
-          v-model.number="formData[param.name]"
+          v-model.number="formData[param.key]"
           type="number"
-          :placeholder="param.placeholder"
           class="w-full glass-input px-3 py-2 rounded-lg text-sm"
         />
-
-        <label v-else-if="param.type === 'boolean'" class="flex items-center cursor-pointer">
-          <input
-            v-model="formData[param.name]"
-            type="checkbox"
-            class="mr-2"
-          />
-          <span class="text-sm">{{ param.label }}</span>
-        </label>
       </div>
     </div>
 
@@ -84,7 +83,7 @@ const canExecute = computed(() => {
 
   return selectedTool.value.params.every(param => {
     if (!param.required) return true;
-    const value = formData.value[param.name];
+    const value = formData.value[param.key];
     return value !== undefined && value !== '' && value !== null;
   });
 });
@@ -93,11 +92,7 @@ watch(selectedTool, (newTool) => {
   if (newTool && newTool.params) {
     formData.value = {};
     newTool.params.forEach(param => {
-      if (param.type === 'boolean') {
-        formData.value[param.name] = param.default || false;
-      } else {
-        formData.value[param.name] = param.default || '';
-      }
+      formData.value[param.key] = param.default || '';
     });
   } else {
     formData.value = {};

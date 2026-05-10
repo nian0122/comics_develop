@@ -28,6 +28,7 @@ export const catalogApi = {
         const url = `/api/levels/${encodeURIComponent(seriesName)}${path ? `?path=${encodeURIComponent(path)}` : ''}`;
         const res = await fetch(url);
         if (!res.ok) throw new ApiError('获取层级节点失败', res.status);
-        return res.json();
+        const data = await res.json();
+        return data.nodes || [];
     }
 };

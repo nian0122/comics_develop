@@ -1,6 +1,5 @@
 // 章节元数据缓存模块
 
-import { store } from '../stores/store.js';
 import { getChapterCoverMeta } from '../utils/chapter-cover-meta.js';
 
 export class ChapterMetaCache {
@@ -26,37 +25,47 @@ export class ChapterMetaCache {
         this.pathIdCache.clear();
     }
 
-    async getOrFetch(index) {
+    /**
+     * 获取或缓存章节元数据
+     * @param {number} index - 章节在 flatList 中的索引
+     * @param {Object} chapter - 章节数据对象
+     * @param {string} seriesName - 系列名称
+     * @returns {Object} 章节元数据
+     */
+    async getOrFetch(index, chapter, seriesName) {
         if (this.cache.has(index)) {
             return this.cache.get(index);
         }
 
-        const chapter = store.chapters.flatList[index];
         const fallback = { totalPages: 0, files: [], coverUrl: '', coverSource: '' };
         if (!chapter) {
             return fallback;
         }
 
-        const seriesName = store.series.current;
         const meta = getChapterCoverMeta(chapter, seriesName);
         this.cache.set(index, meta);
         this.pathIdCache.set(chapter.path_id, meta);
         return meta;
     }
 
-    async getOrFetchByPathId(pathId) {
+    /**
+     * 通过 pathId 获取或缓存章节元数据
+     * @param {string} pathId - 章节 pathId
+     * @param {Object} chapter - 章节数据对象
+     * @param {string} seriesName - 系列名称
+     * @returns {Object} 章节元数据
+     */
+    async getOrFetchByPathId(pathId, chapter, seriesName) {
         if (this.pathIdCache.has(pathId)) {
             return this.pathIdCache.get(pathId);
         }
 
         const fallback = { totalPages: 0, files: [], coverUrl: '', coverSource: '' };
 
-        const chapter = store.chapters.flatList.find(ch => ch.path_id === pathId);
         if (!chapter) {
             return fallback;
         }
 
-        const seriesName = store.series.current;
         const meta = getChapterCoverMeta(chapter, seriesName);
         this.pathIdCache.set(pathId, meta);
         return meta;

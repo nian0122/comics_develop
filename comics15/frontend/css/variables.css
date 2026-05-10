@@ -7,12 +7,14 @@
     --color-surface: #171a21;
     --color-surface-soft: #20242d;
 
-    /* 文本色 */
-    --color-text: #f1f3f5;
-    --color-text-muted: #9aa3af;
+    /* 文本色 - 增强对比度 */
+    --color-text: #ffffff;
+    --color-text-secondary: #c9d1d9;
+    --color-text-tertiary: #8b949e;
+    --color-text-muted: #6e778e;
 
-    /* 强调色 */
-    --color-accent: #8ea4ff;
+    /* 强调色 - 更亮的科技蓝 */
+    --color-accent: #58a6ff;
 
     /* 边框 */
     --color-border: rgba(255, 255, 255, 0.08);
@@ -31,15 +33,15 @@
     --font-mono: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, 'Cascadia Mono', monospace;
 
     /* 向后兼容 - 旧变量名映射到新暗色主题 */
-    --text-primary: rgba(241, 243, 245, 0.95);
-    --text-secondary: rgba(0, 0, 0, 0.7);
-    --text-tertiary: rgb(0, 0, 0);
-    --text-quaternary: rgba(241, 243, 245, 0.30);
+    --text-primary: #ffffff;
+    --text-secondary: #c9d1d9;
+    --text-tertiary: #8b949e;
+    --text-quaternary: #6e7781;
 
-    --accent: #8ea4ff;
-    --accent-hover: #9eb4ff;
-    --accent-active: #7e94ff;
-    --accent-light: rgba(142, 164, 255, 0.15);
+    --accent: #58a6ff;
+    --accent-hover: #79b8ff;
+    --accent-active: #388bfd;
+    --accent-light: rgba(88, 166, 255, 0.15);
 
     --bg-primary: rgba(23, 26, 33, 0.95);
     --bg-secondary: rgba(32, 36, 45, 0.90);

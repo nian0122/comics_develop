@@ -1,6 +1,45 @@
 import { defineStore } from 'pinia';
 import { toolsApi } from '../services/tools-api.js';
 
+const STATUS_MAP = {
+    'PENDING': 'pending',
+    'RUNNING': 'running',
+    'COMPLETED': 'completed',
+    'FAILED': 'error',
+    'CANCELLED': 'cancelled'
+};
+
+function normalizeStatus(status) {
+    return STATUS_MAP[status] || status?.toLowerCase() || status;
+}
+
+function normalizeLogs(logs) {
+    if (!logs || !Array.isArray(logs)) return [];
+    if (logs.length === 0) return [];
+    if (typeof logs[0] === 'string') {
+        return logs.map(message => ({ time: new Date().toISOString(), message }));
+    }
+    return logs;
+}
+
+function normalizeExecution(execution) {
+    return {
+        ...execution,
+        status: normalizeStatus(execution.status),
+        logs: normalizeLogs(execution.logs)
+    };
+}
+
+function normalizeExecutions(executions) {
+    if (!executions) return {};
+    return Object.fromEntries(
+        Object.entries(executions).map(([executionId, execution]) => [
+            executionId,
+            normalizeExecution(execution)
+        ])
+    );
+}
+
 export const useToolsStore = defineStore('tools', {
     state: () => ({
         tools: [],
@@ -54,7 +93,7 @@ export const useToolsStore = defineStore('tools', {
             if (!this.selectedTool) return;
 
             try {
-                const result = await toolsApi.executeTool(this.selectedTool.id, params);
+                const result = await toolsApi.executeTool(this.selectedTool.name, params);
                 this.currentExecution = {
                     id: result.executionId,
                     status: 'running',
@@ -87,15 +126,17 @@ export const useToolsStore = defineStore('tools', {
                     return;
                 }
 
+                const normalizedExecution = normalizeExecution(status);
+
                 this.currentExecution = {
                     ...this.currentExecution,
-                    ...status,
-                    toolName: this.currentExecution?.toolName || status.toolName
+                    ...normalizedExecution,
+                    toolName: this.currentExecution?.toolName || normalizedExecution.toolName
                 };
 
                 this.executions[executionId] = { ...this.currentExecution };
 
-                if (status.status === 'completed' || status.status === 'error' || status.status === 'cancelled') {
+                if (normalizedExecution.status === 'completed' || normalizedExecution.status === 'error' || normalizedExecution.status === 'cancelled') {
                     this.stopPolling();
                 }
             } catch (err) {
@@ -125,7 +166,7 @@ export const useToolsStore = defineStore('tools', {
         async loadExecutions() {
             try {
                 const executions = await toolsApi.getAllExecutions();
-                this.executions = executions || {};
+                this.executions = normalizeExecutions(executions);
             } catch (err) {
                 console.error('加载执行历史失败:', err);
             }

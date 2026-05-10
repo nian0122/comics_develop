@@ -161,7 +161,7 @@ describe('ReaderPage', () => {
 
         mockSeriesStore = {
             current: null,
-            setCurrent: vi.fn((name) => {
+            setCurrentSeries: vi.fn((name) => {
                 mockSeriesStore.current = name;
             })
         };
@@ -204,6 +204,7 @@ describe('ReaderPage', () => {
 
             expect(mockChapterStore.loadChapters).toHaveBeenCalledWith('test-series');
             expect(mockChapterStore.setCurrentChapterByPathId).toHaveBeenCalledWith('chapter1');
+            expect(mockSeriesStore.setCurrentSeries).toHaveBeenCalledWith('test-series');
         });
 
         it('章节数据加载完成后调用 loadFiles', async () => {
