@@ -1,5 +1,0 @@
-/* 主样式入口 - 导入所有样式模块 */
-
-@import url('./variables.css');
-@import url('./components.css');
-@import url('./animations.css');
