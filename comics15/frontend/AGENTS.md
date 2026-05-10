@@ -28,6 +28,7 @@ frontend/
 | 主应用启动 | `src/main.js` | Vue3、Pinia、Router 挂载 |
 | 根组件/恢复状态 | `src/App.vue` | 根据持久化状态恢复系列/章节/阅读位置 |
 | 页面路由 | `src/router/index.js` | Vue Router 配置与 URL 构建函数 |
+| 媒体 URL 构建 | `src/services/media-url.js` | `/hq_image`、`/lq_image`、`/video` 分段编码 |
 | 系列列表页 | `src/pages/SeriesPage.vue` | 系列加载、搜索、错误展示 |
 | 目录页 | `src/pages/DirectoryPage.vue` | 章节树、封面加载、目录导航 |
 | 阅读页 | `src/pages/ReaderPage.vue` | 阅读器页面编排 |
@@ -54,6 +55,7 @@ npm run test:coverage
 npm run lint
 npm run lint:fix
 vitest run src/pages/DirectoryPage.test.js
+vitest run src/components/ReaderMediaItem.test.js
 ```
 
 ## CONVENTIONS
@@ -62,6 +64,7 @@ vitest run src/pages/DirectoryPage.test.js
 - 工具页现在是 Vue 路由页面；修改工具页时看 `ToolsPage.vue`、`components/tools/*`、`stores/tools-store.js`、`services/tools-api.js`。
 - `src/services`、`src/utils`、`src/stores` 为共享模块；测试通常与源文件同目录。
 - CSS 不是迁移清理对象；`css/**`、Tailwind CDN 引用、Vue 组件 class/token 使用方式不要作为冗余删除。
+- Vite dev server 自带漫画静态中间件：`/hq_image` 404、`/lq_image` 204、`/video` 404；不要用 `file://` proxy。
 - 中文系列名、章节路径、文件名进入 URL 前必须 `encodeURIComponent()`；多级路径按段编码，不能整体编码 `/`。
 - LQ 图缺失返回 204；前端通过 `HEAD /lq_image/...` 判断并回退 HQ。
 - GIF 走 `/video/`，因为 Nginx 将 video alias 到 HQ 目录。

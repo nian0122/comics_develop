@@ -14,9 +14,9 @@ tools/
 ## WHERE TO LOOK
 | 工具 | 目录 | 可执行文件 | 后端 toolName |
 |------|------|------------|---------------|
-| 图片优化器 | `image-optimizer/` | `image-optimizer.exe` | `image-optimizer` |
-| 叶目录图片查找 | `leaf-image-finder/` | `leaf-image-finder.exe` | `leaf-image-finder` |
-| 清空文件内容 | `replace_files_with_empty/` | `clean_files.exe` | `replace_files_with_empty` |
+| 图片优化器 | `image-optimizer/main.go` | `image-optimizer.exe` | `image-optimizer` |
+| 叶目录图片查找 | `leaf-image-finder/main.go` | `leaf-image-finder.exe` | `leaf-image-finder` |
+| 清空文件内容 | `replace_files_with_empty/clean_files.go` | `clean_files.exe` | `replace_files_with_empty` |
 
 ## BUILD COMMANDS
 ```bash
@@ -52,7 +52,7 @@ go build -o clean_files.exe .
 ## BACKEND INTEGRATION
 - 工具根目录：`TOOL_ROOT_DIR`，默认 `D:/projects/comics_develop/comics15/tools`。
 - 后端按 OS 选择 `.exe` 或无扩展名二进制。
-- `application.yml` 中 exe 名必须和本目录构建产物一致：`clean_files.exe` 是特殊名。
+- `application.yml` 中 exe 名必须和本目录构建产物一致：`clean_files.exe` 是特殊名，且入口文件是 `clean_files.go` 不是 `main.go`。
 - `ToolExecutor.parseProgress()` 通过中文输出关键词解析：`处理`, `跳过`, `失败数量`。
 - 改工具输出格式时，同步改 `ToolExecutor` 的进度解析。
 - 工具参数契约同时被 `ToolController` 元数据、前端 `tools-api`/工具页表单、各工具 `readme.md` 约束。
@@ -66,6 +66,7 @@ go build -o clean_files.exe .
 - 不要改 exe 文件名而不同步 `ToolExecutor.resolveToolPath()` 和 `application.yml`。
 - 不要让工具默认修改全盘目录；UI/后端默认应限制在漫画根目录或用户显式路径。
 - `replace_files_with_empty` 是破坏性工具：新参数默认必须安全，优先支持 dry-run。
+- 改中文输出关键词（`处理`、`跳过`、`失败数量` 等）必须同步后端 `ToolExecutor.parseProgress()`。
 - 不要删除各工具 `readme.md`；它是 UI/后端参数契约的来源。
 
 ## NOTES

@@ -1,4 +1,4 @@
-# 移动端优先前端设计方案
+# 前端设计方案
 
 ## 设计目标
 
@@ -171,7 +171,6 @@
 上一话
 下一话
 返回目录
-隐藏按钮
 
 规则：
 
@@ -193,16 +192,6 @@ seriesList → directoryBrowser → reader
 - directoryBrowser：点击目录仍停留在 directoryBrowser，但 currentPath 进入下一层。
 - directoryBrowser：点击章节卡片进入 reader。
 - reader：点击返回目录回到 directoryBrowser，并保持当前目录层级和章节高亮。
-
-建议维护的状态：
-
-- currentView
-- currentSeries
-- currentPath
-- currentLevelNodes
-- currentChapter
-- currentChapterFiles
-- readerProgress
 
 ## 8. 最终体验
 

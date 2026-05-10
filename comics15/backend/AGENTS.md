@@ -25,7 +25,7 @@ backend/
 | 添加漫画 API | `src/main/java/com/nianer/comic/Controller/ComicController.java` | 必须 Swagger 注解；业务委托 Service |
 | 添加工具 API | `.../Controller/ToolController.java` | 路径前缀 `/api/tools`；内置工具元数据在此定义 |
 | 目录扫描/章节树 | `Service/ComicCatalogService.java` | 系列、章节、层级节点、章节文件；虚拟线程池扫描 |
-| 缓存策略 | `Service/ComicCacheService.java` | Redis 优先；`REDIS_ENABLED` false 时跳过缓存 |
+| 缓存策略 | `Service/ComicCacheService.java` | Redis 优先；`REDIS_ENABLED` false 时跳过缓存；键名前缀 `v2:` |
 | 媒体过滤/排序/URL | `Service/ComicMediaService.java` | 支持格式、自然排序、HQ/LQ/video URL、章节元数据 |
 | 漫画路径配置 | `Config/ComicConfig.java` + `application.yml` | `comic.root-dir`, `hq-sub-dir`, `lq-sub-dir` |
 | 工具路径配置 | `Config/ToolConfig.java` + `application.yml` | `tool.root-dir`, `tool.executables.*` |
@@ -57,7 +57,8 @@ backend/
 - 日志用 `@Slf4j` 和 `{}` 占位符：`log.info("key={}", key)`。
 - 文件扫描使用 `Path`/`Files`、try-with-resources 的 `Stream<Path>`。
 - 自然排序统一用 `CaseInsensitiveSimpleNaturalComparator`，不要字典序排序漫画文件。
-- Redis 缓存键保持：`series_list`、`chapters_list:{series}`、`chapter_files:{series}:{chapter}`。
+- `ComicCatalogService` 对章节路径 `normalize` 后必须 `startsWith` 校验，防止 `..` 逃逸系列目录。
+- Redis 缓存键保持：`v2:series_list`、`v2:chapter_files:{series}:{path}`、`v2:level:{series}[:{path}]`。
 - Redis 使用 database `1`；不是默认 database `0`。
 
 ## ANTI-PATTERNS
@@ -67,6 +68,7 @@ backend/
 - 不要拼接日志字符串，不要吞掉工具执行异常。
 - 不要把 Redis 不可用当致命错误；项目设计是自动降级。
 - 改 Go 工具输出格式时，不要忘记同步 `ToolExecutor.parseProgress()`。
+- 不要恢复旧缓存键 `series_list`、`chapters_list:*`、`chapter_files:*`；当前代码已迁到 `v2:*`。
 
 ## TESTS
 - 框架：JUnit 5 + Spring Boot Test + Mockito + AssertJ。
