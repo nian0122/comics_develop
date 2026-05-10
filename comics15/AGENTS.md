@@ -13,8 +13,7 @@
 ```text
 comics15/
 ├── backend/                 # Spring Boot API、Service 拆分、Redis 降级、工具执行
-├── frontend/                # Vite + Vue3：阅读器与工具管理页同属 SPA
-├── frontend/src/            # pages/components/stores/services/router/utils
+├── frontend/                # Vue3：阅读器与工具管理页
 ├── tools/                   # 独立 Go CLI：图片优化/叶目录查找/清空文件
 ├── docs/                    # 架构、移动端设计、启动说明；只作设计参考
 ├── nginx.conf               # API 反代 + HQ/LQ/video 静态媒体 alias
@@ -49,7 +48,7 @@ comics15/
 | `ComicMediaService` | Service | `backend/.../Service/ComicMediaService.java` | 媒体过滤、自然排序、URL/元数据构建 |
 | `ToolExecutor` | Service | `backend/.../Service/ToolExecutor.java` | 异步执行 Go 工具并解析日志进度 |
 | `App` | Vue component | `frontend/src/App.vue` | 根组件与路由状态恢复 |
-| `SeriesPage` | Vue page | `frontend/src/pages/SeriesPage.vue` | 系列列表、搜索过滤、错误展示 |
+| `SeriesPage` | Vue page | `frontend/src/pages/SeriesPage.vue` | 系列列表、错误展示 |
 | `DirectoryPage` | Vue page | `frontend/src/pages/DirectoryPage.vue` | 章节树、封面懒加载、目录渲染 |
 | `ReaderShell` | Vue component | `frontend/src/components/ReaderShell.vue` | 阅读器控制壳、跳页、进度、章节导航 |
 | `ToolsPage` | Vue page | `frontend/src/pages/ToolsPage.vue` | 工具管理页编排 |

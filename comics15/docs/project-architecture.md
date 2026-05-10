@@ -322,7 +322,7 @@ IMAGE_EXT = [".jpg", ".jpeg", ".png", ".webp"]  // 封面候选
 
 | Store | 职责 |
 |-------|------|
-| `series-store` | 系列列表、搜索过滤、加载状态 |
+| `series-store` | 系列列表、加载状态 |
 | `chapter-store` | 章节树、层级节点、加载状态 |
 | `reader-store` | 当前章节文件、阅读位置、视图状态 |
 | `progress-store` | 阅读进度持久化、localStorage |
@@ -412,39 +412,6 @@ location /video/ {
     add_header Accept-Ranges bytes;  # 支持视频拖拽
 }
 ```
-
----
-
-## 8. 图片加载策略
-
-完整设计见：[章节图片源策略设计](./chapter-source-strategy-design.md)
-
-### 基本原则
-
-```
-章节首图 cover_source → 普通图片优先按章节级来源加载 → 异常时兜底
-```
-
-**规则**:
-- `cover_source = lq`: 普通图片默认直接构建 LQ WebP URL
-- `cover_source = hq`: 普通图片默认直接构建 HQ URL
-- `cover_source` 缺失: 回退到逐张 HEAD 探测
-- 视频/GIF 始终走 `/video/`，不参与 LQ/HQ 策略
-
-### 阅读器图片加载
-
-1. `ReaderPage` 获取当前章节，提取 `cover_source`
-2. 为每个媒体容器设置 `data-cover-source`
-3. `ReaderMediaItem` 根据 `data-cover-source` 构建初始 URL
-4. 图片加载失败 (`onerror`) 时回退到另一源
-
-### 章节卡片首图
-
-1. `DirectoryPage` 加载层级节点
-2. 章节节点包含 `cover_file` 和 `cover_source`
-3. `ChapterCard` 直接使用 `cover_source` 构建首图 URL
-4. 懒加载触发（`IntersectionObserver`）
-
 ---
 
 ## 9. 缓存策略
@@ -528,8 +495,8 @@ docker compose up --build
 
 - [后端 API 文档](./backend-api.md)
 - [项目需求文档](./project-requirements.md)
-- [移动端前端设计](./mobile-frontend-design.md)
-- [章节图片源策略设计](./chapter-source-strategy-design.md)
+- [前端设计](./frontend-design.md)
+- [项目需求](./project-requirements.md)
 - [启动指南](./start-frontend-backend.md)
 
 ---
