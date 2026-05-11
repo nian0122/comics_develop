@@ -1,48 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light">
-    <title>漫画阅读器</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>本地漫画阅读器</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/main.css">
-</head>
-<body>
-    <main id="app" class="mobile-shell">
-        <section id="seriesView" class="mobile-view"></section>
-        <section id="directoryView" class="mobile-view hidden"></section>
-        <section id="readerView" class="reader-view hidden">
-            <div id="reader" class="reader" tabindex="0"></div>
-            <button id="readerMenuBtn" class="reader-fab" aria-label="展开快捷菜单">⋯</button>
-            <div id="readerActions" class="reader-actions hidden" aria-label="阅读快捷操作">
-                <button id="prevBtn" class="reader-action-btn">上一话</button>
-                <button id="nextBtn" class="reader-action-btn">下一话</button>
-                <button id="backToDirectoryBtn" class="reader-action-btn reader-action-primary">返回目录</button>
-            </div>
-            <button id="progressStatus" class="reader-progress-pill" aria-label="跳转页码">0 / 0</button>
-        </section>
-    </main>
-
-    <div id="jumpModal" class="fixed inset-0 z-[60] hidden items-center justify-center">
-        <div class="glass-strong rounded-2xl p-6 w-80 shadow-2xl">
-            <div class="text-center mb-5">
-                <div class="title text-lg mb-1">跳转页码</div>
-                <div class="chapter-title">共 <span id="totalPages">0</span> 页</div>
-            </div>
-            <input id="jumpPageInput" type="number" min="1"
-                   class="glass-input text-center text-lg mb-5"
-                   placeholder="输入页码">
-            <div class="flex gap-3">
-                <button id="jumpCancelBtn" class="glass-btn flex-1">取消</button>
-                <button id="jumpConfirmBtn" class="primary-btn flex-1">跳转</button>
-            </div>
-            <div class="mt-4 text-center">
-                <span class="status-text">按 G 键快速跳转</span>
-            </div>
-        </div>
-    </div>
-
-    <script type="module" src="/js/main.js"></script>
-</body>
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased">
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>

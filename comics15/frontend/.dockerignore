@@ -1,8 +1,11 @@
 node_modules
 dist
-*.log
 .git
 .gitignore
 *.md
-.test
+.vite
 coverage
+.nyc_output
+.env
+.env.*
+!/.env.example

@@ -1,93 +1,22 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath, URL } from 'node:url';
-import { defineConfig } from 'vite';
-
-const comicsRoot = process.env.COMICS_ROOT_DIR || 'F:/games/comics';
-const hqSubDir = process.env.HQ_SUB_DIR || 'h_photograph';
-const lqSubDir = process.env.LQ_SUB_DIR || 'l_photograph';
-const backendTarget = 'http://localhost:500';
-const frontendRoot = fileURLToPath(new URL('.', import.meta.url));
-
-function decodeUrlPath(url) {
-    return decodeURIComponent((url || '').split('?')[0]);
-}
-
-function sendStaticFile(res, filePath, notFoundStatus) {
-    fs.stat(filePath, (statError, stat) => {
-        if (statError || !stat.isFile()) {
-            res.statusCode = notFoundStatus;
-            res.end();
-            return;
-        }
-
-        res.setHeader('Content-Length', stat.size);
-        fs.createReadStream(filePath).pipe(res);
-    });
-}
-
-function serveComicStatic(prefix, subDir, notFoundStatus) {
-    return (req, res, next) => {
-        if (!req.url?.startsWith(prefix)) {
-            next();
-            return;
-        }
-
-        const relativePath = decodeUrlPath(req.url.slice(prefix.length)).replace(/^\/+/, '');
-        const filePath = path.join(comicsRoot, subDir, relativePath);
-        sendStaticFile(res, filePath, notFoundStatus);
-    };
-}
-
-function comicStaticPlugin() {
-    return {
-        name: 'comic-static-dev-server',
-        configureServer(server) {
-            server.middlewares.use(serveComicStatic('/hq_image/', hqSubDir, 404));
-            server.middlewares.use(serveComicStatic('/lq_image/', lqSubDir, 204));
-            server.middlewares.use(serveComicStatic('/video/', hqSubDir, 404));
-        }
-    };
-}
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { localMediaDevPlugin } from './local-media-dev-server.js'
 
 export default defineConfig({
-    root: '.',
-    base: '/',
-    plugins: [comicStaticPlugin()],
-
-    build: {
-        outDir: 'dist',
-        assetsDir: 'assets',
-        sourcemap: true,
-        minify: 'esbuild',
-        rollupOptions: {
-            input: {
-                main: './index.html',
-                tools: './tools.html'
-            }
-        }
-    },
-
-    server: {
-        port: 3000,
-        fs: {
-            allow: [frontendRoot, comicsRoot]
-        },
-        proxy: {
-            '/api': {
-                target: backendTarget,
-                changeOrigin: true
-            }
-        }
-    },
-
-    preview: {
-        port: 4173,
-        proxy: {
-            '/api': {
-                target: backendTarget,
-                changeOrigin: true
-            }
-        }
+  plugins: [vue(), localMediaDevPlugin()],
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:500',
+        changeOrigin: true
+      }
     }
-});
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: []
+  }
+})
