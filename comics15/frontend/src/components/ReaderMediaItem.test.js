@@ -74,4 +74,28 @@ describe('ReaderMediaItem', () => {
     expect(video.getAttribute('src')).toBe('')
     expect(video.load).toHaveBeenCalled()
   })
+
+  it('active 为 false 时不绑定图片 src', async () => {
+    const wrapper = mount(ReaderMediaItem, {
+      props: { media: { type: 'image', lqUrl: '/lq.webp', hqUrl: '/hq.jpg' }, index: 0, active: false }
+    })
+
+    await wrapper.vm.markVisible()
+
+    expect(wrapper.get('img').attributes('src')).toBe('')
+  })
+
+  it('active 变 false 时清空媒体 src', async () => {
+    const wrapper = mount(ReaderMediaItem, {
+      props: { media: { type: 'image', lqUrl: '/lq.webp', hqUrl: '/hq.jpg' }, index: 0, active: true }
+    })
+
+    await wrapper.vm.markVisible()
+    const image = wrapper.get('img').element
+    expect(image.getAttribute('src')).toBe('/lq.webp')
+
+    await wrapper.setProps({ active: false })
+
+    expect(image.getAttribute('src')).toBe('')
+  })
 })

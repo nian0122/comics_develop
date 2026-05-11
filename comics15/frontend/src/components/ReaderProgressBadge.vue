@@ -23,12 +23,27 @@ function confirmJump(page) {
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-    <div class="pointer-events-auto flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950/90 p-2 shadow-2xl backdrop-blur">
-      <button data-progress="true" class="rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-white" @click="showJumpModal = true">
+  <div class="fixed inset-x-0 bottom-6 z-50 flex justify-center">
+      <button
+        data-progress="true"
+        class="
+        rounded-full
+        border border-white/30
+        bg-white/[0.08]
+        px-5 py-2
+        text-sm font-medium text-white
+        shadow-[0_0_20px_rgba(255,255,255,0.15)]
+        relative overflow-hidden
+        before:absolute before:inset-0
+        before:rounded-full
+        before:bg-gradient-to-b
+        before:from-white/40 before:to-transparent
+        before:opacity-60
+        "
+        @click="showJumpModal = true"
+      >
         {{ currentPage }} / {{ totalPages }}
       </button>
-    </div>
   </div>
 
   <JumpPageModal

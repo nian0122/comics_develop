@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getMediaSource } from '../services/media-url.js'
 import { observeLazyImage } from '../utils/lazy-image.js'
 
@@ -11,6 +11,10 @@ const props = defineProps({
   index: {
     type: Number,
     required: true
+  },
+  active: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -26,6 +30,7 @@ const activeUrl = computed(() => {
 
   return source.value.url
 })
+const safeUrl = computed(() => (props.active ? activeUrl.value : ''))
 
 function markVisible() {
   visible.value = true
@@ -64,6 +69,12 @@ onMounted(() => {
   }
 })
 
+watch(() => props.active, (active) => {
+  if (!active) {
+    stopMediaRequest()
+  }
+})
+
 onBeforeUnmount(() => {
   cleanupObserver()
   stopMediaRequest()
@@ -73,7 +84,7 @@ defineExpose({ markVisible })
 </script>
 
 <template>
-  <figure ref="mediaRef" class="w-full overflow-hidden rounded-xl bg-slate-900">
+  <figure ref="mediaRef" class="w-full overflow-hidden bg-black">
     <div v-if="!visible" class="flex min-h-80 items-center justify-center text-sm text-slate-400">
       第 {{ index + 1 }} 页
     </div>
@@ -82,7 +93,7 @@ defineExpose({ markVisible })
       v-else-if="source.kind === 'video'"
       ref="activeMediaRef"
       class="w-full"
-      :src="activeUrl"
+      :src="safeUrl"
       controls
       playsinline
     />
@@ -90,8 +101,8 @@ defineExpose({ markVisible })
     <img
       v-else
       ref="activeMediaRef"
-      class="w-full select-none"
-      :src="activeUrl"
+      class="w-full select-none block"
+      :src="safeUrl"
       :alt="`第 ${index + 1} 页`"
       loading="lazy"
       @error="useHighQuality"

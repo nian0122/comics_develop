@@ -29,7 +29,10 @@ vi.mock('../router/index.js', () => ({
 }))
 
 vi.mock('../components/ReaderMediaItem.vue', () => ({
-  default: { props: ['media', 'index'], template: '<article class="media-item">{{ index }}</article>' }
+  default: {
+    props: ['media', 'index', 'active'],
+    template: '<article class="media-item" :data-active="active" :data-page-index="index">{{ index }}</article>'
+  }
 }))
 
 vi.mock('../components/ReaderShell.vue', () => ({
@@ -129,6 +132,25 @@ describe('ReaderPage', () => {
     expect(routerMock.push).toHaveBeenCalledWith('/read/系列 A/目录/第 2 话')
   })
 
+  it('只激活当前页附近窗口', () => {
+    useReaderStore.mockReturnValue({
+      mediaItems: [{ url: '/1.jpg' }, { url: '/2.jpg' }, { url: '/3.jpg' }, { url: '/4.jpg' }, { url: '/5.jpg' }],
+      currentPage: 1,
+      totalPages: 5,
+      previousChapterPath: '',
+      nextChapterPath: '',
+      loading: false,
+      error: '',
+      loadChapter: vi.fn(),
+      setCurrentPage: vi.fn()
+    })
+
+    const wrapper = mount(ReaderPage)
+    const states = wrapper.findAll('.media-item').map((item) => item.attributes('data-active'))
+
+    expect(states).toEqual(['true', 'true', 'true', 'false', 'false'])
+  })
+
   it('阅读路由变化时重新加载章节', async () => {
     const loadChapter = vi.fn()
     useReaderStore.mockReturnValue({
@@ -148,6 +170,30 @@ describe('ReaderPage', () => {
     expect(loadChapter).toHaveBeenCalledWith('系列 A', '目录/第 1 话')
 
     routeMock.route.params.pathMatch = '目录/第 2 话'
+    await nextTick()
+
+    expect(loadChapter).toHaveBeenCalledWith('系列 A', '目录/第 2 话')
+  })
+
+  it('阅读路由变化时清理旧页面跟踪状态', async () => {
+    const loadChapter = vi.fn()
+    useReaderStore.mockReturnValue({
+      mediaItems: [{ url: '/1.jpg' }, { url: '/2.jpg' }],
+      currentPage: 1,
+      totalPages: 2,
+      previousChapterPath: '',
+      nextChapterPath: '',
+      loading: false,
+      error: '',
+      loadChapter,
+      setCurrentPage: vi.fn()
+    })
+
+    const wrapper = mount(ReaderPage)
+
+    routeMock.route.params.pathMatch = '目录/第 2 话'
+    await nextTick()
+    await nextTick()
     await nextTick()
 
     expect(loadChapter).toHaveBeenCalledWith('系列 A', '目录/第 2 话')
