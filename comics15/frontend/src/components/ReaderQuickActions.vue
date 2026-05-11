@@ -30,23 +30,47 @@ function closeMenu() {
 <template>
   <div v-if="menuOpen" data-reader-overlay="true" class="fixed inset-0 z-30 bg-transparent" @click="closeMenu"></div>
 
-  <div v-if="visible" class="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-end px-4">
-    <div class="pointer-events-auto flex flex-col items-end gap-2">
-      <div v-if="menuOpen" class="flex flex-col items-end gap-2 rounded-3xl border border-slate-800 bg-slate-950/90 p-3 shadow-2xl backdrop-blur">
-        <button data-back="true" class="rounded-full px-4 py-2 text-sm text-slate-300" @click="emit('back'); closeMenu()">返回目录</button>
-        <button data-prev="true" class="rounded-full px-4 py-2 text-sm text-slate-300 disabled:opacity-40" :disabled="previousDisabled" @click="emit('previous'); closeMenu()">
+  <div v-if="visible" class="fixed inset-x-0 bottom-4 z-50 flex justify-end px-4">
+    <div class="flex flex-col items-end gap-2">
+      <div v-if="menuOpen" class="flex flex-col items-end gap-2 rounded-full border border-white/30 bg-white/[0.08] p-2 shadow-[0_0_20px_rgba(255,255,255,0.15)] relative overflow-hidden backdrop-blur-sm">
+        <button data-back="true" class="rounded-full px-4 py-2 text-sm text-white/80 hover:text-white transition" @click="emit('back'); closeMenu()">返回目录</button>
+        <button 
+          data-prev="true" 
+          class="rounded-full px-4 py-2 text-sm text-white/80 hover:text-white transition disabled:opacity-40" 
+          :disabled="previousDisabled" 
+          @click="emit('previous'); 
+          closeMenu()">
           上一话
         </button>
-        <button data-next="true" class="rounded-full px-4 py-2 text-sm text-slate-300 disabled:opacity-40" :disabled="nextDisabled" @click="emit('next'); closeMenu()">
+        <button 
+          data-next="true" 
+          class="rounded-full px-4 py-2 text-sm text-white/80 hover:text-white transition disabled:opacity-40" 
+          :disabled="nextDisabled" 
+          @click="emit('next'); 
+          closeMenu()">
           下一话
         </button>
       </div>
 
-      <div class="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950/90 p-2 shadow-2xl backdrop-blur">
-        <button data-menu-toggle="true" class="rounded-full bg-slate-800 px-4 py-2 text-xl leading-none text-white" @click="toggleMenu">
-          ⋯
-        </button>
-      </div>
+      <button 
+        data-menu-toggle="true"   
+        class="
+        rounded-full 
+        border border-white/30 
+        bg-white/[0.08] 
+        px-5 py-2 
+        text-sm font-medium text-white 
+        shadow-[0_0_20px_rgba(255,255,255,0.15)] 
+        relative overflow-hidden 
+        before:absolute before:inset-0 
+        before:rounded-full 
+        before:bg-gradient-to-b 
+        before:from-white/40 before:to-transparent 
+        before:opacity-60 
+        "  
+        @click="toggleMenu">
+        ⋯
+      </button>
     </div>
   </div>
 </template>
