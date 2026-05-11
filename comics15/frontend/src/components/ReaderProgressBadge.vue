@@ -23,7 +23,7 @@ function confirmJump(page) {
 </script>
 
 <template>
-  <div class="fixed inset-x-0 bottom-6 z-50 flex justify-center">
+  <div class="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
       <button
         data-progress="true"
         class="
