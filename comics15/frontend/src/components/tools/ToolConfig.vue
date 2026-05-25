@@ -1,18 +1,16 @@
-<script setup>
-const props = defineProps({
-  tool: {
-    type: Object,
-    default: () => ({ params: [] })
-  },
-  modelValue: {
-    type: Object,
-    default: () => ({})
-  }
-})
+<script setup lang="ts">
+import type { ToolInfo } from '@/types/tools'
 
-const emit = defineEmits(['update:modelValue'])
+const props = defineProps<{
+  tool: ToolInfo
+  modelValue: Record<string, string>
+}>()
 
-function updateField(key, value) {
+const emit = defineEmits<{
+  'update:modelValue': [value: Record<string, string>]
+}>()
+
+function updateField(key: string, value: string) {
   emit('update:modelValue', {
     ...props.modelValue,
     [key]: value
@@ -32,10 +30,10 @@ function updateField(key, value) {
           class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
           :required="param.required"
           :value="modelValue[param.key] ?? param.default ?? ''"
-          @change="updateField(param.key, $event.target.value)"
+          @change="updateField(param.key, ($event.target as HTMLSelectElement).value)"
         >
           <option value="">请选择</option>
-          <option v-for="option in param.options ?? []" :key="option.value ?? option" :value="option.value ?? option">
+          <option v-for="option in param.options ?? []" :key="String(option.value ?? option)" :value="option.value ?? option">
             {{ option.label ?? option }}
           </option>
           <option v-if="!param.options || param.options.length === 0" :value="modelValue[param.key] ?? param.default ?? ''">
@@ -49,7 +47,7 @@ function updateField(key, value) {
           :type="param.type === 'number' ? 'number' : 'text'"
           :required="param.required"
           :value="modelValue[param.key] ?? param.default ?? ''"
-          @input="updateField(param.key, $event.target.value)"
+          @input="updateField(param.key, ($event.target as HTMLInputElement).value)"
         />
       </label>
     </div>

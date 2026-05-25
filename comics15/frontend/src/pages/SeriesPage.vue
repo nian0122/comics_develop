@@ -1,8 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useSeriesStore } from '../stores/series-store.js'
-import { createSeriesRootRoute } from '../router/index.js'
+import { useSeriesStore } from '@/stores/series-store'
+import { createSeriesRootRoute } from '@/router'
 
 const seriesStore = useSeriesStore()
 const router = useRouter()
@@ -13,7 +13,7 @@ onMounted(() => {
   }
 })
 
-function openSeries(seriesName) {
+function openSeries(seriesName: string) {
   router.push(createSeriesRootRoute(seriesName))
 }
 </script>

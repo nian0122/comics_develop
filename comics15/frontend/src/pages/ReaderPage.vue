@@ -1,10 +1,10 @@
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ReaderMediaItem from '../components/ReaderMediaItem.vue'
-import ReaderShell from '../components/ReaderShell.vue'
-import { createParentDirectoryRoute, createSeriesReadRoute } from '../router/index.js'
-import { useReaderStore } from '../stores/reader-store.js'
+import ReaderMediaItem from '@/components/ReaderMediaItem.vue'
+import ReaderShell from '@/components/ReaderShell.vue'
+import { createParentDirectoryRoute, createSeriesReadRoute } from '@/router'
+import { useReaderStore } from '@/stores/reader-store'
 
 const readerStore = useReaderStore()
 const route = useRoute()
@@ -17,9 +17,9 @@ const chapterPath = computed(() => {
   return Array.isArray(pathMatch) ? pathMatch.join('/') : String(pathMatch ?? '')
 })
 
-const pageElements = ref([])
-const activePageIndexes = ref(new Set())
-let pageObserver = null
+const pageElements = ref<(HTMLElement | null)[]>([])
+const activePageIndexes = ref<Set<number>>(new Set())
+let pageObserver: IntersectionObserver | null = null
 
 onMounted(() => {
   readerStore.loadChapter(seriesName.value, chapterPath.value)
@@ -38,7 +38,7 @@ onBeforeUnmount(() => {
   cleanupPageTracking()
 })
 
-function setPageRef(element, index) {
+function setPageRef(element: HTMLElement | null, index: number) {
   if (element) {
     pageElements.value[index] = element
   }
@@ -51,9 +51,9 @@ function cleanupPageTracking() {
   activePageIndexes.value = new Set()
 }
 
-function updateActiveWindow(page) {
+function updateActiveWindow(page: number) {
   const currentIndex = Math.max(page - 1, 0)
-  const nextActiveIndexes = new Set()
+  const nextActiveIndexes = new Set<number>()
   const start = Math.max(currentIndex - 1, 0)
   const end = Math.min(currentIndex + 2, Math.max(readerStore.mediaItems.length - 1, 0))
 
@@ -64,7 +64,7 @@ function updateActiveWindow(page) {
   activePageIndexes.value = nextActiveIndexes
 }
 
-function isPageActive(index) {
+function isPageActive(index: number): boolean {
   if (activePageIndexes.value.size === 0 && readerStore.mediaItems.length > 0) {
     const currentIndex = Math.max(readerStore.currentPage - 1, 0)
     const start = Math.max(currentIndex - 1, 0)
@@ -98,7 +98,7 @@ async function initPageObserver() {
     }
 
     const closest = visibleEntries.sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0]
-    const index = Number(closest.target.dataset.pageIndex ?? '0')
+    const index = Number((closest.target as HTMLElement).dataset.pageIndex ?? '0')
     readerStore.setCurrentPage(index + 1)
     updateActiveWindow(index + 1)
   }, {
@@ -106,7 +106,9 @@ async function initPageObserver() {
     threshold: [0.25, 0.5, 0.75]
   })
 
-  pageElements.value.forEach((element) => pageObserver.observe(element))
+  pageElements.value.forEach((element) => {
+    if (element) pageObserver!.observe(element)
+  })
   if (readerStore.currentPage > 0) {
     updateActiveWindow(readerStore.currentPage)
   }
@@ -117,18 +119,20 @@ watch(() => readerStore.mediaItems, () => {
   initPageObserver()
 }, { deep: true, immediate: true })
 
-function jumpToPage(page) {
+function jumpToPage(page: number) {
   readerStore.setCurrentPage(page)
   updateActiveWindow(page)
   const target = document.querySelector(`[data-page-index="${page - 1}"]`)
-  target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  if (target instanceof HTMLElement) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 }
 
 function goBackToDirectory() {
   router.push(createParentDirectoryRoute(seriesName.value, chapterPath.value))
 }
 
-function goToChapter(path) {
+function goToChapter(path: string) {
   if (path) {
     router.push(createSeriesReadRoute(seriesName.value, path))
   }
@@ -154,7 +158,7 @@ defineExpose({
         v-for="(media, index) in readerStore.mediaItems"
         :key="media.url ?? media.hqUrl ?? media.videoUrl ?? index"
         :data-page-index="index"
-        :ref="(element) => setPageRef(element, index)"
+        :ref="(element: unknown) => setPageRef(element as HTMLElement | null, index as number)"
       >
         <ReaderMediaItem :media="media" :index="index" :active="isPageActive(index)" />
       </div>

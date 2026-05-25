@@ -1,10 +1,9 @@
-<script setup>
-defineProps({
-  execution: {
-    type: Object,
-    default: null
-  }
-})
+<script setup lang="ts">
+import type { ExecutionStatus } from '@/types/tools'
+
+defineProps<{
+  execution: ExecutionStatus | null
+}>()
 </script>
 
 <template>

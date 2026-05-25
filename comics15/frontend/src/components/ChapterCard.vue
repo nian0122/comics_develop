@@ -1,18 +1,25 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 
-const props = defineProps({
+const props = defineProps<{
   chapter: {
-    type: Object,
-    required: true
-  },
-  active: {
-    type: Boolean,
-    default: false
+    name: string
+    type?: string
+    path: string
+    path_id: string
+    totalFiles?: number
+    coverUrl?: string
+    loading?: boolean
+    pathText?: string
+    progressText?: string
   }
-})
+  active?: boolean
+}>()
 
-const emit = defineEmits(['select'])
+const emit = defineEmits<{
+  select: [chapter: Record<string, unknown>]
+}>()
+
 const coverFailed = ref(false)
 
 const pageLabel = computed(() => `${props.chapter.totalFiles ?? 0} 页`)
@@ -24,7 +31,7 @@ const rootClasses = computed(() => [
 ])
 
 function onSelect() {
-  emit('select', props.chapter)
+  emit('select', props.chapter as Record<string, unknown>)
 }
 
 function onCoverError() {

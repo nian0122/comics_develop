@@ -1,10 +1,9 @@
-<script setup>
-defineProps({
-  executions: {
-    type: Object,
-    default: () => ({})
-  }
-})
+<script setup lang="ts">
+import type { ExecutionsMap } from '@/types/tools'
+
+defineProps<{
+  executions: ExecutionsMap
+}>()
 </script>
 
 <template>

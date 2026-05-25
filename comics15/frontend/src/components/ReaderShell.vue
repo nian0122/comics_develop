@@ -1,27 +1,20 @@
-<script setup>
+<script setup lang="ts">
 import ReaderProgressBadge from './ReaderProgressBadge.vue'
 import ReaderQuickActions from './ReaderQuickActions.vue'
 
-defineProps({
-  currentPage: {
-    type: Number,
-    required: true
-  },
-  totalPages: {
-    type: Number,
-    required: true
-  },
-  previousDisabled: {
-    type: Boolean,
-    default: false
-  },
-  nextDisabled: {
-    type: Boolean,
-    default: false
-  }
-})
+defineProps<{
+  currentPage: number
+  totalPages: number
+  previousDisabled?: boolean
+  nextDisabled?: boolean
+}>()
 
-const emit = defineEmits(['jump', 'previous', 'next', 'back'])
+const emit = defineEmits<{
+  jump: [page: number]
+  previous: []
+  next: []
+  back: []
+}>()
 </script>
 
 <template>

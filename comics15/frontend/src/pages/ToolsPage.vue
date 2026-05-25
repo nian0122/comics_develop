@@ -1,14 +1,15 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import ExecutionHistory from '../components/tools/ExecutionHistory.vue'
-import ExecutionPanel from '../components/tools/ExecutionPanel.vue'
-import ToolConfig from '../components/tools/ToolConfig.vue'
-import ToolList from '../components/tools/ToolList.vue'
-import { useToolsStore } from '../stores/tools-store.js'
+import ExecutionHistory from '@/components/tools/ExecutionHistory.vue'
+import ExecutionPanel from '@/components/tools/ExecutionPanel.vue'
+import ToolConfig from '@/components/tools/ToolConfig.vue'
+import ToolList from '@/components/tools/ToolList.vue'
+import { useToolsStore } from '@/stores/tools-store'
+import type { ToolInfo } from '@/types/tools'
 
 const toolsStore = useToolsStore()
-const selectedTool = ref(null)
-const params = ref({})
+const selectedTool = ref<ToolInfo | null>(null)
+const params = ref<Record<string, string>>({})
 
 const selectedToolName = computed(() => selectedTool.value?.name ?? '')
 
@@ -16,7 +17,7 @@ onMounted(() => {
   toolsStore.loadTools()
 })
 
-function selectTool(tool) {
+function selectTool(tool: ToolInfo) {
   selectedTool.value = tool
   params.value = Object.fromEntries((tool.params ?? []).map((param) => [param.key, param.default ?? '']))
 }

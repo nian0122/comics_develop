@@ -1,18 +1,17 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 
-const props = defineProps({
-  previousDisabled: {
-    type: Boolean,
-    default: false
-  },
-  nextDisabled: {
-    type: Boolean,
-    default: false
-  }
-})
+const props = defineProps<{
+  previousDisabled?: boolean
+  nextDisabled?: boolean
+}>()
 
-const emit = defineEmits(['previous', 'next', 'back'])
+const emit = defineEmits<{
+  previous: []
+  next: []
+  back: []
+}>()
+
 const menuOpen = ref(false)
 const visible = ref(true)
 

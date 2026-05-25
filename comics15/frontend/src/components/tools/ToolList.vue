@@ -1,16 +1,14 @@
-<script setup>
-defineProps({
-  tools: {
-    type: Array,
-    default: () => []
-  },
-  selectedToolName: {
-    type: String,
-    default: ''
-  }
-})
+<script setup lang="ts">
+import type { ToolInfo } from '@/types/tools'
 
-defineEmits(['select'])
+defineProps<{
+  tools: ToolInfo[]
+  selectedToolName?: string
+}>()
+
+defineEmits<{
+  select: [tool: ToolInfo]
+}>()
 </script>
 
 <template>

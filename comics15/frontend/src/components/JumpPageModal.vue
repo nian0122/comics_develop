@@ -1,21 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 
-const props = defineProps({
-  currentPage: {
-    type: Number,
-    required: true
-  },
-  totalPages: {
-    type: Number,
-    required: true
-  }
-})
+const props = defineProps<{
+  currentPage: number
+  totalPages: number
+}>()
 
-const emit = defineEmits(['confirm', 'close'])
+const emit = defineEmits<{
+  confirm: [page: number]
+  close: []
+}>()
+
 const pageInput = ref(String(props.currentPage))
 
-function clampPage(value) {
+function clampPage(value: string): number {
   const page = Number.parseInt(value, 10)
 
   if (Number.isNaN(page)) {

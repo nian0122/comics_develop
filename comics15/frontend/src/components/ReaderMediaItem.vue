@@ -1,27 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { getMediaSource } from '../services/media-url.js'
-import { observeLazyImage } from '../utils/lazy-image.js'
+import { getMediaSource } from '@/services/media-url'
+import { observeLazyImage } from '@/utils/lazy-image'
+import type { MediaItem } from '@/types/api'
 
-const props = defineProps({
-  media: {
-    type: Object,
-    required: true
-  },
-  index: {
-    type: Number,
-    required: true
-  },
-  active: {
-    type: Boolean,
-    default: true
-  }
-})
+const props = defineProps<{
+  media: MediaItem
+  index: number
+  active?: boolean
+}>()
 
 const visible = ref(false)
 const useFallback = ref(false)
-const mediaRef = ref(null)
-const activeMediaRef = ref(null)
+const mediaRef = ref<HTMLElement | null>(null)
+const activeMediaRef = ref<HTMLImageElement | HTMLVideoElement | null>(null)
 const source = computed(() => getMediaSource(props.media))
 const activeUrl = computed(() => {
   if (useFallback.value && source.value.fallbackUrl) {
@@ -50,9 +42,10 @@ function stopMediaRequest() {
   }
 
   element.removeAttribute('src')
-  element.src = ''
-
-  if (typeof element.load === 'function') {
+  if (element instanceof HTMLImageElement) {
+    element.src = ''
+  } else if (element instanceof HTMLVideoElement) {
+    element.src = ''
     element.load()
   }
 }

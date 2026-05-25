@@ -1,22 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import JumpPageModal from './JumpPageModal.vue'
 
-defineProps({
-  currentPage: {
-    type: Number,
-    required: true
-  },
-  totalPages: {
-    type: Number,
-    required: true
-  }
-})
+defineProps<{
+  currentPage: number
+  totalPages: number
+}>()
 
-const emit = defineEmits(['jump'])
+const emit = defineEmits<{
+  jump: [page: number]
+}>()
+
 const showJumpModal = ref(false)
 
-function confirmJump(page) {
+function confirmJump(page: number) {
   showJumpModal.value = false
   emit('jump', page)
 }
