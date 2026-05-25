@@ -3,6 +3,11 @@ export interface LazyImageOptions {
   threshold?: number
 }
 
+/**
+ * 使用 IntersectionObserver 监听元素进入视口附近时触发加载回调。
+ * 不支持 IntersectionObserver 的环境直接触发回调。
+ * 返回清理函数，调用后断开观察器。
+ */
 export function observeLazyImage(
   element: HTMLElement | null,
   onLoad: (element: HTMLElement) => void,

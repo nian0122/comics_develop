@@ -82,6 +82,10 @@ export const useReaderStore = defineStore('reader', {
       this.previousChapterPath = previousChapterPath
       this.nextChapterPath = nextChapterPath
     },
+    /**
+     * 根据当前 chapterPath 在 chapterPaths 列表中定位，自动计算上一话 / 下一话。
+     * 未找到或列表为空时清空导航信息。
+     */
     updateChapterNavigation(chapterPath: string) {
       if (!this.chapterPaths.length) {
         return

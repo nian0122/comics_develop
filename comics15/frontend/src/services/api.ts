@@ -5,6 +5,9 @@ export interface FetchError extends Error {
   body: string
 }
 
+/**
+ * 通用 JSON 请求封装。非 2xx 响应会抛出包含 status 和 body 的 FetchError。
+ */
 export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options)
 
@@ -22,6 +25,7 @@ export function fetchSeries(): Promise<SeriesListResponse> {
   return fetchJson<SeriesListResponse>('/api/series')
 }
 
+/** 获取某系列的目录层级（目录 + 章节节点），中文路径自动编码 */
 export function fetchLevel(seriesName: string, path = ''): Promise<LevelResponse> {
   const encodedSeries = encodeURIComponent(seriesName)
   const encodedPath = path ? `?path=${encodeURIComponent(path)}` : ''
@@ -29,6 +33,7 @@ export function fetchLevel(seriesName: string, path = ''): Promise<LevelResponse
   return fetchJson<LevelResponse>(`/api/levels/${encodedSeries}${encodedPath}`)
 }
 
+/** 获取某个章节的媒体文件列表（图片/视频），中文路径自动编码 */
 export function fetchChapter(seriesName: string, chapterPath = ''): Promise<ChapterResponse> {
   const encodedSeries = encodeURIComponent(seriesName)
   const encodedChapterPath = chapterPath ? `?chapterPath=${encodeURIComponent(chapterPath)}` : ''
