@@ -183,6 +183,47 @@ public class ComicMediaService {
     }
 
     /**
+     * 构建层级接口根节点中的漫画系列条目。
+     *
+     * <p>扫描系列目录的直接子目录，找到首个有封面的章节作为系列封面，并统计章
+     * 节总数。该方法只遍历直接子级，不递归。</p>
+     *
+     * @param seriesDir 系列物理目录
+     * @return type=series 的节点数据，包含封面 URL 和章节统计
+     */
+    public Map<String, Object> buildSeriesNode(Path seriesDir) throws IOException {
+        String seriesName = seriesDir.getFileName().toString();
+        Map<String, Object> node = new HashMap<>();
+        node.put("type", "series");
+        node.put("name", seriesName);
+        node.put("path", seriesName);
+        node.put("pathId", seriesName);
+        node.put("hasChildren", hasChildDirectories(seriesDir));
+
+        // 扫描直接子目录：找到首个章节的第一张图片作为系列封面，同时统计章节数。
+        List<Path> children = listSortedSubDirectories(seriesDir);
+        int chapterCount = 0;
+        String firstCoverUrl = null;
+
+        for (Path child : children) {
+            ChapterPreview preview = inspectChapterPreview(child);
+            if (preview.hasMedia()) {
+                chapterCount++;
+                if (firstCoverUrl == null && preview.firstImageFile().isPresent()) {
+                    String childRelPath = child.getFileName().toString();
+                    firstCoverUrl = buildCoverUrl(seriesName, childRelPath, preview.firstImageFile().get());
+                }
+            }
+        }
+
+        node.put("fileCount", chapterCount);
+        if (firstCoverUrl != null) {
+            node.put("coverUrl", firstCoverUrl);
+        }
+        return node;
+    }
+
+    /**
      * 构建层级节点接口响应 body。
      *
      * @param decodedPath 当前层级相对路径

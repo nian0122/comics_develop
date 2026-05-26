@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
-import { fetchSeries } from '@/services/api'
+import { fetchRootLevel } from '@/services/api'
+import type { LevelNode } from '@/types/api'
 
 interface SeriesState {
-  series: string[]
+  series: LevelNode[]
   loading: boolean
   error: string
 }
@@ -19,7 +20,10 @@ export const useSeriesStore = defineStore('series', {
       this.error = ''
 
       try {
-        this.series = await fetchSeries()
+        const response = await fetchRootLevel()
+        this.series = (response.nodes ?? []).filter(
+          (node) => node.type === 'series'
+        )
       } catch (error) {
         this.error = error instanceof Error ? error.message : '加载系列失败'
         this.series = []

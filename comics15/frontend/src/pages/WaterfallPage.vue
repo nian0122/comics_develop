@@ -47,19 +47,20 @@ onMounted(async () => {
 // ── Load root-level chapters for every series in parallel ──
 async function loadAllSeriesChapters() {
   const promises = seriesStore.series.map(async (series) => {
-    if (seriesChapters[series]) {
+    const seriesName = series.name
+    if (seriesChapters[seriesName]) {
       return
     }
-    seriesChapters[series] = { nodes: [], loading: true, error: '' }
+    seriesChapters[seriesName] = { nodes: [], loading: true, error: '' }
     try {
-      const response = await fetchLevel(series, '')
+      const response = await fetchLevel(seriesName, '')
       const chapters = (response.nodes ?? []).filter(
         (n: LevelNode) => n.type === 'chapter'
       )
-      seriesChapters[series] = { nodes: chapters, loading: false, error: '' }
+      seriesChapters[seriesName] = { nodes: chapters, loading: false, error: '' }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '加载失败'
-      seriesChapters[series] = { nodes: [], loading: false, error: message }
+      seriesChapters[seriesName] = { nodes: [], loading: false, error: message }
     }
   })
   await Promise.allSettled(promises)
@@ -286,18 +287,18 @@ function retry() {
         <div class="space-y-10">
           <section
             v-for="series in seriesStore.series"
-            :key="series"
+            :key="series.pathId"
           >
             <!-- Series row header -->
             <div class="mb-3 flex items-center justify-between">
               <div class="flex items-baseline gap-2 min-w-0">
                 <h3 class="truncate text-base font-semibold text-white">{{
-                  series
+                  series.name
                 }}</h3>
               </div>
               <button
                 class="shrink-0 text-xs text-sky-400 transition hover:text-sky-300"
-                @click="openSeriesAll(series)"
+                @click="openSeriesAll(series.name)"
               >
                 查看全部 &rsaquo;
               </button>
@@ -307,7 +308,7 @@ function retry() {
             <div>
               <!-- Loading skeleton for this series -->
               <div
-                v-if="seriesChapters[series]?.loading"
+                v-if="seriesChapters[series.name]?.loading"
                 class="flex gap-3 overflow-hidden"
               >
                 <div
@@ -319,15 +320,15 @@ function retry() {
 
               <!-- Error for this series -->
               <p
-                v-else-if="seriesChapters[series]?.error"
+                v-else-if="seriesChapters[series.name]?.error"
                 class="text-xs text-rose-400"
               >
-                {{ seriesChapters[series].error }}
+                {{ seriesChapters[series.name].error }}
               </p>
 
               <!-- Empty chapters -->
               <p
-                v-else-if="!seriesChapters[series]?.nodes?.length"
+                v-else-if="!seriesChapters[series.name]?.nodes?.length"
                 class="text-xs text-slate-500"
               >
                 暂无章节
@@ -340,7 +341,7 @@ function retry() {
                 style="scrollbar-width: none"
               >
                 <ChapterCard
-                  v-for="chapter in seriesChapters[series].nodes"
+                  v-for="chapter in seriesChapters[series.name].nodes"
                   :key="chapter.pathId"
                   :chapter="{
                     name: chapter.name,
@@ -349,10 +350,10 @@ function retry() {
                     pathId: chapter.pathId,
                     fileCount: chapter.fileCount,
                     coverUrl: chapter.coverUrl,
-                    progressText: getProgressText(series, chapter.pathId)
+                    progressText: getProgressText(series.name, chapter.pathId)
                   }"
                   class="w-48 shrink-0 snap-start"
-                  @select="(ch: Record<string, unknown>) => onChapterSelect(series, ch)"
+                  @select="(ch: Record<string, unknown>) => onChapterSelect(series.name, ch)"
                 />
               </div>
             </div>

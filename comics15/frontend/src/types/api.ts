@@ -1,13 +1,11 @@
-export type SeriesListResponse = string[]
-
 export interface LevelNode {
   name: string
-  type: 'directory' | 'chapter'
+  type: 'directory' | 'chapter' | 'series'
   path: string
   pathId: string
-  hasChildren?: boolean   // directory node only
-  fileCount?: number       // chapter node only
-  coverUrl?: string        // chapter node only
+  hasChildren?: boolean   // directory or series node only
+  fileCount?: number       // chapter or series node only
+  coverUrl?: string        // chapter or series node only
 }
 
 export interface LevelResponse {

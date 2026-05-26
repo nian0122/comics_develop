@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,40 +33,43 @@ public class ComicCatalogService {
     }
 
     /**
-     * 扫描 HQ 根目录，返回顶层系列目录名称列表。
+     * 获取根层级的漫画系列节点列表。
      *
-     * <p>系列由 HQ 根目录下的一级目录表示，不做递归扫描。
-     * 前端通过 /api/levels 按需加载各系列下的目录/章节节点。</p>
+     * <p>扫描 HQ 根目录下的每个系列目录，为每个系列构建一个 type=series 的节
+     * 点，包含封面 URL 和章节统计信息。结果缓存于 v2:level:__root__。</p>
      *
-     * @return 自然排序后的系列名称列表
+     * @return 包含 HTTP 状态码和层级节点响应 body 的结果
      */
-    public List<String> listSeries() throws IOException {
-        String cacheKey = "v2:series_list";
-        Optional<List<String>> cached = cacheService.get(cacheKey, new TypeReference<List<String>>() {
-        }, "[Series]");
+    public LevelNodesResult listRootLevels() throws IOException {
+        String cacheKey = "v2:level:__root__";
+        Optional<Map<String, Object>> cached = cacheService.get(cacheKey, new TypeReference<Map<String, Object>>() {
+        }, "[RootLevels]");
         if (cached.isPresent()) {
-            return cached.get();
+            return new LevelNodesResult(HttpStatus.OK, cached.get());
         }
 
         Path hqPath = config.getHqPath();
-        log.info("开始扫描物理路径: {}", hqPath.toAbsolutePath());
-        if (!Files.exists(hqPath)) {
-            log.warn("警告：路径不存在 -> {}", hqPath.toAbsolutePath());
-            return Collections.emptyList();
+        if (!Files.exists(hqPath) || !Files.isDirectory(hqPath)) {
+            log.warn("[RootLevels] HQ 根目录不存在: {}", hqPath.toAbsolutePath());
+            return new LevelNodesResult(HttpStatus.OK, mediaService.buildLevelResponse("", Collections.emptyList()));
         }
 
-        List<String> seriesNames;
+        List<Map<String, Object>> nodes = new ArrayList<>();
         try (Stream<Path> stream = Files.list(hqPath)) {
-            seriesNames = stream
+            List<Path> seriesDirs = stream
                     .filter(Files::isDirectory)
-                    .map(p -> p.getFileName().toString())
-                    .sorted(mediaService::naturalCompare)
+                    .sorted(Comparator.comparing(p -> p.getFileName().toString(), mediaService::naturalCompare))
                     .collect(Collectors.toList());
-        }
-        log.info("成功扫描到 {} 个漫画系列", seriesNames.size());
 
-        cacheService.put(cacheKey, seriesNames);
-        return seriesNames;
+            for (Path seriesDir : seriesDirs) {
+                nodes.add(mediaService.buildSeriesNode(seriesDir));
+            }
+        }
+
+        log.info("[RootLevels] 扫描完成，共 {} 个系列", nodes.size());
+        Map<String, Object> response = mediaService.buildLevelResponse("", nodes);
+        cacheService.put(cacheKey, response);
+        return new LevelNodesResult(HttpStatus.OK, response);
     }
 
     /**

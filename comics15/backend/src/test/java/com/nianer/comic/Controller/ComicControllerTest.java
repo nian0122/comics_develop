@@ -192,23 +192,6 @@ class ComicControllerTest {
         assertThat(files).isEmpty();
     }
 
-    @Test
-    void listSeriesReturnsSeriesNamesSorted() throws Exception {
-        createSeriesDir("海贼王");
-        createSeriesDir("火影忍者");
-        createSeriesDir("进击的巨人");
-
-        List<String> series = controller.listSeries();
-
-        assertThat(series).containsExactlyInAnyOrder("海贼王", "火影忍者", "进击的巨人");
-    }
-
-    @Test
-    void listSeriesReturnsEmptyListWhenNoSeriesExist() throws Exception {
-        List<String> series = controller.listSeries();
-        assertThat(series).isEmpty();
-    }
-
     private Map<String, Object> findNodeByName(List<Map<String, Object>> nodes, String name) {
         return nodes.stream()
                 .filter(node -> name.equals(node.get("name")))

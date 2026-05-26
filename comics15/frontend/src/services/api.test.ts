@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fetchChapter, fetchLevel, fetchSeries, fetchJson } from './api'
+import { fetchChapter, fetchLevel, fetchRootLevel, fetchJson } from './api'
 
 describe('api', () => {
-  it('构造系列接口 URL', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ['A'] })
+  it('构造根层级接口 URL', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ nodes: [] }) })
 
-    await fetchSeries()
+    await fetchRootLevel()
 
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/series', undefined)
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/levels', undefined)
   })
 
   it('构造章节接口 URL 并编码中文参数', async () => {
@@ -35,6 +35,6 @@ describe('api', () => {
   it('非 2xx 时抛出包含状态码的错误', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404, text: async () => 'not found' })
 
-    await expect(fetchJson('/api/series')).rejects.toMatchObject({ status: 404 })
+    await expect(fetchJson('/api/levels')).rejects.toMatchObject({ status: 404 })
   })
 })

@@ -50,19 +50,6 @@ class ComicCatalogServiceTest {
     }
 
     @Test
-    void listSeriesScansHqDirectoriesWithNaturalOrderWhenCacheDisabled() throws Exception {
-        Files.createDirectories(comicsRoot.resolve("h_photograph").resolve("Series 10"));
-        Files.createDirectories(comicsRoot.resolve("h_photograph").resolve("Series 2"));
-        Files.createDirectories(comicsRoot.resolve("h_photograph").resolve("Series 1"));
-        Files.writeString(comicsRoot.resolve("h_photograph").resolve("not-a-series.txt"), "ignore");
-
-        List<String> series = catalogService.listSeries();
-
-        assertThat(series)
-                .containsExactly("Series 1", "Series 2", "Series 10");
-    }
-
-    @Test
     void getChapterFilesReturnsNotFoundBodyWhenChapterDirectoryMissing() throws Exception {
         ComicCatalogService.ChapterFilesResult result = catalogService.getChapterFiles("测试系列", "缺失章节");
 

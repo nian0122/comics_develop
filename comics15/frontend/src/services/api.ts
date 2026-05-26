@@ -1,4 +1,4 @@
-import type { ChapterResponse, LevelResponse, SeriesListResponse } from '@/types/api'
+import type { ChapterResponse, LevelResponse } from '@/types/api'
 
 export interface FetchError extends Error {
   status: number
@@ -21,8 +21,9 @@ export async function fetchJson<T>(url: string, options?: RequestInit): Promise<
   return response.json() as Promise<T>
 }
 
-export function fetchSeries(): Promise<SeriesListResponse> {
-  return fetchJson<SeriesListResponse>('/api/series')
+/** 获取根层级节点（所有漫画系列），中文路径自动编码 */
+export function fetchRootLevel(): Promise<LevelResponse> {
+  return fetchJson<LevelResponse>('/api/levels')
 }
 
 /** 获取某系列的目录层级（目录 + 章节节点），中文路径自动编码 */

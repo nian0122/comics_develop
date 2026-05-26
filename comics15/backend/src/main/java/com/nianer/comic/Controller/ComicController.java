@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -29,11 +28,12 @@ public class ComicController {
         this.catalogService = catalogService;
     }
 
-    @Operation(summary = "获取所有漫画系列", description = "扫描 HQ 根目录下的顶级目录作为漫画系列名称，不做递归扫描，支持 Redis 缓存。")
-    @ApiResponse(responseCode = "200", description = "请求成功，返回系列名称数组")
-    @GetMapping("/series")
-    public List<String> listSeries() throws IOException {
-        return catalogService.listSeries();
+    @Operation(summary = "获取根层级漫画系列节点", description = "返回所有漫画系列作为根层级节点，每个系列节点包含封面、章节统计等预览信息。支持 Redis 缓存。")
+    @ApiResponse(responseCode = "200", description = "返回根路径和系列节点数组")
+    @GetMapping("/levels")
+    public ResponseEntity<Map<String, Object>> listRootLevels() throws IOException {
+        ComicCatalogService.LevelNodesResult result = catalogService.listRootLevels();
+        return ResponseEntity.status(result.status()).body(result.body());
     }
 
     @Operation(summary = "获取章节内的文件列表", description = "返回指定章节目录下所有支持媒体文件的展示元数据。")
