@@ -128,13 +128,13 @@ public class ComicMediaService {
     public Map<String, String> buildChapterData(String seriesName, String relativePath, List<String> mediaFiles) {
         String normalizedPath = normalizePath(relativePath);
         Map<String, String> chapterData = new HashMap<>();
-        chapterData.put("path_id", normalizedPath);
+        chapterData.put("pathId", normalizedPath);
         chapterData.put("name", normalizedPath.isEmpty() ? seriesName : Path.of(normalizedPath).getFileName().toString());
-        chapterData.put("total_files", String.valueOf(mediaFiles.size()));
+        chapterData.put("fileCount", String.valueOf(mediaFiles.size()));
 
         Optional<String> coverFile = mediaFiles.stream().filter(this::isImageFile).findFirst();
         if (coverFile.isPresent()) {
-            chapterData.put("cover_url", buildCoverUrl(seriesName, normalizedPath, coverFile.get()));
+            chapterData.put("coverUrl", buildCoverUrl(seriesName, normalizedPath, coverFile.get()));
         }
         return chapterData;
     }
@@ -153,7 +153,7 @@ public class ComicMediaService {
         node.put("name", name);
         node.put("path", relativePath);
         // 这里只标记是否还能展开，不在当前响应中返回下一层节点内容。
-        node.put("has_children", hasChildDirectories(directory));
+        node.put("hasChildren", hasChildDirectories(directory));
         return node;
     }
 
@@ -171,13 +171,13 @@ public class ComicMediaService {
         String normalizedPath = normalizePath(relativePath);
         node.put("type", "chapter");
         node.put("name", name);
-        node.put("path_id", normalizedPath);
-        node.put("total_files", preview.totalFiles());
+        node.put("pathId", normalizedPath);
+        node.put("fileCount", preview.totalFiles());
 
         // 封面只选择章节内第一张图片；视频/GIF 章节没有图片时不会生成封面字段。
         Optional<String> coverFile = preview.firstImageFile();
         if (coverFile.isPresent()) {
-            node.put("cover_url", buildCoverUrl(seriesName, normalizedPath, coverFile.get()));
+            node.put("coverUrl", buildCoverUrl(seriesName, normalizedPath, coverFile.get()));
         }
         return node;
     }
@@ -204,67 +204,47 @@ public class ComicMediaService {
     }
 
     /**
-     * 构建单个媒体文件的展示元数据。
+     * 构建单个媒体文件的扁平展示元数据。后端预计算最优 URL：
+     * 图片优先 LQ（存在时），fallback 到 HQ；视频直接指向 /video/。
      *
-     * @param seriesName 漫画系列名称
-     * @param chapterPath 系列内章节相对路径
+     * @param seriesName         漫画系列名称
+     * @param chapterPath        系列内章节相对路径
      * @param chapterPathResolved 章节物理目录
-     * @param filename 媒体文件名
-     * @return 包含媒体类型、HQ/LQ 信息和可选视频 URL 的文件元数据
+     * @param filename           媒体文件名
+     * @return 扁平化的文件元数据 {name, type, url, fallbackUrl}
      */
     private Map<String, Object> buildFileMetadata(String seriesName, String chapterPath, Path chapterPathResolved, String filename) throws IOException {
         String baseName = stripExtension(filename);
         boolean imageFile = isImageFile(filename);
-        Path hqFile = chapterPathResolved.resolve(filename);
-        String lqFilename = baseName + ".webp";
-        Path lqFile = config.getLqPath().resolve(seriesName).resolve(chapterPath).resolve(lqFilename);
 
         Map<String, Object> fileMeta = new HashMap<>();
         fileMeta.put("name", filename);
-        fileMeta.put("baseName", baseName);
-        fileMeta.put("mediaType", imageFile ? "image" : "video");
-        fileMeta.put("preferredSource", Files.exists(lqFile) ? "lq" : "hq");
-        fileMeta.put("hq", buildHqInfo(seriesName, chapterPath, filename, hqFile));
-        fileMeta.put("lq", buildLqInfo(seriesName, chapterPath, lqFilename, lqFile));
+
         if (!imageFile) {
-            fileMeta.put("videoUrl", buildVideoUrl(seriesName, chapterPath, filename));
+            fileMeta.put("type", "video");
+            fileMeta.put("url", buildVideoUrl(seriesName, chapterPath, filename));
+            fileMeta.put("fallbackUrl", null);
+        } else {
+            String lqFilename = baseName + ".webp";
+            Path lqFile = config.getLqPath().resolve(seriesName).resolve(chapterPath).resolve(lqFilename);
+            fileMeta.put("type", "image");
+            if (Files.exists(lqFile)) {
+                fileMeta.put("url", buildLQUrl(seriesName, chapterPath, lqFilename));
+                // LQ 存在时，HQ 作为 fallback——但需确保 HQ 不是空白占位文件。
+                Path hqFile = chapterPathResolved.resolve(filename);
+                fileMeta.put("fallbackUrl",
+                        (Files.exists(hqFile) && Files.size(hqFile) > 0)
+                                ? buildHQUrl(seriesName, chapterPath, filename)
+                                : null);
+            } else {
+                fileMeta.put("url", buildHQUrl(seriesName, chapterPath, filename));
+                fileMeta.put("fallbackUrl", null);
+            }
         }
         return fileMeta;
     }
 
-    /**
-     * 构建 HQ 原始媒体文件的信息块。
-     *
-     * @param seriesName 漫画系列名称
-     * @param chapterPath 系列内章节相对路径
-     * @param filename HQ 媒体文件名
-     * @param hqFile HQ 文件物理路径
-     * @return 包含存在状态、文件大小和 HQ 访问 URL 的 Map
-     */
-    private Map<String, Object> buildHqInfo(String seriesName, String chapterPath, String filename, Path hqFile) throws IOException {
-        Map<String, Object> hqInfo = new HashMap<>();
-        boolean exists = Files.exists(hqFile);
-        hqInfo.put("exists", exists);
-        hqInfo.put("size", exists ? Files.size(hqFile) : 0L);
-        hqInfo.put("url", buildHQUrl(seriesName, chapterPath, filename));
-        return hqInfo;
-    }
 
-    /**
-     * 构建 LQ 低清 WebP 文件的信息块。
-     *
-     * @param seriesName 漫画系列名称
-     * @param chapterPath 系列内章节相对路径
-     * @param filename LQ 文件名，通常由 HQ 文件基础名替换为 .webp 得到
-     * @param lqFile LQ 文件物理路径
-     * @return 包含存在状态和 LQ 访问 URL 的 Map
-     */
-    private Map<String, Object> buildLqInfo(String seriesName, String chapterPath, String filename, Path lqFile) {
-        Map<String, Object> lqInfo = new HashMap<>();
-        lqInfo.put("exists", Files.exists(lqFile));
-        lqInfo.put("url", buildLQUrl(seriesName, chapterPath, filename));
-        return lqInfo;
-    }
 
     /**
      * 构建 HQ 静态资源访问路径。
@@ -390,4 +370,6 @@ public class ComicMediaService {
      */
     public record ChapterPreview(boolean hasMedia, int totalFiles, Optional<String> firstImageFile) {
     }
+
+
 }

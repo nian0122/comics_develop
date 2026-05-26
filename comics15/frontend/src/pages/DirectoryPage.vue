@@ -20,15 +20,6 @@ const currentPath = computed(() => {
 
   return Array.isArray(pathMatch) ? pathMatch.join('/') : String(pathMatch ?? '')
 })
-const visibleNodes = computed(() => {
-  const nodes = chapterStore.nodes ?? []
-
-  if (nodes.length > 0) {
-    return nodes
-  }
-
-  return [...(chapterStore.directories ?? []), ...(chapterStore.chapters ?? [])]
-})
 
 onMounted(() => {
   chapterStore.loadLevel(seriesName.value, currentPath.value)
@@ -66,16 +57,16 @@ function openDirectory(directory: LevelNode) {
 
 function openChapter(chapter: Record<string, unknown>) {
   const chapterNodes = (chapterStore.nodes ?? []).filter((node) => node.type === 'chapter')
-  const pathId = String(chapter.path_id ?? '')
-  const chapterIndex = chapterNodes.findIndex((node) => node.path_id === pathId)
+  const pathId = String(chapter.pathId ?? '')
+  const chapterIndex = chapterNodes.findIndex((node) => node.pathId === pathId)
   const previousChapter = chapterIndex > 0 ? chapterNodes[chapterIndex - 1] : null
   const nextChapter = chapterIndex >= 0 && chapterIndex < chapterNodes.length - 1 ? chapterNodes[chapterIndex + 1] : null
 
   chapterStore.setLastReadChapterPath(seriesName.value, pathId)
   readerStore.setChapterContext({
-    previousChapterPath: previousChapter?.path_id ?? '',
-    nextChapterPath: nextChapter?.path_id ?? '',
-    chapterPaths: chapterNodes.map((node) => node.path_id)
+    previousChapterPath: previousChapter?.pathId ?? '',
+    nextChapterPath: nextChapter?.pathId ?? '',
+    chapterPaths: chapterNodes.map((node) => node.pathId)
   })
   router.push(createSeriesReadRoute(seriesName.value, pathId))
 }
@@ -107,7 +98,7 @@ function navigateUp() {
           <h2 class="text-sm uppercase tracking-[0.3em] text-slate-400 px-1">目录</h2>
           <button
             v-for="dir in chapterStore.directories"
-            :key="dir.path_id"
+            :key="dir.pathId"
             class="flex w-full items-center rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-left text-slate-200 transition hover:border-sky-500"
             @click="openDirectory(dir)"
           >
@@ -120,11 +111,15 @@ function navigateUp() {
           <h2 class="text-sm uppercase tracking-[0.3em] text-slate-400 px-1">章节</h2>
           <ChapterCard
             v-for="chapter in chapterStore.chapters"
-            :key="chapter.path_id"
+            :key="chapter.pathId"
             :chapter="{
-              ...chapter,
-              pathText: chapter.path_id,
-              progressText: getProgressText(chapter.path_id)
+              name: chapter.name,
+              path: chapter.path,
+              pathId: chapter.pathId,
+              fileCount: chapter.fileCount,
+              coverUrl: chapter.coverUrl,
+              pathText: chapter.pathId,
+              progressText: getProgressText(chapter.pathId)
             }"
             @select="openChapter"
           />

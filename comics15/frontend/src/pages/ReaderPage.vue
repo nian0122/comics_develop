@@ -156,7 +156,7 @@ defineExpose({
     <section v-else class="mx-auto flex flex-col">
       <div
         v-for="(media, index) in readerStore.mediaItems"
-        :key="media.url ?? media.hqUrl ?? media.videoUrl ?? index"
+        :key="media.url ?? index"
         :data-page-index="index"
         :ref="(element: unknown) => setPageRef(element as HTMLElement | null, index as number)"
       >

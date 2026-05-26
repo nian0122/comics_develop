@@ -1,20 +1,6 @@
 import { defineStore } from 'pinia'
 import { fetchChapter } from '@/services/api'
-import type { ChapterResponse } from '@/types/api'
-
-interface MediaItem {
-  name?: string
-  type?: string
-  mediaType?: string
-  hqUrl?: string
-  lqUrl?: string
-  videoUrl?: string
-  url?: string
-  hq?: { url: string }
-  lq?: { url: string }
-  preferredSource?: string
-  preferredUrl?: string
-}
+import type { MediaItem } from '@/types/api'
 
 interface ReaderState {
   seriesName: string
@@ -54,7 +40,7 @@ export const useReaderStore = defineStore('reader', {
       this.error = ''
 
       try {
-        const response = await fetchChapter(seriesName, chapterPath) as ChapterResponse
+        const response = await fetchChapter(seriesName, chapterPath)
         this.seriesName = seriesName
         this.chapterPath = response.path ?? chapterPath
         this.mediaItems = Array.isArray(response.files) ? response.files : []

@@ -6,8 +6,8 @@ const props = defineProps<{
     name: string
     type?: string
     path: string
-    path_id: string
-    totalFiles?: number
+    pathId: string
+    fileCount?: number
     coverUrl?: string
     loading?: boolean
     pathText?: string
@@ -22,7 +22,7 @@ const emit = defineEmits<{
 
 const coverFailed = ref(false)
 
-const pageLabel = computed(() => `${props.chapter.totalFiles ?? 0} 页`)
+const pageLabel = computed(() => `${props.chapter.fileCount ?? 0} 页`)
 const rootClasses = computed(() => [
   'group flex w-full overflow-hidden rounded-2xl border text-left transition',
   props.active

@@ -4,9 +4,10 @@ export interface LevelNode {
   name: string
   type: 'directory' | 'chapter'
   path: string
-  path_id: string
-  totalFiles?: number
-  coverUrl?: string
+  pathId: string
+  hasChildren?: boolean   // directory node only
+  fileCount?: number       // chapter node only
+  coverUrl?: string        // chapter node only
 }
 
 export interface LevelResponse {
@@ -21,18 +22,10 @@ export interface ChapterResponse {
 }
 
 export interface MediaItem {
-  name?: string
-  type?: string
-  mediaType?: string
-  hqUrl?: string
-  lqUrl?: string
-  videoUrl?: string
-  video_url?: string
-  url?: string
-  hq?: { url: string }
-  lq?: { url: string }
-  preferredSource?: string
-  preferredUrl?: string
+  name: string
+  type: 'image' | 'video'
+  url: string
+  fallbackUrl: string | null
 }
 
 export interface MediaSource {

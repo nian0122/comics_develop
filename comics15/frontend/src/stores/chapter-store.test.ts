@@ -19,9 +19,9 @@ describe('chapter-store', () => {
     fetchLevel.mockResolvedValue({
       path: '目录',
       nodes: [
-        { type: 'chapter', name: '第 10 话', path_id: '目录/第 10 话' },
+        { type: 'chapter', name: '第 10 话', pathId: '目录/第 10 话' },
         { type: 'directory', name: '番外 2', path: '目录/番外 2' },
-        { type: 'chapter', name: '第 2 话', path_id: '目录/第 2 话' },
+        { type: 'chapter', name: '第 2 话', pathId: '目录/第 2 话' },
         { type: 'directory', name: '番外 1', path: '目录/番外 1' }
       ]
     })

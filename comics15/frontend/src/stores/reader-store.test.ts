@@ -18,7 +18,10 @@ describe('reader-store', () => {
   it('加载章节媒体并保留当前页', async () => {
     fetchChapter.mockResolvedValue({
       path: '目录/第 1 话',
-      files: [{ url: '/1.jpg' }, { url: '/2.jpg' }],
+      files: [
+        { name: '1.jpg', type: 'image', url: '/1.jpg', fallbackUrl: null },
+        { name: '2.jpg', type: 'image', url: '/2.jpg', fallbackUrl: null }
+      ],
       total: 2
     })
 

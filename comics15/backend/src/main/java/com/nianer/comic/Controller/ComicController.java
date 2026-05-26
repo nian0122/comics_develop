@@ -29,14 +29,9 @@ public class ComicController {
         this.catalogService = catalogService;
     }
 
-    @Operation(summary = "获取所有漫画系列", description = "扫描 HQ 根目录下的顶级文件夹作为漫画系列，支持 Redis 缓存。")
-    @ApiResponse(responseCode = "200", description = "请求成功，返回漫画系列名称数组")
+    @Operation(summary = "获取所有漫画系列", description = "扫描 HQ 根目录下的顶级目录作为漫画系列名称，不做递归扫描，支持 Redis 缓存。")
+    @ApiResponse(responseCode = "200", description = "请求成功，返回系列名称数组")
     @GetMapping("/series")
-    /**
-     * 获取 HQ 根目录下的漫画系列列表。
-     *
-     * @return 按自然排序排列的系列名称数组
-     */
     public List<String> listSeries() throws IOException {
         return catalogService.listSeries();
     }

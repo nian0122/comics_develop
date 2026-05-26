@@ -46,9 +46,9 @@ export const useChapterStore = defineStore('chapter', {
         const sortedNodes = nodes.slice().sort((left, right) => naturalSort(left.name, right.name))
 
         this.currentPath = response.path ?? path
-        this.nodes = sortedNodes as LevelNode[]
-        this.directories = sortNodes(sortedNodes as LevelNode[], 'directory')
-        this.chapters = sortNodes(sortedNodes as LevelNode[], 'chapter')
+        this.nodes = sortedNodes
+        this.directories = sortNodes(sortedNodes, 'directory')
+        this.chapters = sortNodes(sortedNodes, 'chapter')
       } catch (error) {
         this.error = error instanceof Error ? error.message : '加载目录失败'
         this.nodes = []

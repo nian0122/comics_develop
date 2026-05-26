@@ -63,10 +63,10 @@ describe('DirectoryPage', () => {
       currentPath: '目录',
       nodes: [
         { type: 'directory', name: '番外', path: '目录/番外' },
-        { type: 'chapter', name: '第 1 话', path_id: '目录/第 1 话', total_files: 10 }
+        { type: 'chapter', name: '第 1 话', pathId: '目录/第 1 话', fileCount: 10 }
       ],
       directories: [{ name: '番外', path: '目录/番外' }],
-      chapters: [{ name: '第 1 话', path_id: '目录/第 1 话', total_files: 10 }],
+      chapters: [{ name: '第 1 话', pathId: '目录/第 1 话', fileCount: 10 }],
       loading: false,
       error: '',
       loadLevel: vi.fn(),
@@ -115,9 +115,9 @@ describe('DirectoryPage', () => {
     useChapterStore.mockReturnValue({
       seriesName: '系列 A',
       currentPath: '目录',
-      nodes: [{ type: 'chapter', name: '第 1 话', path_id: '目录/第 1 话', total_files: 10 }],
+      nodes: [{ type: 'chapter', name: '第 1 话', pathId: '目录/第 1 话', fileCount: 10 }],
       directories: [],
-      chapters: [{ name: '第 1 话', path_id: '目录/第 1 话', total_files: 10 }],
+      chapters: [{ name: '第 1 话', pathId: '目录/第 1 话', fileCount: 10 }],
       loading: false,
       error: '',
       loadLevel: vi.fn(),

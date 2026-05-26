@@ -58,7 +58,8 @@ class ComicCatalogServiceTest {
 
         List<String> series = catalogService.listSeries();
 
-        assertThat(series).containsExactly("Series 1", "Series 2", "Series 10");
+        assertThat(series)
+                .containsExactly("Series 1", "Series 2", "Series 10");
     }
 
     @Test
@@ -103,9 +104,9 @@ class ComicCatalogServiceTest {
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> files = (List<Map<String, Object>>) cachedResult.body().get("files");
-        assertThat(files.getFirst()).containsEntry("preferredSource", "hq");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> lqInfo = (Map<String, Object>) files.getFirst().get("lq");
-        assertThat(lqInfo).containsEntry("exists", false);
+        assertThat(files.getFirst())
+                .containsEntry("type", "image")
+                .containsEntry("url", "/hq_image/测试系列/第 1 话/001.jpg")
+                .containsEntry("fallbackUrl", null);
     }
 }

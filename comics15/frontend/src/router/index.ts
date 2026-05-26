@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import DirectoryPage from '@/pages/DirectoryPage.vue'
 import ReaderPage from '@/pages/ReaderPage.vue'
-import SeriesPage from '@/pages/SeriesPage.vue'
+import WaterfallPage from '@/pages/WaterfallPage.vue'
 import ToolsPage from '@/pages/ToolsPage.vue'
 import { encodeRoutePath, splitRoutePath } from '@/utils/route-path'
 
@@ -9,7 +9,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: SeriesPage
+    component: WaterfallPage
   },
   {
     path: '/series/:series/dir/:pathMatch(.*)*',
@@ -76,6 +76,3 @@ export function createParentDirectoryRoute(seriesName: string, path = ''): strin
   return createSeriesDirectoryRoute(seriesName, parts.slice(0, -1).join('/'))
 }
 
-export function createReaderRoute(seriesName: string, path = ''): string {
-  return createSeriesReadRoute(seriesName, path)
-}

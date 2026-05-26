@@ -32,11 +32,12 @@ public class ComicCatalogService {
     }
 
     /**
-     * 扫描并返回所有漫画系列名称。
+     * 扫描 HQ 根目录，返回顶层系列目录名称列表。
      *
-     * <p>系列由 HQ 根目录下的一级目录表示；Redis 可用时会优先读取和写入缓存。</p>
+     * <p>系列由 HQ 根目录下的一级目录表示，不做递归扫描。
+     * 前端通过 /api/levels 按需加载各系列下的目录/章节节点。</p>
      *
-     * @return 自然排序后的漫画系列名称列表
+     * @return 自然排序后的系列名称列表
      */
     public List<String> listSeries() throws IOException {
         String cacheKey = "v2:series_list";
@@ -53,18 +54,18 @@ public class ComicCatalogService {
             return Collections.emptyList();
         }
 
-        List<String> series;
+        List<String> seriesNames;
         try (Stream<Path> stream = Files.list(hqPath)) {
-            series = stream
+            seriesNames = stream
                     .filter(Files::isDirectory)
                     .map(p -> p.getFileName().toString())
                     .sorted(mediaService::naturalCompare)
                     .collect(Collectors.toList());
         }
-        log.info("成功扫描到 {} 个漫画系列", series.size());
+        log.info("成功扫描到 {} 个漫画系列", seriesNames.size());
 
-        cacheService.put(cacheKey, series);
-        return series;
+        cacheService.put(cacheKey, seriesNames);
+        return seriesNames;
     }
 
     /**

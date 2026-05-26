@@ -53,6 +53,10 @@ class ComicControllerTest {
         Files.writeString(hqChapter.resolve(filename), "hq");
     }
 
+    private void createSeriesDir(String series) throws Exception {
+        Files.createDirectories(comicsRoot.resolve("h_photograph").resolve(series));
+    }
+
     @Test
     void listLevelNodesReturnsDirectDirectoriesAndChapters() throws Exception {
         Path lqChapter = comicsRoot.resolve("l_photograph").resolve("测试系列").resolve("第 2 话");
@@ -76,18 +80,18 @@ class ComicControllerTest {
         assertThat(directoryNode)
                 .containsEntry("type", "directory")
                 .containsEntry("path", "第一卷")
-                .containsEntry("has_children", true)
-                .doesNotContainKeys("cover_url");
+                .containsEntry("hasChildren", true)
+                .doesNotContainKeys("coverUrl");
         assertThat(chapter2Node)
                 .containsEntry("type", "chapter")
-                .containsEntry("path_id", "第 2 话")
-                .containsEntry("total_files", 1)
-                .containsEntry("cover_url", "/lq_image/%E6%B5%8B%E8%AF%95%E7%B3%BB%E5%88%97/%E7%AC%AC%202%20%E8%AF%9D/001.webp");
+                .containsEntry("pathId", "第 2 话")
+                .containsEntry("fileCount", 1)
+                .containsEntry("coverUrl", "/lq_image/测试系列/第 2 话/001.webp");
         assertThat(chapter10Node)
                 .containsEntry("type", "chapter")
-                .containsEntry("path_id", "第 10 话")
-                .containsEntry("total_files", 1)
-                .containsEntry("cover_url", "/hq_image/%E6%B5%8B%E8%AF%95%E7%B3%BB%E5%88%97/%E7%AC%AC%2010%20%E8%AF%9D/001.jpg");
+                .containsEntry("pathId", "第 10 话")
+                .containsEntry("fileCount", 1)
+                .containsEntry("coverUrl", "/hq_image/测试系列/第 10 话/001.jpg");
     }
 
     @Test
@@ -104,9 +108,9 @@ class ComicControllerTest {
         assertThat(nodes.getFirst())
                 .containsEntry("type", "chapter")
                 .containsEntry("name", "第 1 话")
-                .containsEntry("path_id", "第一卷/第 1 话")
-                .containsEntry("total_files", 1)
-                .containsEntry("cover_url", "/hq_image/%E6%B5%8B%E8%AF%95%E7%B3%BB%E5%88%97/%E7%AC%AC%E4%B8%80%E5%8D%B7/%E7%AC%AC%201%20%E8%AF%9D/001.png");
+                .containsEntry("pathId", "第一卷/第 1 话")
+                .containsEntry("fileCount", 1)
+                .containsEntry("coverUrl", "/hq_image/测试系列/第一卷/第 1 话/001.png");
     }
 
     @Test
@@ -123,9 +127,9 @@ class ComicControllerTest {
         assertThat(nodes.getFirst())
                 .containsEntry("type", "chapter")
                 .containsEntry("name", "视频章节")
-                .containsEntry("path_id", "第一卷/视频章节")
-                .containsEntry("total_files", 2)
-                .containsEntry("cover_url", "/hq_image/%E6%B5%8B%E8%AF%95%E7%B3%BB%E5%88%97/%E7%AC%AC%E4%B8%80%E5%8D%B7/%E8%A7%86%E9%A2%91%E7%AB%A0%E8%8A%82/002.jpg");
+                .containsEntry("pathId", "第一卷/视频章节")
+                .containsEntry("fileCount", 2)
+                .containsEntry("coverUrl", "/hq_image/测试系列/第一卷/视频章节/002.jpg");
     }
 
 
@@ -152,40 +156,16 @@ class ComicControllerTest {
         Map<String, Object> imageMeta = files.getFirst();
         assertThat(imageMeta)
                 .containsEntry("name", "001.jpg")
-                .containsEntry("baseName", "001")
-                .containsEntry("mediaType", "image")
-                .containsEntry("preferredSource", "lq")
-                .doesNotContainKey("videoUrl");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> imageHq = (Map<String, Object>) imageMeta.get("hq");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> imageLq = (Map<String, Object>) imageMeta.get("lq");
-        assertThat(imageHq)
-                .containsEntry("exists", true)
-                .containsEntry("size", 8L)
-                .containsEntry("url", "/hq_image/测试系列/第一卷/第 1 话/001.jpg");
-        assertThat(imageLq)
-                .containsEntry("exists", true)
-                .containsEntry("url", "/lq_image/测试系列/第一卷/第 1 话/001.webp");
+                .containsEntry("type", "image")
+                .containsEntry("url", "/lq_image/测试系列/第一卷/第 1 话/001.webp")
+                .containsEntry("fallbackUrl", "/hq_image/测试系列/第一卷/第 1 话/001.jpg");
 
         Map<String, Object> videoMeta = files.get(1);
         assertThat(videoMeta)
                 .containsEntry("name", "002.mp4")
-                .containsEntry("baseName", "002")
-                .containsEntry("mediaType", "video")
-                .containsEntry("preferredSource", "hq")
-                .containsEntry("videoUrl", "/video/测试系列/第一卷/第 1 话/002.mp4");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> videoHq = (Map<String, Object>) videoMeta.get("hq");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> videoLq = (Map<String, Object>) videoMeta.get("lq");
-        assertThat(videoHq)
-                .containsEntry("exists", true)
-                .containsEntry("size", 5L)
-                .containsEntry("url", "/hq_image/测试系列/第一卷/第 1 话/002.mp4");
-        assertThat(videoLq)
-                .containsEntry("exists", false)
-                .containsEntry("url", "/lq_image/测试系列/第一卷/第 1 话/002.webp");
+                .containsEntry("type", "video")
+                .containsEntry("url", "/video/测试系列/第一卷/第 1 话/002.mp4")
+                .containsEntry("fallbackUrl", null);
     }
 
     @Test
@@ -210,6 +190,23 @@ class ComicControllerTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> files = (List<Map<String, Object>>) response.getBody().get("files");
         assertThat(files).isEmpty();
+    }
+
+    @Test
+    void listSeriesReturnsSeriesNamesSorted() throws Exception {
+        createSeriesDir("海贼王");
+        createSeriesDir("火影忍者");
+        createSeriesDir("进击的巨人");
+
+        List<String> series = controller.listSeries();
+
+        assertThat(series).containsExactlyInAnyOrder("海贼王", "火影忍者", "进击的巨人");
+    }
+
+    @Test
+    void listSeriesReturnsEmptyListWhenNoSeriesExist() throws Exception {
+        List<String> series = controller.listSeries();
+        assertThat(series).isEmpty();
     }
 
     private Map<String, Object> findNodeByName(List<Map<String, Object>> nodes, String name) {
