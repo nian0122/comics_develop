@@ -1,0 +1,8 @@
+# 本地测试配置 - 使用 E:\快捷文件\图片 作为漫画存储路径
+# 启动方式: ./mvnw spring-boot:run -Dspring-boot.run.profiles=test
+# 或设置环境变量: SPRING_PROFILES_ACTIVE=test
+comic:
+  root-dir: 'E:\快捷文件'
+  hq-sub-dir: '图片'
+  # LQ 目录在测试环境中不存在，后端会自动回退 HQ
+  # 无需另外配置 lq-sub-dir，保持默认即可

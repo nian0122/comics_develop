@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadEnv } from 'vite'
 
 const DEFAULT_COMICS_ROOT = 'F:/games/comics'
 const DEFAULT_HQ_SUB_DIR = 'h_photograph'
@@ -62,11 +63,12 @@ export function createLocalMediaResolver(env = process.env) {
 }
 
 export function localMediaDevPlugin(env = process.env) {
-  const resolveLocalMedia = createLocalMediaResolver(env)
-
   return {
     name: 'comic-local-media-dev-server',
     configureServer(server) {
+      const dotEnv = loadEnv(server.config.mode, process.cwd(), '')
+      const resolveLocalMedia = createLocalMediaResolver({ ...dotEnv, ...process.env })
+
       server.middlewares.use((request, response, next) => {
         const resolved = resolveLocalMedia(request.url ?? '')
 
