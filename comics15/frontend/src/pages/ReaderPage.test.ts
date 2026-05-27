@@ -32,8 +32,8 @@ vi.mock('@/router', () => ({
 
 vi.mock('../components/ReaderMediaItem.vue', () => ({
   default: {
-    props: ['media', 'index', 'active'],
-    template: '<article class="media-item" :data-active="active" :data-page-index="index">{{ index }}</article>'
+    props: ['url', 'fallbackUrl', 'alt', 'kind'],
+    template: '<article class="media-item">{{ alt }}</article>'
   }
 }))
 
@@ -42,6 +42,34 @@ vi.mock('../components/ReaderShell.vue', () => ({
     props: ['currentPage', 'totalPages', 'previousDisabled', 'nextDisabled'],
     emits: ['jump', 'back', 'previous', 'next'],
     template: '<nav><button data-jump="true" @click="$emit(\'jump\', 2)">jump</button><button data-back="true" @click="$emit(\'back\')">back</button><button data-prev="true" @click="$emit(\'previous\')">prev</button><button data-next="true" @click="$emit(\'next\')">next</button></nav>'
+  }
+}))
+
+vi.mock('vue-virtual-scroller', () => ({
+  DynamicScroller: {
+    props: ['items', 'keyField', 'minItemSize'],
+    emits: ['update'],
+    methods: {
+      scrollToItem() {}
+    },
+    template: `<div class="dynamic-scroller">
+      <slot v-for="(it, idx) in items" :key="idx" :item="it" :index="idx" :active="true" :itemWithSize="{ item: it, id: idx, size: undefined }" />
+    </div>`
+  },
+  DynamicScrollerItem: {
+    props: ['item', 'active', 'dataIndex'],
+    template: '<div class="scroller-item"><slot /></div>'
+  }
+}))
+
+vi.mock('vue-virtual-scroller/dist/vue-virtual-scroller.css', () => ({}))
+
+vi.mock('@/utils/preload-engine', () => ({
+  preloadEngine: {
+    setUrlResolver: vi.fn(),
+    reset: vi.fn(),
+    onVisibleChange: vi.fn(),
+    destroy: vi.fn()
   }
 }))
 
@@ -58,7 +86,7 @@ describe('ReaderPage', () => {
 
   it('加载章节并渲染媒体流', () => {
     useReaderStore.mockReturnValue({
-      mediaItems: [{ url: '/1.jpg' }, { url: '/2.jpg' }],
+      mediaItems: [{ url: '/1.jpg', name: '1.jpg', type: 'image', fallbackUrl: null }, { url: '/2.jpg', name: '2.jpg', type: 'image', fallbackUrl: null }],
       currentPage: 1,
       totalPages: 2,
       previousChapterPath: '',
@@ -77,7 +105,7 @@ describe('ReaderPage', () => {
   it('跳页时更新当前页', async () => {
     const setCurrentPage = vi.fn()
     useReaderStore.mockReturnValue({
-      mediaItems: [{ url: '/1.jpg' }, { url: '/2.jpg' }],
+      mediaItems: [{ url: '/1.jpg', name: '1.jpg', type: 'image', fallbackUrl: null }, { url: '/2.jpg', name: '2.jpg', type: 'image', fallbackUrl: null }],
       currentPage: 1,
       totalPages: 2,
       previousChapterPath: '',
@@ -135,25 +163,6 @@ describe('ReaderPage', () => {
     expect(routerMock.push).toHaveBeenCalledWith('/read/系列 A/目录/第 2 话')
   })
 
-  it('只激活当前页附近窗口', () => {
-    useReaderStore.mockReturnValue({
-      mediaItems: [{ url: '/1.jpg' }, { url: '/2.jpg' }, { url: '/3.jpg' }, { url: '/4.jpg' }, { url: '/5.jpg' }],
-      currentPage: 1,
-      totalPages: 5,
-      previousChapterPath: '',
-      nextChapterPath: '',
-      loading: false,
-      error: '',
-      loadChapter: vi.fn(),
-      setCurrentPage: vi.fn()
-    })
-
-    const wrapper = mount(ReaderPage)
-    const states = wrapper.findAll('.media-item').map((item) => item.attributes('data-active'))
-
-    expect(states).toEqual(['true', 'true', 'true', 'false', 'false'])
-  })
-
   it('阅读路由变化时重新加载章节', async () => {
     const loadChapter = vi.fn()
     useReaderStore.mockReturnValue({
@@ -173,30 +182,6 @@ describe('ReaderPage', () => {
     expect(loadChapter).toHaveBeenCalledWith('系列 A', '目录/第 1 话')
 
     routeMock.route.params.pathMatch = '目录/第 2 话'
-    await nextTick()
-
-    expect(loadChapter).toHaveBeenCalledWith('系列 A', '目录/第 2 话')
-  })
-
-  it('阅读路由变化时清理旧页面跟踪状态', async () => {
-    const loadChapter = vi.fn()
-    useReaderStore.mockReturnValue({
-      mediaItems: [{ url: '/1.jpg' }, { url: '/2.jpg' }],
-      currentPage: 1,
-      totalPages: 2,
-      previousChapterPath: '',
-      nextChapterPath: '',
-      loading: false,
-      error: '',
-      loadChapter,
-      setCurrentPage: vi.fn()
-    })
-
-    mount(ReaderPage)
-
-    routeMock.route.params.pathMatch = '目录/第 2 话'
-    await nextTick()
-    await nextTick()
     await nextTick()
 
     expect(loadChapter).toHaveBeenCalledWith('系列 A', '目录/第 2 话')
