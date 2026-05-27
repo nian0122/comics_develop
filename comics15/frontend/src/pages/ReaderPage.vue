@@ -95,10 +95,16 @@ function setupPageObserver() {
       }
     }
 
+    let minVisible = Infinity
+    let maxVisible = -Infinity
     let bestIndex = -1
     let bestRatio = 0
 
     for (const [index, ratio] of visibilityByIndex) {
+      if (ratio > 0) {
+        minVisible = Math.min(minVisible, index)
+        maxVisible = Math.max(maxVisible, index)
+      }
       if (ratio > bestRatio) {
         bestIndex = index
         bestRatio = ratio
@@ -107,8 +113,8 @@ function setupPageObserver() {
 
     if (bestIndex >= 0) {
       readerStore.setCurrentPage(bestIndex + 1)
-      const visibleStart = Math.max(0, bestIndex - 2)
-      const visibleEnd = Math.min(bestIndex + 2, readerStore.totalPages - 1)
+      const visibleStart = minVisible !== Infinity ? minVisible : bestIndex
+      const visibleEnd = maxVisible !== -Infinity ? maxVisible : bestIndex
       preloadEngine.onVisibleChange(visibleStart, visibleEnd, readerStore.totalPages)
     }
   }, { threshold: [0, 0.25, 0.5, 0.75] })

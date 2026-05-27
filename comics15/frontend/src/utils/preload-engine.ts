@@ -23,20 +23,27 @@ export class PreloadEngine {
     this.destroyed = false
   }
 
-  onVisibleChange(visibleStart: number, visibleEnd: number, _total: number): void {
+  onVisibleChange(visibleStart: number, visibleEnd: number, total: number): void {
     if (this.destroyed) return
     if (!this.urlResolver) return
-    if (this.total <= 0) return
+    if (total <= 0) return
+    if (this.total !== total) {
+      this.total = total
+    }
 
     const start = Math.max(0, visibleStart)
     const end = Math.min(visibleEnd, this.total - 1)
 
     if (start > end) return
 
+    // 清除上一轮 onVisibleChange 遗留的 cascade 定时器，
+    // 防止快速滚动时旧回调触发生成无效预加载
+    this.clearCascadeTimers()
     this.cancelFarIndices(start, end)
     this.loadImmediate(start, end)
-    this.loadCascadeForward(end + 1)
-    this.loadCascadeBackward(start - 1)
+    // loadImmediate 已覆盖 [start-1, end+1]，cascade 从边界外侧开始避免重叠
+    this.loadCascadeForward(end + 2)
+    this.loadCascadeBackward(start - 2)
   }
 
   destroy(): void {
@@ -54,7 +61,7 @@ export class PreloadEngine {
   }
 
   private loadCascadeForward(fromIndex: number): void {
-    const cascadeCount = 20
+    const cascadeCount = 10
     const end = Math.min(fromIndex + cascadeCount - 1, this.total - 1)
 
     if (fromIndex > end) return
@@ -70,7 +77,7 @@ export class PreloadEngine {
   }
 
   private loadCascadeBackward(fromIndex: number): void {
-    const cascadeCount = 20
+    const cascadeCount = 10
     const end = Math.max(fromIndex - cascadeCount + 1, 0)
 
     if (fromIndex < end) return
@@ -96,20 +103,33 @@ export class PreloadEngine {
     // 使用 new Image() 预热浏览器图片解码缓存（下载 + 解码），
     // 而非 fetch() 仅预热 HTTP 缓存。虚拟滚动组件渲染同名 URL 时直接命中，零解码成本。
     const img = new Image()
+
+    img.onerror = () => {
+      this.active.delete(url)
+    }
     img.src = url
 
     const task: PreloadTask = { url, index, image: img, priority }
     this.active.set(url, task)
   }
 
+  private clearCascadeTimers(): void {
+    for (const timer of this.cascadeTimers) {
+      clearTimeout(timer)
+    }
+    this.cascadeTimers = []
+  }
+
   private cancelFarIndices(_visibleStart: number, _visibleEnd: number): void {
-    const retainAbove = 5
+    const retainMargin = 10
     const visibleStart = Math.max(0, _visibleStart)
-    const keepAbove = Math.max(0, visibleStart - retainAbove)
+    const visibleEnd = Math.max(0, _visibleEnd)
+    const keepAbove = Math.max(0, visibleStart - retainMargin)
+    const keepBelow = Math.min(this.total - 1, visibleEnd + retainMargin)
 
     for (const [url, task] of this.active) {
-      if (task.priority === 'cascade' && task.index < keepAbove) {
-        // 清空 src 释放下载管线 + 移除引用允许 GC
+      if (task.priority !== 'cascade') continue
+      if (task.index < keepAbove || task.index > keepBelow) {
         task.image.src = ''
         this.active.delete(url)
       }
