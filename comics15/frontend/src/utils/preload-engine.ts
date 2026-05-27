@@ -1,21 +1,16 @@
 type PreloadTask = {
   url: string
   index: number
-  controller: AbortController
+  image: HTMLImageElement
   priority: 'immediate' | 'cascade'
 }
 
 export class PreloadEngine {
-  private maxConcurrent: number
   private urlResolver: ((index: number) => string | null) | null = null
   private total = 0
   private active = new Map<string, PreloadTask>()
   private cascadeTimers: ReturnType<typeof setTimeout>[] = []
   private destroyed = false
-
-  constructor(maxConcurrent = 4) {
-    this.maxConcurrent = maxConcurrent
-  }
 
   setUrlResolver(resolver: (index: number) => string | null): void {
     this.urlResolver = resolver
@@ -59,32 +54,34 @@ export class PreloadEngine {
   }
 
   private loadCascadeForward(fromIndex: number): void {
-    const cascadeCount = 15
+    const cascadeCount = 20
     const end = Math.min(fromIndex + cascadeCount - 1, this.total - 1)
 
-    let delay = 0
+    if (fromIndex > end) return
+
     for (let i = fromIndex; i <= end; i++) {
+      const delay = (i - fromIndex) * 80
       this.cascadeTimers.push(
         setTimeout(() => {
           this.enqueue(i, 'cascade')
-        }, delay)
+        }, delay),
       )
-      delay += 50
     }
   }
 
   private loadCascadeBackward(fromIndex: number): void {
-    const cascadeCount = 15
+    const cascadeCount = 20
     const end = Math.max(fromIndex - cascadeCount + 1, 0)
 
-    let delay = 0
+    if (fromIndex < end) return
+
     for (let i = fromIndex; i >= end; i--) {
+      const delay = (fromIndex - i) * 80
       this.cascadeTimers.push(
         setTimeout(() => {
           this.enqueue(i, 'cascade')
-        }, delay)
+        }, delay),
       )
-      delay += 50
     }
   }
 
@@ -96,16 +93,12 @@ export class PreloadEngine {
     if (!url) return
     if (this.active.has(url)) return
 
-    if (priority === 'cascade' && this.active.size >= this.maxConcurrent) {
-      return
-    }
+    // 使用 new Image() 预热浏览器图片解码缓存（下载 + 解码），
+    // 而非 fetch() 仅预热 HTTP 缓存。虚拟滚动组件渲染同名 URL 时直接命中，零解码成本。
+    const img = new Image()
+    img.src = url
 
-    const controller = new AbortController()
-    fetch(url, { signal: controller.signal }).catch(() => {
-      this.active.delete(url)
-    })
-
-    const task: PreloadTask = { url, index, controller, priority }
+    const task: PreloadTask = { url, index, image: img, priority }
     this.active.set(url, task)
   }
 
@@ -116,7 +109,8 @@ export class PreloadEngine {
 
     for (const [url, task] of this.active) {
       if (task.priority === 'cascade' && task.index < keepAbove) {
-        task.controller.abort()
+        // 清空 src 释放下载管线 + 移除引用允许 GC
+        task.image.src = ''
         this.active.delete(url)
       }
     }
@@ -129,7 +123,7 @@ export class PreloadEngine {
     this.cascadeTimers = []
 
     for (const [, task] of this.active) {
-      task.controller.abort()
+      task.image.src = ''
     }
     this.active.clear()
   }

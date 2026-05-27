@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps<{
   url: string
@@ -12,29 +12,13 @@ const currentSrc = ref(props.url)
 const status = ref<'loading' | 'loaded' | 'error'>('loading')
 let fallbackAttempted = false
 
-// 图片宽高比缓存：key=url, value="w/h" 字符串。
-// 同一张图第二次渲染时直接用 aspect-ratio 预留精确高度，零布局跳动。
-const ratioCache = new Map<string, string>()
-
-const containerStyle = computed(() => {
-  const cached = ratioCache.get(props.url)
-  if (cached) {
-    return { aspectRatio: cached }
-  }
-  return { minHeight: '400px' }
-})
-
 watch(() => props.url, (newUrl) => {
   status.value = 'loading'
   fallbackAttempted = false
   currentSrc.value = newUrl
 })
 
-function onLoad(e: Event) {
-  const img = e.target as HTMLImageElement
-  if (img.naturalWidth && img.naturalHeight) {
-    ratioCache.set(props.url, `${img.naturalWidth} / ${img.naturalHeight}`)
-  }
+function onLoad() {
   status.value = 'loaded'
 }
 
@@ -57,11 +41,12 @@ function onDblClick() {
 </script>
 
 <template>
-  <div v-if="kind === 'image'" class="relative" :style="containerStyle">
+  <div v-if="kind === 'image'" class="relative w-full">
     <!-- 加载中骨架屏 -->
     <div
       v-show="status === 'loading'"
-      class="absolute inset-0 bg-slate-800 animate-pulse flex items-center justify-center"
+      class="absolute inset-0 z-10 bg-slate-800 animate-pulse flex items-center justify-center"
+      style="min-height: 400px"
     >
       <span class="text-sm text-slate-500 select-none">加载中…</span>
     </div>
@@ -69,16 +54,18 @@ function onDblClick() {
     <!-- 加载失败占位 -->
     <div
       v-show="status === 'error'"
-      class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-2"
+      class="absolute inset-0 z-10 bg-slate-900 flex flex-col items-center justify-center gap-2"
+      style="min-height: 400px"
     >
       <span class="text-3xl select-none">🖼</span>
       <span class="text-xs text-slate-500 select-none">加载失败</span>
     </div>
 
+    <!-- 图片在正常流中，由自身宽高比自然撑开容器 -->
     <img
       :src="currentSrc"
       :alt="alt"
-      class="absolute inset-0 w-full h-full object-cover select-none"
+      class="block w-full h-auto select-none"
       :class="{ 'invisible': status !== 'loaded' }"
       @load="onLoad"
       @error="onError"

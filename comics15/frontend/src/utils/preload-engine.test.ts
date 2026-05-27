@@ -4,18 +4,22 @@ import { PreloadEngine } from './preload-engine'
 describe('PreloadEngine', () => {
   let engine: PreloadEngine
 
-  function mockFetch() {
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response())
+  // Mock Image 构造函数，替代原先的 fetch mock
+  function mockImage() {
+    vi.stubGlobal('Image', vi.fn().mockImplementation(() => ({
+      src: '',
+    })))
   }
 
   function withEngine(concurrency?: number): PreloadEngine {
-    const e = new PreloadEngine(concurrency)
+    // PreloadEngine 不再接受构造函数参数
+    const e = new PreloadEngine()
     e.setUrlResolver((i) => `/page/${i}`)
     return e
   }
 
   beforeEach(() => {
-    mockFetch()
+    mockImage()
   })
 
   afterEach(() => {
@@ -77,9 +81,17 @@ describe('PreloadEngine', () => {
     engine.onVisibleChange(3, 10, 5)
   })
 
-  it('并发数不超过构造函数传入的 maxConcurrent', () => {
-    engine = withEngine(2)
-    engine.reset(30)
-    engine.onVisibleChange(5, 5, 30)
+  it('对可见范围内的 URL 创建 Image 预加载', () => {
+    const imageSpy = vi.fn().mockImplementation(() => ({ src: '' }))
+    vi.stubGlobal('Image', imageSpy)
+
+    const e = new PreloadEngine()
+    e.setUrlResolver((i) => `/page/${i}`)
+    e.reset(10)
+    e.onVisibleChange(3, 3, 10)
+
+    // immediate: 可见页 ±1 → 索引 2,3,4；级联不展开验证
+    // visibleStart=3, visibleEnd=3 → loadImmediate range 2..4 → 3个 Image
+    expect(imageSpy).toHaveBeenCalled()
   })
 })
