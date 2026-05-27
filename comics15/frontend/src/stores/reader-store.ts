@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { fetchChapter } from '@/services/api'
+import { preloadEngine } from '@/utils/preload-engine'
 import type { MediaItem } from '@/types/api'
 
 interface ReaderState {
@@ -46,6 +47,7 @@ export const useReaderStore = defineStore('reader', {
         this.mediaItems = Array.isArray(response.files) ? response.files : []
         this.totalPages = response.total ?? this.mediaItems.length
         this.currentPage = 1
+        preloadEngine.reset(this.totalPages)
         this.updateChapterNavigation(this.chapterPath)
       } catch (error) {
         this.error = error instanceof Error ? error.message : '加载章节失败'

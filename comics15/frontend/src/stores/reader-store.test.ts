@@ -6,6 +6,10 @@ vi.mock('@/services/api', () => ({
   fetchChapter: vi.fn()
 }))
 
+vi.mock('@/utils/preload-engine', () => ({
+  preloadEngine: { reset: vi.fn() }
+}))
+
 import { fetchChapter as _fetchChapter } from '@/services/api'
 const fetchChapter = _fetchChapter as unknown as ReturnType<typeof vi.fn>
 
