@@ -7,9 +7,11 @@ import ReaderMediaItem from '@/components/ReaderMediaItem.vue'
 import ReaderShell from '@/components/ReaderShell.vue'
 import { createParentDirectoryRoute, createSeriesReadRoute } from '@/router'
 import { useReaderStore } from '@/stores/reader-store'
+import { useProgressStore } from '@/stores/progress-store'
 import { preloadEngine } from '@/utils/preload-engine'
 
 const readerStore = useReaderStore()
+const progressStore = useProgressStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -43,9 +45,26 @@ onBeforeUnmount(() => {
   preloadEngine.reset(0)
 })
 
-watch(() => readerStore.mediaItems, async () => {
+// 翻页时自动保存阅读进度到 localStorage
+watch(() => readerStore.currentPage, (page) => {
+  if (page > 0 && readerStore.totalPages > 0) {
+    progressStore.setProgress(seriesName.value, chapterPath.value, {
+      currentPage: page,
+      completed: page >= readerStore.totalPages
+    })
+  }
+})
+
+watch(() => readerStore.mediaItems, async (items) => {
+  if (items.length === 0) return
   await nextTick()
   setupPageObserver()
+
+  // 自动恢复上次的阅读页码
+  const saved = progressStore.getProgress(seriesName.value, chapterPath.value)
+  if (saved && !saved.completed && saved.currentPage > 1) {
+    jumpToPage(Math.min(saved.currentPage, readerStore.totalPages))
+  }
 })
 
 async function onScrollerVisible() {
