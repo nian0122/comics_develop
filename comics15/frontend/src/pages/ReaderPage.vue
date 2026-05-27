@@ -104,7 +104,7 @@ function goToChapter(path: string) {
 </script>
 
 <template>
-  <main ref="mainRef" class="min-h-dvh bg-black text-slate-100">
+  <main ref="mainRef" class="h-dvh bg-black text-slate-100 flex flex-col">
     <div
       v-if="readerStore.loading"
       class="flex min-h-dvh items-center justify-center text-sm text-slate-400"
@@ -125,8 +125,7 @@ function goToChapter(path: string) {
       :items="readerStore.mediaItems"
       :min-item-size="400"
       key-field="url"
-      page-mode
-      class="pb-24"
+      class="flex-1 pb-24"
       @visible="onScrollerVisible"
     >
       <template #default="{ item, index, active }">
