@@ -94,38 +94,33 @@ function navigateUp() {
       </div>
 
       <div v-else class="space-y-4">
-        <div v-if="chapterStore.directories.length > 0" class="space-y-2">
-          <h2 class="text-sm uppercase tracking-[0.3em] text-slate-400 px-1">目录</h2>
+        <template v-for="node in chapterStore.nodes" :key="node.pathId">
           <button
-            v-for="dir in chapterStore.directories"
-            :key="dir.pathId"
+            v-if="node.type === 'directory'"
             class="flex w-full items-center rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-left text-slate-200 transition hover:border-sky-500"
-            @click="openDirectory(dir)"
+            @click="openDirectory(node)"
           >
             <span class="mr-3 text-sky-400">📁</span>
-            {{ dir.name }}
+            <span class="flex-1 truncate">{{ node.name }}</span>
+            <span class="ml-2 shrink-0 text-sm text-slate-500">→</span>
           </button>
-        </div>
 
-        <div v-if="chapterStore.chapters.length > 0" class="space-y-2">
-          <h2 class="text-sm uppercase tracking-[0.3em] text-slate-400 px-1">章节</h2>
           <ChapterCard
-            v-for="chapter in chapterStore.chapters"
-            :key="chapter.pathId"
+            v-else-if="node.type === 'chapter'"
             :chapter="{
-              name: chapter.name,
-              path: chapter.path,
-              pathId: chapter.pathId,
-              fileCount: chapter.fileCount,
-              coverUrl: chapter.coverUrl,
-              pathText: chapter.pathId,
-              progressText: getProgressText(chapter.pathId)
+              name: node.name,
+              path: node.path,
+              pathId: node.pathId,
+              fileCount: node.fileCount,
+              coverUrl: node.coverUrl,
+              pathText: node.pathId,
+              progressText: getProgressText(node.pathId)
             }"
             @select="openChapter"
           />
-        </div>
+        </template>
 
-        <div v-if="chapterStore.directories.length === 0 && chapterStore.chapters.length === 0 && !chapterStore.loading" class="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-sm text-slate-400">
+        <div v-if="chapterStore.nodes.length === 0 && !chapterStore.loading" class="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-sm text-slate-400">
           此目录为空
         </div>
       </div>
