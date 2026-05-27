@@ -26,9 +26,3 @@ export interface MediaItem {
   fallbackUrl: string | null
 }
 
-export interface MediaSource {
-  url: string
-  fallbackUrl: string | null
-  kind: 'image' | 'video'
-  mediaType: string
-}
