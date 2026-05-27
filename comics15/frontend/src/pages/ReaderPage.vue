@@ -90,7 +90,8 @@ function setupPageObserver() {
       if (entry.isIntersecting) {
         visibilityByIndex.set(index, entry.intersectionRatio)
       } else {
-        visibilityByIndex.delete(index)
+        // 保留条目但 ratio=0，避免中间帧 map 缩小导致 currentPage 跳动
+        visibilityByIndex.set(index, 0)
       }
     }
 
