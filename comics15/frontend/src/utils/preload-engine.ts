@@ -85,8 +85,9 @@ export class PreloadEngine {
     }
 
     const controller = new AbortController()
-    const img = new Image()
-    img.src = url
+    fetch(url, { signal: controller.signal }).catch(() => {
+      this.active.delete(url)
+    })
 
     const task: PreloadTask = { url, index, controller, priority }
     this.active.set(url, task)

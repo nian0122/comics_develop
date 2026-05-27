@@ -28,7 +28,6 @@ function onDblClick() {
     v-if="kind === 'image'"
     :src="currentSrc"
     :alt="alt"
-    loading="lazy"
     class="w-full select-none block"
     @error="onError"
     @dblclick="onDblClick"

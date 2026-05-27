@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
@@ -20,6 +20,9 @@ const chapterPath = computed(() => {
 })
 
 const scrollerRef = ref<{ scrollToItem: (index: number) => void } | null>(null)
+const mainRef = ref<HTMLElement | null>(null)
+
+let pageObserver: IntersectionObserver | null = null
 
 onMounted(() => {
   preloadEngine.setUrlResolver((index: number) => readerStore.mediaItems[index]?.url ?? null)
@@ -35,17 +38,53 @@ watch([seriesName, chapterPath], ([nextSeriesName, nextChapterPath], [previousSe
 })
 
 onBeforeUnmount(() => {
+  pageObserver?.disconnect()
   preloadEngine.reset(0)
 })
 
-function onScrollerUpdate(
-  _startIndex: number,
-  _endIndex: number,
-  visibleStartIndex: number,
-  visibleEndIndex: number
-) {
-  readerStore.setCurrentPage(visibleStartIndex + 1)
-  preloadEngine.onVisibleChange(visibleStartIndex, visibleEndIndex, readerStore.totalPages)
+watch(() => readerStore.mediaItems, async () => {
+  await nextTick()
+  setupPageObserver()
+})
+
+function onScrollerVisible() {
+  setupPageObserver()
+}
+
+function setupPageObserver() {
+  pageObserver?.disconnect()
+
+  if (!globalThis.IntersectionObserver) {
+    readerStore.setCurrentPage(1)
+    return
+  }
+
+  const items = mainRef.value?.querySelectorAll('[data-index]')
+  if (!items || items.length === 0) return
+
+  let bestIndex = 0
+  let bestRatio = 0
+
+  pageObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const index = Number((entry.target as HTMLElement).dataset.index ?? '0')
+      if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
+        bestIndex = index
+        bestRatio = entry.intersectionRatio
+      }
+    }
+
+    if (bestRatio > 0) {
+      readerStore.setCurrentPage(bestIndex + 1)
+      const visibleStart = Math.max(0, bestIndex - 2)
+      const visibleEnd = Math.min(bestIndex + 2, readerStore.totalPages - 1)
+      preloadEngine.onVisibleChange(visibleStart, visibleEnd, readerStore.totalPages)
+    }
+  }, { threshold: [0, 0.25, 0.5, 0.75] })
+
+  for (const item of items) {
+    pageObserver.observe(item)
+  }
 }
 
 function jumpToPage(page: number) {
@@ -65,7 +104,7 @@ function goToChapter(path: string) {
 </script>
 
 <template>
-  <main class="h-dvh bg-black text-slate-100 flex flex-col">
+  <main ref="mainRef" class="h-dvh bg-black text-slate-100 flex flex-col">
     <div
       v-if="readerStore.loading"
       class="flex min-h-dvh items-center justify-center text-sm text-slate-400"
@@ -87,7 +126,7 @@ function goToChapter(path: string) {
       :min-item-size="400"
       key-field="url"
       class="flex-1 pb-24"
-      @update="onScrollerUpdate"
+      @visible="onScrollerVisible"
     >
       <template #default="{ item, index, active }">
         <DynamicScrollerItem

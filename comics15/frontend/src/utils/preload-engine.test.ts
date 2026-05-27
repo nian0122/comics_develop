@@ -3,23 +3,9 @@ import { PreloadEngine } from './preload-engine'
 
 describe('PreloadEngine', () => {
   let engine: PreloadEngine
-  let originalImage: typeof Image
 
-  function mockGlobalImage() {
-    originalImage = globalThis.Image
-    vi.spyOn(globalThis, 'Image').mockImplementation(() => {
-      const img = { src: '' } as HTMLImageElement
-      Object.defineProperty(img, 'src', {
-        set(_url: string) {},
-        get() { return '' }
-      })
-      return img
-    })
-  }
-
-  function restoreGlobalImage() {
-    vi.restoreAllMocks()
-    globalThis.Image = originalImage
+  function mockFetch() {
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response())
   }
 
   function withEngine(concurrency?: number): PreloadEngine {
@@ -29,12 +15,12 @@ describe('PreloadEngine', () => {
   }
 
   beforeEach(() => {
-    mockGlobalImage()
+    mockFetch()
   })
 
   afterEach(() => {
     if (engine) engine.destroy()
-    restoreGlobalImage()
+    vi.restoreAllMocks()
   })
 
   it('setUrlResolver 注册后调用 onVisibleChange 不抛错', () => {

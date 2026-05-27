@@ -48,7 +48,7 @@ vi.mock('../components/ReaderShell.vue', () => ({
 vi.mock('vue-virtual-scroller', () => ({
   DynamicScroller: {
     props: ['items', 'keyField', 'minItemSize'],
-    emits: ['update'],
+    emits: ['visible'],
     methods: {
       scrollToItem() {}
     },
@@ -72,6 +72,12 @@ vi.mock('@/utils/preload-engine', () => ({
     destroy: vi.fn()
   }
 }))
+
+globalThis.IntersectionObserver = vi.fn().mockReturnValue({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn()
+}) as unknown as typeof IntersectionObserver
 
 import { useReaderStore as _useReaderStore } from '@/stores/reader-store'
 const useReaderStore = _useReaderStore as unknown as ReturnType<typeof vi.fn>
