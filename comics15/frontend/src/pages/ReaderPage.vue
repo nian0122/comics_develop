@@ -23,6 +23,7 @@ const scrollerRef = ref<{ scrollToItem: (index: number) => void } | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 
 let pageObserver: IntersectionObserver | null = null
+const visibilityByIndex = new Map<number, number>()
 
 onMounted(() => {
   preloadEngine.setUrlResolver((index: number) => readerStore.mediaItems[index]?.url ?? null)
@@ -54,6 +55,7 @@ async function onScrollerVisible() {
 
 function setupPageObserver() {
   pageObserver?.disconnect()
+  visibilityByIndex.clear()
 
   if (!globalThis.IntersectionObserver) {
     readerStore.setCurrentPage(1)
@@ -64,14 +66,22 @@ function setupPageObserver() {
   if (!items || items.length === 0) return
 
   pageObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const index = Number((entry.target as HTMLElement).dataset.index ?? '0')
+      if (entry.isIntersecting) {
+        visibilityByIndex.set(index, entry.intersectionRatio)
+      } else {
+        visibilityByIndex.delete(index)
+      }
+    }
+
     let bestIndex = -1
     let bestRatio = 0
 
-    for (const entry of entries) {
-      const index = Number((entry.target as HTMLElement).dataset.index ?? '0')
-      if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
+    for (const [index, ratio] of visibilityByIndex) {
+      if (ratio > bestRatio) {
         bestIndex = index
-        bestRatio = entry.intersectionRatio
+        bestRatio = ratio
       }
     }
 
