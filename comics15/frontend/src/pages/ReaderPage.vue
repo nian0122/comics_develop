@@ -47,7 +47,8 @@ watch(() => readerStore.mediaItems, async () => {
   setupPageObserver()
 })
 
-function onScrollerVisible() {
+async function onScrollerVisible() {
+  await nextTick()
   setupPageObserver()
 }
 

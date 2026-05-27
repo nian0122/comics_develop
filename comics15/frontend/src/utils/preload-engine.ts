@@ -40,7 +40,8 @@ export class PreloadEngine {
 
     this.cancelFarIndices(start, end)
     this.loadImmediate(start, end)
-    this.loadCascade(end + 1)
+    this.loadCascadeForward(end + 1)
+    this.loadCascadeBackward(start - 1)
   }
 
   destroy(): void {
@@ -57,12 +58,27 @@ export class PreloadEngine {
     }
   }
 
-  private loadCascade(fromIndex: number): void {
+  private loadCascadeForward(fromIndex: number): void {
     const cascadeCount = 15
     const end = Math.min(fromIndex + cascadeCount - 1, this.total - 1)
 
     let delay = 0
     for (let i = fromIndex; i <= end; i++) {
+      this.cascadeTimers.push(
+        setTimeout(() => {
+          this.enqueue(i, 'cascade')
+        }, delay)
+      )
+      delay += 50
+    }
+  }
+
+  private loadCascadeBackward(fromIndex: number): void {
+    const cascadeCount = 15
+    const end = Math.max(fromIndex - cascadeCount + 1, 0)
+
+    let delay = 0
+    for (let i = fromIndex; i >= end; i--) {
       this.cascadeTimers.push(
         setTimeout(() => {
           this.enqueue(i, 'cascade')
