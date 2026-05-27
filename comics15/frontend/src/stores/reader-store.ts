@@ -63,6 +63,8 @@ export const useReaderStore = defineStore('reader', {
     setChapterContext({ previousChapterPath = '', nextChapterPath = '', chapterPaths }: ChapterContext = {}) {
       if (Array.isArray(chapterPaths)) {
         this.chapterPaths = chapterPaths
+        this.previousChapterPath = previousChapterPath
+        this.nextChapterPath = nextChapterPath
         this.updateChapterNavigation(this.chapterPath)
         return
       }

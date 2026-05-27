@@ -63,10 +63,10 @@ function setupPageObserver() {
   const items = mainRef.value?.querySelectorAll('[data-index]')
   if (!items || items.length === 0) return
 
-  let bestIndex = 0
-  let bestRatio = 0
-
   pageObserver = new IntersectionObserver((entries) => {
+    let bestIndex = -1
+    let bestRatio = 0
+
     for (const entry of entries) {
       const index = Number((entry.target as HTMLElement).dataset.index ?? '0')
       if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
@@ -75,7 +75,7 @@ function setupPageObserver() {
       }
     }
 
-    if (bestRatio > 0) {
+    if (bestIndex >= 0) {
       readerStore.setCurrentPage(bestIndex + 1)
       const visibleStart = Math.max(0, bestIndex - 2)
       const visibleEnd = Math.min(bestIndex + 2, readerStore.totalPages - 1)
@@ -120,41 +120,42 @@ function goToChapter(path: string) {
       {{ readerStore.error }}
     </div>
 
-    <DynamicScroller
-      v-else
-      ref="scrollerRef"
-      :items="readerStore.mediaItems"
-      :min-item-size="400"
-      key-field="url"
-      class="flex-1 pb-24"
-      @visible="onScrollerVisible"
-    >
-      <template #default="{ item, index, active }">
-        <DynamicScrollerItem
-          :item="item"
-          :active="active"
-          :data-index="index"
-          class="mx-auto"
-        >
-          <ReaderMediaItem
-            :url="item.url"
-            :fallback-url="item.fallbackUrl"
-            :alt="item.name"
-            :kind="item.type"
-          />
-        </DynamicScrollerItem>
-      </template>
-    </DynamicScroller>
+    <template v-else>
+      <DynamicScroller
+        ref="scrollerRef"
+        :items="readerStore.mediaItems"
+        :min-item-size="400"
+        key-field="url"
+        class="flex-1 pb-24"
+        @visible="onScrollerVisible"
+      >
+        <template #default="{ item, index, active }">
+          <DynamicScrollerItem
+            :item="item"
+            :active="active"
+            :data-index="index"
+            class="mx-auto"
+          >
+            <ReaderMediaItem
+              :url="item.url"
+              :fallback-url="item.fallbackUrl"
+              :alt="item.name"
+              :kind="item.type"
+            />
+          </DynamicScrollerItem>
+        </template>
+      </DynamicScroller>
 
-    <ReaderShell
-      :current-page="readerStore.currentPage"
-      :total-pages="readerStore.totalPages"
-      :previous-disabled="!readerStore.previousChapterPath"
-      :next-disabled="!readerStore.nextChapterPath"
-      @jump="jumpToPage"
-      @back="goBackToDirectory"
-      @previous="goToChapter(readerStore.previousChapterPath)"
-      @next="goToChapter(readerStore.nextChapterPath)"
-    />
+      <ReaderShell
+        :current-page="readerStore.currentPage"
+        :total-pages="readerStore.totalPages"
+        :previous-disabled="!readerStore.previousChapterPath"
+        :next-disabled="!readerStore.nextChapterPath"
+        @jump="jumpToPage"
+        @back="goBackToDirectory"
+        @previous="goToChapter(readerStore.previousChapterPath)"
+        @next="goToChapter(readerStore.nextChapterPath)"
+      />
+    </template>
   </main>
 </template>

@@ -9,7 +9,8 @@ const props = defineProps<{
 }>()
 
 const currentSrc = ref(props.url)
-const loaded = ref(false)
+const status = ref<'loading' | 'loaded' | 'error'>('loading')
+let fallbackAttempted = false
 
 // 图片宽高比缓存：key=url, value="w/h" 字符串。
 // 同一张图第二次渲染时直接用 aspect-ratio 预留精确高度，零布局跳动。
@@ -24,7 +25,8 @@ const containerStyle = computed(() => {
 })
 
 watch(() => props.url, (newUrl) => {
-  loaded.value = false
+  status.value = 'loading'
+  fallbackAttempted = false
   currentSrc.value = newUrl
 })
 
@@ -33,33 +35,51 @@ function onLoad(e: Event) {
   if (img.naturalWidth && img.naturalHeight) {
     ratioCache.set(props.url, `${img.naturalWidth} / ${img.naturalHeight}`)
   }
-  loaded.value = true
+  status.value = 'loaded'
 }
 
 function onError() {
-  loaded.value = true
-  if (props.fallbackUrl && currentSrc.value !== props.fallbackUrl) {
+  if (props.fallbackUrl && !fallbackAttempted) {
+    fallbackAttempted = true
     currentSrc.value = props.fallbackUrl
+    return
   }
+  status.value = 'error'
 }
 
 function onDblClick() {
   if (props.fallbackUrl) {
     currentSrc.value = props.fallbackUrl
+    status.value = 'loading'
+    fallbackAttempted = true
   }
 }
 </script>
 
 <template>
   <div v-if="kind === 'image'" class="relative" :style="containerStyle">
+    <!-- 加载中骨架屏 -->
     <div
-      v-show="!loaded"
-      class="absolute inset-0 bg-slate-800 animate-pulse"
-    />
+      v-show="status === 'loading'"
+      class="absolute inset-0 bg-slate-800 animate-pulse flex items-center justify-center"
+    >
+      <span class="text-sm text-slate-500 select-none">加载中…</span>
+    </div>
+
+    <!-- 加载失败占位 -->
+    <div
+      v-show="status === 'error'"
+      class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-2"
+    >
+      <span class="text-3xl select-none">🖼</span>
+      <span class="text-xs text-slate-500 select-none">加载失败</span>
+    </div>
+
     <img
       :src="currentSrc"
       :alt="alt"
-      class="absolute inset-0 w-full h-full object-contain select-none"
+      class="absolute inset-0 w-full h-full object-cover select-none"
+      :class="{ 'invisible': status !== 'loaded' }"
       @load="onLoad"
       @error="onError"
       @dblclick="onDblClick"
