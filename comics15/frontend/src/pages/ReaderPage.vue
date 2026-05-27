@@ -19,7 +19,7 @@ const chapterPath = computed(() => {
   return Array.isArray(pathMatch) ? pathMatch.join('/') : String(pathMatch ?? '')
 })
 
-const scrollerRef = ref<InstanceType<typeof DynamicScroller> | null>(null)
+const scrollerRef = ref<{ scrollToItem: (index: number) => void } | null>(null)
 
 onMounted(() => {
   preloadEngine.setUrlResolver((index: number) => readerStore.mediaItems[index]?.url ?? null)
