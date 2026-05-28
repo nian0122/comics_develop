@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useCoverQueue } from '@/composables/useCoverQueue'
 
 const props = defineProps<{
   chapter: {
@@ -20,7 +21,64 @@ const emit = defineEmits<{
   select: [chapter: Record<string, unknown>]
 }>()
 
-const coverFailed = ref(false)
+const coverQueue = useCoverQueue()
+const coverContainer = ref<HTMLElement | null>(null)
+const shouldLoadCover = ref(false)
+let observer: IntersectionObserver | null = null
+
+onMounted(() => {
+  if (!coverContainer.value) return
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0]?.isIntersecting) {
+        observer?.disconnect()
+        coverQueue.schedule(() => {
+          shouldLoadCover.value = true
+        })
+      }
+    },
+    { rootMargin: '100px' }
+  )
+  observer.observe(coverContainer.value)
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  coverQueue.dispose()
+  clearSkeletonTimer()
+})
+
+const coverStatus = ref<'loading' | 'loaded' | 'error'>('loading')
+const showSkeleton = ref(false)
+let lastCoverUrl: string | undefined = props.chapter.coverUrl
+let coverLoadReleased = false
+let skeletonTimer: ReturnType<typeof setTimeout> | null = null
+
+watch([shouldLoadCover, coverStatus], ([isLoading, status]) => {
+  clearSkeletonTimer()
+  if (isLoading && status === 'loading') {
+    skeletonTimer = setTimeout(() => {
+      showSkeleton.value = true
+    }, 200)
+  } else {
+    showSkeleton.value = false
+  }
+})
+
+function clearSkeletonTimer() {
+  if (skeletonTimer !== null) {
+    clearTimeout(skeletonTimer)
+    skeletonTimer = null
+  }
+}
+
+watch(() => props.chapter.coverUrl, (newUrl) => {
+  if (newUrl !== lastCoverUrl) {
+    lastCoverUrl = newUrl
+    coverStatus.value = 'loading'
+    coverLoadReleased = false
+  }
+})
 
 const pageLabel = computed(() => `${props.chapter.fileCount ?? 0} 页`)
 const rootClasses = computed(() => [
@@ -34,8 +92,20 @@ function onSelect() {
   emit('select', props.chapter as Record<string, unknown>)
 }
 
+function onCoverLoad() {
+  coverStatus.value = 'loaded'
+  if (!coverLoadReleased) {
+    coverLoadReleased = true
+    coverQueue.release()
+  }
+}
+
 function onCoverError() {
-  coverFailed.value = true
+  coverStatus.value = 'error'
+  if (!coverLoadReleased) {
+    coverLoadReleased = true
+    coverQueue.release()
+  }
 }
 
 defineExpose({ onCoverError })
@@ -46,20 +116,42 @@ defineExpose({ onCoverError })
     :class="rootClasses"
     @click="onSelect"
   >
-    <div class="h-28 w-20 shrink-0 bg-slate-800 sm:h-32 sm:w-24">
+    <div ref="coverContainer" class="h-28 w-20 shrink-0 bg-slate-800 sm:h-32 sm:w-24">
+      <!-- 数据加载骨架 -->
       <div
         v-if="chapter.loading"
         data-cover-skeleton="true"
         class="h-full w-full animate-pulse bg-gradient-to-br from-slate-700 via-slate-800 to-slate-700"
       ></div>
-      <img
-        v-else-if="chapter.coverUrl && !coverFailed"
-        :src="chapter.coverUrl"
-        :alt="chapter.name"
-        class="h-full w-full object-cover"
-        loading="lazy"
-        @error="onCoverError"
-      />
+
+      <template v-else-if="chapter.coverUrl">
+        <!-- 图片加载骨架：200ms 后仍未加载完成才出现 -->
+        <div
+          v-show="showSkeleton"
+          class="h-full w-full animate-pulse bg-gradient-to-br from-slate-700 via-slate-800 to-slate-700"
+        ></div>
+
+        <!-- 加载失败占位 -->
+        <div
+          v-if="coverStatus === 'error'"
+          class="flex h-full items-center justify-center"
+        >
+          <span class="px-2 text-center text-xs text-slate-400">暂无封面</span>
+        </div>
+
+        <img
+          v-if="shouldLoadCover && coverStatus !== 'error'"
+          :src="chapter.coverUrl"
+          :alt="chapter.name"
+          class="h-full w-full object-cover"
+          :class="{ 'invisible': coverStatus !== 'loaded' }"
+          decoding="async"
+          fetchpriority="low"
+          @load="onCoverLoad"
+          @error="onCoverError"
+        />
+      </template>
+
       <div v-else class="flex h-full items-center justify-center text-sm text-slate-400">
         <span class="px-2 text-center text-xs">暂无封面</span>
       </div>
