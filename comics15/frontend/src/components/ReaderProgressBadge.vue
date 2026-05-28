@@ -20,7 +20,7 @@ function confirmJump(page: number) {
 </script>
 
 <template>
-  <div class="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+  <div class="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
       <button
         data-progress="true"
         class="
@@ -36,6 +36,7 @@ function confirmJump(page: number) {
         before:bg-gradient-to-b
         before:from-white/40 before:to-transparent
         before:opacity-60
+        pointer-events-auto
         "
         @click="showJumpModal = true"
       >
