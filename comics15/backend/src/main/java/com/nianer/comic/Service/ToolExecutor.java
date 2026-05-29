@@ -31,6 +31,7 @@ public class ToolExecutor {
     private ComicConfig comicConfig;
 
     private final Map<String, ToolExecution> executions = new ConcurrentHashMap<>();
+    private final Map<String, Process> runningProcesses = new ConcurrentHashMap<>();
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
     /**
@@ -85,6 +86,7 @@ public class ToolExecutor {
             execution.addLog("工作目录: " + pb.directory());
 
             Process process = pb.start();
+            runningProcesses.put(execution.getExecutionId(), process);
 
             readOutputAsync(process, execution);
 
@@ -102,6 +104,8 @@ public class ToolExecutor {
             log.error("工具执行异常: {}", e.getMessage(), e);
             execution.addLog("执行异常: " + e.getMessage());
             execution.markFailed();
+        } finally {
+            runningProcesses.remove(execution.getExecutionId());
         }
     }
 
@@ -274,6 +278,11 @@ public class ToolExecutor {
             log.info("[Executor] 取消执行: {}", executionId);
             execution.markCancelled();
             execution.addLog("用户取消执行");
+            Process process = runningProcesses.get(executionId);
+            if (process != null && process.isAlive()) {
+                process.destroy();
+                log.info("[Executor] 已终止进程: {}", executionId);
+            }
         }
     }
 

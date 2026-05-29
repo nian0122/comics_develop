@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import type { ToolInfo } from '@/types/tools'
+import { computed } from 'vue'
+import type { ToolInfo, ToolParamOption } from '@/types/tools'
 
 const props = defineProps<{
   tool: ToolInfo
   modelValue: Record<string, string>
+  seriesOptions?: ToolParamOption[]
 }>()
 
 const emit = defineEmits<{
@@ -15,6 +17,13 @@ function updateField(key: string, value: string) {
     ...props.modelValue,
     [key]: value
   })
+}
+
+function getOptions(param: (typeof props.tool.params)[number]): ToolParamOption[] {
+  if (param.key === 'series' && props.seriesOptions?.length) {
+    return props.seriesOptions
+  }
+  return param.options ?? []
 }
 </script>
 
@@ -33,10 +42,10 @@ function updateField(key: string, value: string) {
           @change="updateField(param.key, ($event.target as HTMLSelectElement).value)"
         >
           <option value="">请选择</option>
-          <option v-for="option in param.options ?? []" :key="String(option.value ?? option)" :value="option.value ?? option">
+          <option v-for="option in getOptions(param)" :key="String(option.value ?? option)" :value="option.value ?? option">
             {{ option.label ?? option }}
           </option>
-          <option v-if="!param.options || param.options.length === 0" :value="modelValue[param.key] ?? param.default ?? ''">
+          <option v-if="getOptions(param).length === 0" :value="modelValue[param.key] ?? param.default ?? ''">
             {{ modelValue[param.key] ?? param.default ?? '默认' }}
           </option>
         </select>
