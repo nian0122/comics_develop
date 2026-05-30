@@ -33,7 +33,7 @@ function onError() {
 
 /** Double-click to switch to fallback URL (manual HQ/LQ toggle) */
 function onDblClick() {
-  if (props.fallbackUrl) {
+  if (props.fallbackUrl && currentSrc.value !== props.fallbackUrl) {
     currentSrc.value = props.fallbackUrl
     status.value = 'loading'
     fallbackAttempted = true
