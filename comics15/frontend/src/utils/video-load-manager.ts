@@ -1,73 +1,61 @@
-/**
- * VideoLoadManager — centralized video preload scheduler for comic reader.
- *
- * Responsibilities:
- * - Owns a single IntersectionObserver shared by all registered video containers
- * - Ensures only ONE video preloads metadata at a time (browser connection pool limits)
- * - Aborts active preload when video leaves viewport, auto-dequeues next
- * - Playback mutual exclusion: pauses currently playing video when new video plays
- *
- * No more &lt;source&gt; element hack — directly manipulates video.src.
- * Abort via video.removeAttribute('src') + load() triggers resource selection algorithm re-run.
- */
+export type VideoStatus = 'idle' | 'loading' | 'loaded' | 'error'
 
-export interface VideoEntryOptions {
+export interface VideoEntryConfig {
   url: string
-  onLoaded: () => void
-  onError: (fallback: () => void) => void
-  onAborted: () => void
+  onStatusChange: (status: VideoStatus) => void
 }
 
-interface VideoEntry extends VideoEntryOptions {
+export interface VideoEntry {
   video: HTMLVideoElement
-  container: HTMLElement
+  config: VideoEntryConfig
+  status: VideoStatus
 }
 
 export class VideoLoadManager {
   private observer: IntersectionObserver | null = null
-  private registry = new Map<HTMLVideoElement, VideoEntry>()
-  private activePreload: VideoEntry | null = null
-  private waitQueue: VideoEntry[] = []
+  private registry: Map<HTMLVideoElement, VideoEntry> = new Map()
+  private containerToEntry: WeakMap<HTMLElement, VideoEntry> = new WeakMap()
   private playingVideo: HTMLVideoElement | null = null
   private refCount = 0
 
-  /**
-   * Register a video element and its container. Manager observes container for viewport enter/leave.
-   * Re-registering the same video first unregisters then registers fresh (DynamicScroller recycling).
-   */
-  register(video: HTMLVideoElement, container: HTMLElement, options: VideoEntryOptions): void {
-    if (this.registry.has(video)) {
-      this.unregister(video)
+  register(
+    container: HTMLElement,
+    video: HTMLVideoElement,
+    config: VideoEntryConfig,
+  ): void {
+    const entry: VideoEntry = {
+      video,
+      config,
+      status: 'idle',
     }
 
-    const entry: VideoEntry = { video, container, ...options }
     this.registry.set(video, entry)
-    this.ensureObserver()
-    this.observer!.observe(container)
-    this.refCount++
+    this.containerToEntry.set(container, entry)
 
-    video.addEventListener('loadedmetadata', this.onMetadataLoaded)
-    video.addEventListener('error', this.onVideoError)
+    if (this.refCount === 0) {
+      this.observer = new IntersectionObserver(
+        (entries) => this.handleIntersection(entries),
+        { rootMargin: '300px 0px' },
+      )
+    }
+
+    this.refCount++
+    this.observer!.observe(container)
   }
 
-  /** Unregister a video element, cleaning up observer and event listeners. */
-  unregister(video: HTMLVideoElement): void {
-    const entry = this.registry.get(video)
+  unregister(container: HTMLElement): void {
+    const entry = this.containerToEntry.get(container)
     if (!entry) return
 
-    this.observer?.unobserve(entry.container)
-    this.registry.delete(video)
-    this.refCount--
+    this.observer?.unobserve(container)
+    this.registry.delete(entry.video)
+    this.containerToEntry.delete(container)
 
-    video.removeEventListener('loadedmetadata', this.onMetadataLoaded)
-    video.removeEventListener('error', this.onVideoError)
-
-    if (this.activePreload?.video === video) {
-      this.abortActive()
+    if (this.playingVideo === entry.video) {
+      this.playingVideo = null
     }
 
-    this.waitQueue = this.waitQueue.filter(e => e.video !== video)
-
+    this.refCount--
     if (this.refCount <= 0) {
       this.observer?.disconnect()
       this.observer = null
@@ -75,109 +63,74 @@ export class VideoLoadManager {
     }
   }
 
-  /** Called when user clicks play — releases preload slot + playback mutual exclusion */
-  onUserPlayed(video: HTMLVideoElement): void {
-    if (this.playingVideo && this.playingVideo !== video && !this.playingVideo.paused) {
+  onPlay(video: HTMLVideoElement): void {
+    if (
+      this.playingVideo &&
+      this.playingVideo !== video &&
+      !this.playingVideo.paused
+    ) {
       this.playingVideo.pause()
     }
     this.playingVideo = video
-
-    if (this.activePreload?.video === video) {
-      this.activePreload = null
-      this.dequeueNext()
-    }
   }
 
-  // ── Private ──────────────────────────────────────────────
+  private handleIntersection(entries: IntersectionObserverEntry[]): void {
+    for (const e of entries) {
+      const container = e.target as HTMLElement
+      const entry = this.containerToEntry.get(container)
+      if (!entry) continue
 
-  private ensureObserver(): void {
-    if (this.observer) return
-    this.observer = new IntersectionObserver(
-      (entries) => this.onObserverChange(entries),
-      { rootMargin: '300px 0px' },
-    )
-  }
-
-  private onObserverChange(entries: IntersectionObserverEntry[]): void {
-    for (const entry of entries) {
-      const videoEntry = this.findEntryByContainer(entry.target as HTMLElement)
-      if (!videoEntry) continue
-
-      if (entry.isIntersecting) {
-        this.onEnterViewport(videoEntry)
+      if (e.isIntersecting) {
+        if (entry.status === 'idle') {
+          this.startLoad(entry)
+        }
       } else {
-        this.onLeaveViewport(videoEntry)
+        if (entry.status === 'loading') {
+          this.abort(entry)
+        } else if (this.playingVideo === entry.video) {
+          this.playingVideo.pause()
+          this.playingVideo = null
+        }
       }
     }
   }
 
-  private findEntryByContainer(container: HTMLElement): VideoEntry | undefined {
-    for (const entry of this.registry.values()) {
-      if (entry.container === container) return entry
-    }
-    return undefined
-  }
+  private startLoad(entry: VideoEntry): void {
+    entry.status = 'loading'
+    entry.config.onStatusChange('loading')
 
-  private onEnterViewport(entry: VideoEntry): void {
-    if (this.activePreload?.video === entry.video) return
-    if (this.waitQueue.some(e => e.video === entry.video)) return
-
-    if (this.activePreload === null) {
-      this.startPreload(entry)
-    } else {
-      this.waitQueue.push(entry)
-    }
-  }
-
-  private onLeaveViewport(entry: VideoEntry): void {
-    if (this.activePreload?.video === entry.video) {
-      this.abortActive()
-    }
-    this.waitQueue = this.waitQueue.filter(e => e.video !== entry.video)
-    if (this.playingVideo === entry.video && !entry.video.paused) {
-      entry.video.pause()
-    }
-  }
-
-  private startPreload(entry: VideoEntry): void {
-    this.activePreload = entry
     entry.video.preload = 'metadata'
-    entry.video.src = entry.url
+
+    entry.video.onloadedmetadata = () => {
+      entry.status = 'loaded'
+      entry.config.onStatusChange('loaded')
+      entry.video.onloadedmetadata = null
+      entry.video.onerror = null
+    }
+
+    entry.video.onerror = () => {
+      entry.status = 'error'
+      entry.config.onStatusChange('error')
+      entry.video.onloadedmetadata = null
+      entry.video.onerror = null
+    }
+
+    entry.video.src = entry.config.url
     entry.video.load()
   }
 
-  private abortActive(): void {
-    if (!this.activePreload) return
-    const video = this.activePreload.video
-    video.removeAttribute('src')
-    video.load()
-    this.activePreload = null
-    this.dequeueNext()
+  private abort(entry: VideoEntry): void {
+    entry.video.removeAttribute('src')
+    entry.video.load()
+    entry.status = 'idle'
+    entry.config.onStatusChange('idle')
   }
 
-  private dequeueNext(): void {
-    const next = this.waitQueue.shift()
-    if (next) {
-      this.startPreload(next)
-    }
-  }
-
-  private onMetadataLoaded = (event: Event): void => {
-    const video = event.target as HTMLVideoElement
-    const entry = this.registry.get(video)
-    entry?.onLoaded()
-  }
-
-  private onVideoError = (event: Event): void => {
-    const video = event.target as HTMLVideoElement
-    const entry = this.registry.get(video)
-    if (!entry) return
-
-    entry.onError(() => {
-      this.startPreload(entry)
-    })
+  private findEntryByContainer(
+    container: HTMLElement,
+  ): VideoEntry | undefined {
+    return this.containerToEntry.get(container)
   }
 }
 
-/** Module-level singleton */
 export const videoLoadManager = new VideoLoadManager()
