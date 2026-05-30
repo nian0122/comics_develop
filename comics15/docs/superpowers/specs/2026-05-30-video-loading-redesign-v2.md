@@ -37,6 +37,10 @@
 - reader-store 回归纯图片职责，职责单一
 - 改动量可控（约 6 个文件），架构收益明确
 
+**数据获取策略**：选择策略 C — ReaderPage 居中分发。
+
+后端 `/api/chapter` 返回混合列表（图片+视频），ReaderPage 只发一次请求，将结果按 `type` 分发到两个 store。这样 stores 互不知晓，各自独立管理自己的数据、缓存、错误处理。VideoStore 保留独立的 `fetchVideos()` 用于预取场景（提前加载下一话视频，不等 ReaderPage 触发）。
+
 淘汰方案：
 - 方案 A（最小修复）：不改架构，不符合"视频数据独立管理"需求
 - 方案 C（视频脱离 DynamicScroller）：过于激进，改动量大，体验割裂
@@ -44,49 +48,51 @@
 ## 4. 架构
 
 ```
-ReaderPage.vue
+章节切换 → ReaderPage.vue 调 API（一次请求）
  │
- ├─ 图片管线（不变）
- │   ├─ useReaderStore  → API /api/chapter → MediaItem[]（仅图片）
+ ├─ filter(image) → readerStore.setImages()
  │   └─ DynamicScroller → ReaderMediaItem(kind='image') → ReaderImageItem
  │
- └─ 视频管线（新增/重写）
-     ├─ useVideoStore        → API /api/chapter → MediaItem[]（仅视频）
-     │                         独立状态：loading、error、缓存
-     ├─ VideoLoadManager     → 唯一 IntersectionObserver
-     │                         注册表、加载/中止调度、播放互斥
-     └─ DynamicScroller      → ReaderMediaItem(kind='video') → ReaderVideoItem
+ └─ filter(video) → videoStore.setVideos()
+     │
+     ├─ VideoLoadManager → 唯一 IntersectionObserver
+     │                     注册表、加载/中止调度、播放互斥
+     └─ DynamicScroller  → ReaderMediaItem(kind='video') → ReaderVideoItem
 ```
+
+ReaderPage 只发一次 HTTP 请求，按 `type` 字段分发到两个 store。stores 互不知晓，完全解耦。
 
 | 模块 | 类型 | 职责 | 对外暴露 |
 |------|------|------|----------|
-| `useVideoStore` | Pinia store（新建） | 独立拉取章节视频列表，缓存策略，加载状态 | `videos: MediaItem[]`, `total`, `loading`, `error`, `fetchVideos()`, `prefetchNext()`, `clear()` |
-| `VideoLoadManager` | 工具单例（新建） | 视口检测、加载/中止调度、播放互斥 | `register(el, config)`, `unregister(el)` |
+| `useVideoStore` | Pinia store（新建） | 存视频列表，独立缓存、预取。不主动调 API（由 ReaderPage 分发） | `videos`, `total`, `loading`, `error`, `setVideos(items)`, `fetchVideos(series, path)`（预取用）, `prefetchNext()`, `clear()` |
+| `VideoLoadManager` | 工具单例（新建） | 视口检测、加载/中止调度、播放互斥 | `register(el, config)`, `unregister(el)`, `onPlay(el)` |
 | `ReaderVideoItem` | Vue 组件（重写） | 纯展示：骨架屏、video 元素、状态响应 | props: `url`, `alt` |
-| `ReaderPage` | Vue 页面（改动） | 引入 VideoStore，双管线合并渲染 | 不变 |
+| `ReaderPage` | Vue 页面（改动） | 居中调 API，按 type 分发到 reader-store / videoStore；合并双管线渲染 | — |
 | `ReaderMediaItem` | dispatcher（微调） | 按 kind 分发，video 分支不传 fallbackUrl | 不变 |
 | `ReaderImageItem` | 组件（不变） | 图片展示 | 不变 |
-| `reader-store` | Pinia store（简化） | 去掉视频相关，`mediaItems` → `imageItems` | `imageItems` 只含图片 |
+| `reader-store` | Pinia store（简化） | 只存图片列表。`loadChapter` 改为接收全量数据后过滤，或新增 `setImages()` | `imageItems`, `setImages(items)` 或 `loadChapter` 内部改造 |
 
 ### 数据流
 
 ```
 章节切换
   │
-  ├── readerStore.loadChapter()     → API → 图片 MediaItem[]
-  └── videoStore.fetchVideos()      → API → 视频 MediaItem[]
-                                          │
-                              VideoLoadManager
-                              （接收视频 DOM 注册）
-                                          │
-                              IntersectionObserver 回调
-                                          │
-                              ┌─ 进入视口 → loadMetadata()
-                              ├─ 离开视口 → 加载中? abort() : 忽略
-                              └─ 播放     → pauseOthers()
+  ReaderPage: fetchChapter(series, path)  ←── 一次 HTTP 请求
+  │
+  ├── readerStore.setImages(files.filter(f => f.type === 'image'))
+  └── videoStore.setVideos(files.filter(f => f.type === 'video'))
+                                        │
+                            VideoLoadManager
+                            （接收视频 DOM 注册）
+                                        │
+                            IntersectionObserver 回调
+                                        │
+                            ┌─ 进入视口 → loadMetadata()
+                            ├─ 离开视口 → 加载中? abort() : 忽略
+                            └─ 播放     → pauseOthers()
 ```
 
-VideoStore 和 reader-store **各自调同一 API**（`/api/chapter`），各自过滤自己的类型。API 层不拆分（后端不动）。
+ReaderPage 作为编排层，只发一次请求，两个 store 各自接收自己关心的数据。stores 之间零依赖。
 
 ## 5. 各模块详细设计
 
@@ -187,8 +193,6 @@ onPlay(videoEl: HTMLVideoElement): void {
 
 ```typescript
 interface VideoStoreState {
-  seriesName: string
-  chapterPath: string
   videos: MediaItem[]
   total: number
   loading: boolean
@@ -197,33 +201,52 @@ interface VideoStoreState {
 }
 
 actions: {
+  // 主要入口：ReaderPage 调 API 后分发视频数据过来
+  setVideos(items: MediaItem[], series: string, chapterPath: string): void
+
+  // 独立预取：提前拉取下一章节视频（不经过 ReaderPage）
   async fetchVideos(series: string, chapterPath: string): Promise<void>
+
+  // 预取下一话（根据导航信息推断）
   async prefetchNext(series: string, nextChapterPath: string): Promise<void>
+
   clear(): void
 }
 ```
 
-**缓存逻辑：**
-
+**`setVideos`**（主要入口）：
 ```
-fetchVideos(series, path):
-  cacheKey = `${series}::${path}`
+setVideos(items, series, chapterPath):
+  cacheKey = `${series}::${chapterPath}`
+  this.videos = items
+  this.total = items.length
+  cache.set(cacheKey, items)
+  // LRU 淘汰：超出 10 条删最旧
+```
+
+**`fetchVideos`**（独立预取用）：
+```
+fetchVideos(series, chapterPath):
+  cacheKey = `${series}::${chapterPath}`
   if cache.has(cacheKey):
     this.videos = cache.get(cacheKey)
     return
 
   try:
-    response = await fetchChapter(series, path)
-    this.videos = response.files.filter(f => f.type === 'video')
-    this.total = this.videos.length
-    cache.set(cacheKey, this.videos)
+    response = await fetchChapter(series, chapterPath)
+    videos = response.files.filter(f => f.type === 'video')
+    cache.set(cacheKey, videos)
+    this.videos = videos
+    this.total = videos.length
   catch:
     this.error = "..."
   finally:
     this.loading = false
 ```
 
-LRU 淘汰：缓存 Map 保留最近 10 个章节，超出淘汰最旧的。
+两个入口的区别：
+- `setVideos()` — 同步赋值，ReaderPage 已经拿到数据了，不需要再请求
+- `fetchVideos()` — 异步拉取，用于预取下一话的场景（不依赖 ReaderPage）
 
 ### 5.3 ReaderVideoItem (重写 `components/ReaderVideoItem.vue`)
 
@@ -315,14 +338,45 @@ watch(() => props.url, () => {
 
 ### 5.4 ReaderPage 改动
 
+**API 分发模式（策略 C）：**
+
+```typescript
+// ReaderPage 居中调 API，一次请求，按 type 分发
+async function loadChapterData(series: string, chapterPath: string) {
+  readerStore.loading = true
+  videoStore.loading = true
+
+  try {
+    const response = await fetchChapter(series, chapterPath)
+
+    // 图片 → reader-store
+    readerStore.setImages(
+      response.files.filter(f => f.type === 'image'),
+      response.total  // or response.files.length
+    )
+
+    // 视频 → videoStore
+    videoStore.setVideos(
+      response.files.filter(f => f.type === 'video'),
+      series,
+      chapterPath
+    )
+  } catch (e) {
+    readerStore.error = e.message
+    videoStore.error = e.message
+  } finally {
+    readerStore.loading = false
+    videoStore.loading = false
+  }
+}
+```
+
+**合并渲染：**
+
 ```typescript
 const allMediaItems = computed(() => {
-  const images = readerStore.imageItems.map(item => ({
-    ...item,
-    // 按 name 标记原始顺序用于合并排序
-  }))
-  const videos = videoStore.videos.map(item => ({...item}))
-  // 按自然排序合并，恢复 API 的混合顺序
+  const images = readerStore.imageItems
+  const videos = videoStore.videos
   return [...images, ...videos].sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { numeric: true })
   )
@@ -331,12 +385,7 @@ const allMediaItems = computed(() => {
 
 `readerStore.totalPages` = 图片数 + 视频数，进度计算不变。
 
-章节切换时同时触发两条管线：
-
-```typescript
-readerStore.loadChapter(series, chapterPath)
-videoStore.fetchVideos(series, chapterPath)
-```
+**章节切换时**：调用 `loadChapterData(series, chapterPath)` 一次即可。
 
 ### 5.5 reader-store 简化
 
@@ -344,12 +393,17 @@ videoStore.fetchVideos(series, chapterPath)
 - mediaItems: MediaItem[]     // 所有媒体混合
 + imageItems: MediaItem[]     // 只保留图片
 
-  loadChapter:
--   this.mediaItems = response.files
-+   this.imageItems = response.files.filter(f => f.type === 'image')
--   this.totalPages = response.total
-+   this.totalPages = this.imageItems.length
+- loadChapter(series, path)   // 自己调 API
++ setImages(items: MediaItem[], totalPages: number)  // 由 ReaderPage 分发
++ loadChapter(series, path)   // 保留，内部调 setImages（兼容旧调用方）
 ```
+
+**两种改造方式（二选一）：**
+
+1. **新增 `setImages`**：`loadChapter` 改为调 API 后调 `setImages`，内部过滤。ReaderPage 也可以用 `setImages` 直接分发。
+2. **改造 `loadChapter` 接受可选参数**：如果传入了预取数据就不调 API，否则自己调。
+
+推荐方式 1——语义清晰，`setImages` 是纯数据接收，`loadChapter` 是带 API 调用的便捷封装。
 
 ### 5.6 ReaderMediaItem 微调
 
@@ -406,7 +460,10 @@ videoStore.fetchVideos(series, chapterPath)
 | VideoLoadManager 加载调度 | 单元 | entry 进入视口 → idle→loading；离开 → loading→idle；loaded 离开不变 |
 | VideoLoadManager 播放互斥 | 单元 | A.play → B.play → A.pause() 被调用 |
 | VideoLoadManager 错误 | 单元 | onerror → status: error |
-| VideoStore 缓存 | 单元 | 命中缓存不调 API；新章节调 API 写缓存 |
+| VideoStore `setVideos` | 单元 | setVideos 写入缓存，total 正确；再次 setVideos 同一 key 命中缓存 |
+| VideoStore `fetchVideos` | 单元 | 调 API → 过滤 type=video → 写缓存；API 失败设置 error |
+| ReaderPage 分发 | 组件 | fetchChapter 返回混合列表 → readerStore.imageItems 只有图片 → videoStore.videos 只有视频 |
+| reader-store `setImages` | 单元 | setImages 写入后 imageItems 和 totalPages 正确 |
 | ReaderVideoItem 生命周期 | 组件 | mounted → register；unmounted → unregister；url 变更 → re-register |
 | ReaderVideoItem 状态 UI | 组件 | idle→loading→loaded→error 各状态 DOM 断言 |
 | ReaderPage 双管线 | 组件 | 各自获取后正确合并排序 |
