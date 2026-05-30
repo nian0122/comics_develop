@@ -33,13 +33,13 @@ describe('ReaderVideoItem', () => {
     })
 
     expect(mockRegister).toHaveBeenCalledTimes(1)
-    const [videoEl, containerEl, config] = mockRegister.mock.calls[0] as [
-      HTMLVideoElement,
+    const [containerEl, videoEl, config] = mockRegister.mock.calls[0] as [
       HTMLDivElement,
+      HTMLVideoElement,
       { url: string; onStatusChange: (s: string) => void },
     ]
-    expect(videoEl).toBeInstanceOf(HTMLVideoElement)
     expect(containerEl).toBeInstanceOf(HTMLDivElement)
+    expect(videoEl).toBeInstanceOf(HTMLVideoElement)
     expect(config.url).toBe('/video/test.mp4')
   })
 

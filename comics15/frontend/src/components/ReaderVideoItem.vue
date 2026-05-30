@@ -13,7 +13,7 @@ const status = ref<VideoStatus>('idle')
 
 function register() {
   if (!videoRef.value || !containerRef.value) return
-  videoLoadManager.register(videoRef.value, containerRef.value, {
+  videoLoadManager.register(containerRef.value, videoRef.value, {
     url: props.url,
     onStatusChange: (s) => { status.value = s },
   })
@@ -22,12 +22,12 @@ function register() {
 onMounted(() => register())
 
 onBeforeUnmount(() => {
-  videoLoadManager.unregister(videoRef.value!)
+  videoLoadManager.unregister(containerRef.value!)
 })
 
 // DynamicScroller 回收：URL 变了 → 注销旧，注册新
 watch(() => props.url, () => {
-  videoLoadManager.unregister(videoRef.value!)
+  videoLoadManager.unregister(containerRef.value!)
   status.value = 'idle'
   register()
 })
