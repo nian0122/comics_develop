@@ -12,7 +12,7 @@ export interface VideoEntry {
   loadTimer: ReturnType<typeof setTimeout> | null
 }
 
-const METADATA_TIMEOUT_MS = 8000
+const METADATA_TIMEOUT_MS = 2000
 
 export class VideoLoadManager {
   private observer: IntersectionObserver | null = null

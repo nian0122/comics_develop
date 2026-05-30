@@ -330,7 +330,7 @@ describe('VideoLoadManager', () => {
   })
 
   describe('metadata load timeout', () => {
-    it('超过 8 秒未 loadedmetadata 则超时变 error', () => {
+    it('超过 2 秒未 loadedmetadata 则超时变 error', () => {
       vi.useFakeTimers()
 
       const container = document.createElement('div')
@@ -346,8 +346,8 @@ describe('VideoLoadManager', () => {
       fireIntersection([{ target: container, isIntersecting: true }])
       expect(onStatusChange).toHaveBeenCalledWith('loading')
 
-      // Advance past 8 second timeout
-      vi.advanceTimersByTime(8000)
+      // Advance past 2 second timeout
+      vi.advanceTimersByTime(2000)
 
       // Should report error
       expect(onStatusChange).toHaveBeenCalledWith('error')
@@ -373,11 +373,11 @@ describe('VideoLoadManager', () => {
       expect(onStatusChange).toHaveBeenCalledWith('loading')
 
       // loadedmetadata fires before timeout
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(1000)
       video.dispatchEvent(new Event('loadedmetadata'))
 
       // Advance past where timeout would fire
-      vi.advanceTimersByTime(10000)
+      vi.advanceTimersByTime(5000)
 
       // Should still be loaded, not error
       expect(onStatusChange).not.toHaveBeenCalledWith('error')
