@@ -6,7 +6,7 @@ import type { MediaItem } from '@/types/api'
 interface ReaderState {
   seriesName: string
   chapterPath: string
-  mediaItems: MediaItem[]
+  imageItems: MediaItem[]
   currentPage: number
   totalPages: number
   previousChapterPath: string
@@ -26,7 +26,7 @@ export const useReaderStore = defineStore('reader', {
   state: (): ReaderState => ({
     seriesName: '',
     chapterPath: '',
-    mediaItems: [],
+    imageItems: [],
     currentPage: 1,
     totalPages: 0,
     previousChapterPath: '',
@@ -36,6 +36,10 @@ export const useReaderStore = defineStore('reader', {
     error: ''
   }),
   actions: {
+    setImages(items: MediaItem[]) {
+      this.imageItems = items
+      this.totalPages = items.length
+    },
     async loadChapter(seriesName: string, chapterPath: string) {
       this.loading = true
       this.error = ''
@@ -44,15 +48,15 @@ export const useReaderStore = defineStore('reader', {
         const response = await fetchChapter(seriesName, chapterPath)
         this.seriesName = seriesName
         this.chapterPath = response.path ?? chapterPath
-        this.mediaItems = Array.isArray(response.files) ? response.files : []
-        this.totalPages = response.total ?? this.mediaItems.length
+        const allFiles = Array.isArray(response.files) ? response.files : []
+        const imageItems = allFiles.filter(f => f.type === 'image')
+        this.setImages(imageItems)
         this.currentPage = 1
         preloadEngine.reset(this.totalPages)
         this.updateChapterNavigation(this.chapterPath)
       } catch (error) {
         this.error = error instanceof Error ? error.message : '加载章节失败'
-        this.mediaItems = []
-        this.totalPages = 0
+        this.setImages([])
       } finally {
         this.loading = false
       }

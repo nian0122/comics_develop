@@ -34,7 +34,7 @@ describe('reader-store', () => {
 
     expect(store.seriesName).toBe('系列 A')
     expect(store.chapterPath).toBe('目录/第 1 话')
-    expect(store.mediaItems).toHaveLength(2)
+    expect(store.imageItems).toHaveLength(2)
     expect(store.currentPage).toBe(1)
   })
 
@@ -67,5 +67,38 @@ describe('reader-store', () => {
     await store.loadChapter('系列 A', '目录/第 2 话')
     expect(store.previousChapterPath).toBe('目录/第 1 话')
     expect(store.nextChapterPath).toBe('目录/第 3 话')
+  })
+
+  it('过滤掉视频文件，只保留图片', async () => {
+    fetchChapter.mockResolvedValue({
+      path: '目录/第 1 话',
+      files: [
+        { name: '1.jpg', type: 'image', url: '/1.jpg', fallbackUrl: null },
+        { name: '2.mp4', type: 'video', url: '/2.mp4', fallbackUrl: null },
+        { name: '3.jpg', type: 'image', url: '/3.jpg', fallbackUrl: null },
+        { name: '4.mov', type: 'video', url: '/4.mov', fallbackUrl: null }
+      ],
+      total: 4
+    })
+
+    const store = useReaderStore()
+    await store.loadChapter('系列 A', '目录/第 1 话')
+
+    expect(store.imageItems).toHaveLength(2)
+    expect(store.totalPages).toBe(2)
+    expect(store.imageItems.every(item => item.type === 'image')).toBe(true)
+  })
+
+  it('setImages 同步设置图片列表和总页数', () => {
+    const store = useReaderStore()
+    const items = [
+      { name: '1.jpg', type: 'image' as const, url: '/1.jpg', fallbackUrl: null },
+      { name: '2.jpg', type: 'image' as const, url: '/2.jpg', fallbackUrl: null }
+    ]
+
+    store.setImages(items)
+
+    expect(store.imageItems).toEqual(items)
+    expect(store.totalPages).toBe(2)
   })
 })
