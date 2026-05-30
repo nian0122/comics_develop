@@ -9,7 +9,10 @@ export interface VideoEntry {
   video: HTMLVideoElement
   config: VideoEntryConfig
   status: VideoStatus
+  loadTimer: ReturnType<typeof setTimeout> | null
 }
+
+const METADATA_TIMEOUT_MS = 8000
 
 export class VideoLoadManager {
   private observer: IntersectionObserver | null = null
@@ -27,6 +30,7 @@ export class VideoLoadManager {
       video,
       config,
       status: 'idle',
+      loadTimer: null,
     }
 
     this.registry.set(video, entry)
@@ -46,6 +50,11 @@ export class VideoLoadManager {
   unregister(container: HTMLElement): void {
     const entry = this.containerToEntry.get(container)
     if (!entry) return
+
+    if (entry.loadTimer) {
+      clearTimeout(entry.loadTimer)
+      entry.loadTimer = null
+    }
 
     this.observer?.unobserve(container)
     this.registry.delete(entry.video)
@@ -102,6 +111,7 @@ export class VideoLoadManager {
     entry.video.preload = 'metadata'
 
     entry.video.onloadedmetadata = () => {
+      this.clearLoadTimer(entry)
       entry.status = 'loaded'
       entry.config.onStatusChange('loaded')
       entry.video.onloadedmetadata = null
@@ -109,17 +119,33 @@ export class VideoLoadManager {
     }
 
     entry.video.onerror = () => {
+      this.clearLoadTimer(entry)
       entry.status = 'error'
       entry.config.onStatusChange('error')
       entry.video.onloadedmetadata = null
       entry.video.onerror = null
     }
 
+    entry.loadTimer = setTimeout(() => {
+      entry.loadTimer = null
+      this.abort(entry)
+      entry.status = 'error'
+      entry.config.onStatusChange('error')
+    }, METADATA_TIMEOUT_MS)
+
     entry.video.src = entry.config.url
     entry.video.load()
   }
 
+  private clearLoadTimer(entry: VideoEntry): void {
+    if (entry.loadTimer) {
+      clearTimeout(entry.loadTimer)
+      entry.loadTimer = null
+    }
+  }
+
   private abort(entry: VideoEntry): void {
+    this.clearLoadTimer(entry)
     entry.video.removeAttribute('src')
     entry.video.load()
     entry.status = 'idle'

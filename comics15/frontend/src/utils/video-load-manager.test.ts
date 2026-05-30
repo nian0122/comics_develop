@@ -329,6 +329,64 @@ describe('VideoLoadManager', () => {
     })
   })
 
+  describe('metadata load timeout', () => {
+    it('超过 8 秒未 loadedmetadata 则超时变 error', () => {
+      vi.useFakeTimers()
+
+      const container = document.createElement('div')
+      const video = createVideo()
+      const onStatusChange = vi.fn()
+
+      manager.register(container, video, {
+        url: '/video/slow.mp4',
+        onStatusChange,
+      })
+
+      // Enter → start loading
+      fireIntersection([{ target: container, isIntersecting: true }])
+      expect(onStatusChange).toHaveBeenCalledWith('loading')
+
+      // Advance past 8 second timeout
+      vi.advanceTimersByTime(8000)
+
+      // Should report error
+      expect(onStatusChange).toHaveBeenCalledWith('error')
+      // Should abort (remove src)
+      expect(video.removeAttribute).toHaveBeenCalledWith('src')
+
+      vi.useRealTimers()
+    })
+
+    it('loadedmetadata 在超时前触发则清除定时器', () => {
+      vi.useFakeTimers()
+
+      const container = document.createElement('div')
+      const video = createVideo()
+      const onStatusChange = vi.fn()
+
+      manager.register(container, video, {
+        url: '/video/ok.mp4',
+        onStatusChange,
+      })
+
+      fireIntersection([{ target: container, isIntersecting: true }])
+      expect(onStatusChange).toHaveBeenCalledWith('loading')
+
+      // loadedmetadata fires before timeout
+      vi.advanceTimersByTime(3000)
+      video.dispatchEvent(new Event('loadedmetadata'))
+
+      // Advance past where timeout would fire
+      vi.advanceTimersByTime(10000)
+
+      // Should still be loaded, not error
+      expect(onStatusChange).not.toHaveBeenCalledWith('error')
+      expect(onStatusChange).toHaveBeenCalledWith('loaded')
+
+      vi.useRealTimers()
+    })
+  })
+
   describe('videoLoadManager singleton', () => {
     it('videoLoadManager 是 VideoLoadManager 实例', () => {
       expect(videoLoadManager).toBeInstanceOf(VideoLoadManager)
