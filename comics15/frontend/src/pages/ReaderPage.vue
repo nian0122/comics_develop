@@ -7,10 +7,13 @@ import ReaderMediaItem from '@/components/ReaderMediaItem.vue'
 import ReaderShell from '@/components/ReaderShell.vue'
 import { createParentDirectoryRoute, createSeriesReadRoute } from '@/router'
 import { useReaderStore } from '@/stores/reader-store'
+import { useVideoStore } from '@/stores/video-store'
 import { useProgressStore } from '@/stores/progress-store'
+import { fetchChapter } from '@/services/api'
 import { preloadEngine } from '@/utils/preload-engine'
 
 const readerStore = useReaderStore()
+const videoStore = useVideoStore()
 const progressStore = useProgressStore()
 const route = useRoute()
 const router = useRouter()
@@ -24,12 +27,50 @@ const chapterPath = computed(() => {
 const scrollerRef = ref<{ scrollToItem: (index: number) => void } | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 
+// 合并图片和视频数据给 DynamicScroller，按文件名自然排序
+const allMediaItems = computed(() => {
+  const images = readerStore.imageItems
+  const videos = videoStore.videos
+  return [...images, ...videos].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { numeric: true })
+  )
+})
+
+async function loadChapterData(series: string, chapterPath: string) {
+  readerStore.loading = true
+  videoStore.loading = true
+
+  try {
+    const response = await fetchChapter(series, chapterPath)
+
+    readerStore.setImages(
+      response.files.filter(f => f.type === 'image')
+    )
+    videoStore.setVideos(
+      response.files.filter(f => f.type === 'video'),
+      series,
+      chapterPath
+    )
+    readerStore.totalPages = readerStore.imageItems.length + videoStore.videos.length
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '加载章节失败'
+    readerStore.error = msg
+    videoStore.error = msg
+  } finally {
+    readerStore.loading = false
+    videoStore.loading = false
+  }
+}
+
 let pageObserver: IntersectionObserver | null = null
 const visibilityByIndex = new Map<number, number>()
 
 onMounted(() => {
-  preloadEngine.setUrlResolver((index: number) => readerStore.mediaItems[index]?.url ?? null)
-  readerStore.loadChapter(seriesName.value, chapterPath.value)
+  preloadEngine.setUrlResolver((index: number) => {
+    const item = allMediaItems.value[index]
+    return item?.type === 'image' ? item.url : null
+  })
+  loadChapterData(seriesName.value, chapterPath.value)
 })
 
 watch([seriesName, chapterPath], ([nextSeriesName, nextChapterPath], [previousSeriesName, previousChapterPath]) => {
@@ -37,7 +78,7 @@ watch([seriesName, chapterPath], ([nextSeriesName, nextChapterPath], [previousSe
     return
   }
   preloadEngine.reset(0)
-  readerStore.loadChapter(nextSeriesName, nextChapterPath)
+  loadChapterData(nextSeriesName, nextChapterPath)
 })
 
 onBeforeUnmount(() => {
@@ -55,7 +96,7 @@ watch(() => readerStore.currentPage, (page) => {
   }
 })
 
-watch(() => readerStore.mediaItems, async (items) => {
+watch(allMediaItems, async (items) => {
   if (items.length === 0) return
   await nextTick()
   setupPageObserver()
@@ -143,23 +184,23 @@ function goToChapter(path: string) {
 <template>
   <main ref="mainRef" class="h-dvh bg-black text-slate-100 flex flex-col">
     <div
-      v-if="readerStore.loading"
+      v-if="readerStore.loading || videoStore.loading"
       class="flex min-h-dvh items-center justify-center text-sm text-slate-400"
     >
       加载中…
     </div>
 
     <div
-      v-else-if="readerStore.error"
+      v-else-if="readerStore.error || videoStore.error"
       class="flex min-h-dvh items-center justify-center px-6 text-center text-sm text-rose-200"
     >
-      {{ readerStore.error }}
+      {{ readerStore.error || videoStore.error }}
     </div>
 
     <template v-else>
       <DynamicScroller
         ref="scrollerRef"
-        :items="readerStore.mediaItems"
+        :items="allMediaItems"
         :min-item-size="400"
         key-field="url"
         class="flex-1 pb-24"
