@@ -20,7 +20,6 @@ defineProps<{
   <ReaderVideoItem
     v-else
     :url="url"
-    :fallback-url="fallbackUrl"
     :alt="alt"
   />
 </template>
