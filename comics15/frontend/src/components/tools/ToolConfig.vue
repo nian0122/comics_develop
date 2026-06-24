@@ -19,7 +19,7 @@ function updateField(key: string, value: string) {
   })
 }
 
-function getOptions(param: (typeof props.tool.params)[number]): ToolParamOption[] {
+function getOptions(param: NonNullable<typeof props.tool.params>[number]): ToolParamOption[] {
   if (param.key === 'series' && props.seriesOptions?.length) {
     return props.seriesOptions
   }

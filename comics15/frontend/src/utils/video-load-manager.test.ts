@@ -33,6 +33,7 @@ describe('VideoLoadManager', () => {
             disconnect: mockDisconnect,
             root: null,
             rootMargin: options?.rootMargin ?? '0px',
+            scrollMargin: '',
             thresholds: [],
             takeRecords: () => [],
           } as IntersectionObserver
